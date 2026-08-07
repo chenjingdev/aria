@@ -546,6 +546,18 @@ ok("export가 실제로 쓴 파일만 보고한다", () => {
 const { sf2Available, SF2_PATH, parseSf2 } = await import("../src/sf2.js");
 const { SF_PRESETS, SF_DRUM_KITS } = await import("../src/presets.js");
 
+ok("재배포가 막힌 전용 폰트를 프리셋이 참조하지 않음", () => {
+  const blocked = new Set(["philharmonia.sf2", "phil-winds.sf2", "phil-brass.sf2", "phil-perc.sf2"]);
+  for (const [id, preset] of [...Object.entries(SF_PRESETS), ...Object.entries(SF_DRUM_KITS)]) {
+    assert.ok(!blocked.has(preset.font), `${id}가 ${preset.font}를 참조함`);
+  }
+  assert.equal(SF_PRESETS["sf-violin-pizz"].gm, 45, "피치카토 대체음이 GM Pizzicato Strings가 아님");
+  assert.equal(SF_PRESETS["sf-contrabass-pizz"].gm, 32, "저음 피치카토가 GM Acoustic Bass가 아님");
+  assert.equal(SF_PRESETS["sf-violin-sord"].gm, 49, "약음기 대체음이 GM Slow Strings가 아님");
+  assert.equal(SF_PRESETS["sf-bass-clarinet"].gm, 71, "베이스 클라리넷 대체음이 GM Piccolo로 잘못 바뀜");
+  assert.equal(SF_PRESETS["sf-contrabassoon"].gm, 70, "콘트라바순 대체음이 GM Recorder로 잘못 바뀜");
+});
+
 if (!sf2Available()) {
   console.log(`  (건너뜀) 사운드폰트 없음 — ${SF2_PATH}`);
 } else {

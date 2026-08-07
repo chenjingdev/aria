@@ -40,14 +40,11 @@ GUI만 띄워보려면: `npm start`. MCP 브리지만 직접 시험하려면: `n
 
 ## SoundFont (샘플 프리셋)
 
-`~/.aria/soundfonts/default.sf2`에 GM 사운드폰트를 두면 실제 악기 녹음 기반 프리셋 12종 + 드럼 킷이 열립니다:
-`sf-piano sf-epiano sf-vibes sf-organ sf-nylon sf-steel sf-bass sf-strings sf-choir sf-brass sf-sax sf-flute sf-kit`
+`~/.aria/soundfonts/default.sf2`에 GM 사운드폰트를 두면 피아노·현악·목관·금관·기타·베이스·드럼 프리셋이 열립니다. 기존 곡의 `sf-violin`, `sf-cello`, `sf-sax`, `sf-horn`, `sf-orch-kit` 같은 id도 이 기본 GM 폰트로 재생됩니다.
 
 - 기본 제공 스크립트 없이 파일만 두면 됨 (권장: [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS) ~32MB, 무료 라이선스. `ARIA_SF2` 환경변수로 다른 경로 지정 가능)
 - **다중 사운드폰트**: 같은 폴더에 `salamander.sf2`([Salamander Grand Piano](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) SF2판, 1.3GB, CC-BY 3.0 © Alexander Holm)를 두면 `sf-piano`가 자동으로 이걸 우선 사용 — 벨로시티 16층의 진짜 피아노. 프리셋의 `font` 필드로 어떤 프리셋이든 전용 폰트 지정 가능
-- **필하모니아 독주 현악**: `philharmonia.sf2`(자체 빌드, 142MB)가 있으면 `sf-violin sf-viola sf-cello sf-contrabass`와 주법 프리셋 `sf-violin-pizz sf-viola-pizz sf-contrabass-pizz sf-violin-sord`가 열립니다 — [Philharmonia Orchestra 무료 샘플](https://philharmonia.co.uk/resources/sound-samples/)(셈여림 pp~ff를 벨로시티 레이어로)을 `tools/build-phil.mjs strings` 파이프라인(무음 트림·자동 루프 생성·SF2 인코딩)으로 패키징한 것. 원본 녹음은 1.5초지만 크로스페이드 루프로 무한 지속(피치카토는 루프 없이 자연 감쇠)
-- **필하모니아 관악**: `phil-winds.sf2`(193MB) → `sf-flute sf-oboe sf-english-horn sf-clarinet sf-bass-clarinet sf-bassoon sf-contrabassoon sf-sax`, `phil-brass.sf2`(71MB) → `sf-trumpet sf-horn sf-trombone sf-tuba`. 각각 `tools/build-phil.mjs winds|brass`로 빌드
-- **필하모니아 오케스트라 타악**: `phil-perc.sf2`(2.6MB, `tools/build-phil-perc.mjs`) → 드럼 킷 `sf-orch-kit`. 전용 피스: `kick snare tom-l/m/h crash ride tamtam tambourine cowbell agogo cabasa guiro woodblock triangle sleigh castanets`
+- 현악·목관·금관과 `sf-orch-kit`은 재배포 가능한 기본 GM 폰트의 대응 악기로 재생합니다. Philharmonia 원본 샘플을 다시 묶은 전용 폰트는 배포 조건과 품질 대비 효용 때문에 제품 프리셋에서 사용하지 않습니다.
 - **VSCO 2 CE 색채 악기**: `vsco.sf2`(9MB, `tools/build-vsco.mjs`, [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) CC0) → `sf-harp sf-glockenspiel sf-marimba sf-xylophone sf-timpani sf-cello-pizz`. 팀파니는 파일명에 음정이 없어 자기상관 f0 검출로 매핑(렌더 검증: C2 악보 → 66.2Hz)
 - **Salamander 밴드 드럼**: `salamander-kit.sf2`(10MB, `tools/build-salamander.mjs`, [Salamander Drumkit](https://archive.org/details/SalamanderDrumkit) 퍼블릭 도메인 © Alexander Holm) → 드럼 킷 `sf-band-kit`(표준 피스, 벨로시티 최대 6층). e808-kit의 실녹음 레이어도 이 킷을 우선 사용
 - 신스 프리셋과 완전히 같은 방식으로 사용 — 같은 노트 모델, 같은 velRange/attack/release/reverb 오버라이드

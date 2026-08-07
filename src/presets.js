@@ -174,29 +174,30 @@ export const SF_PRESETS = {
   "sf-steel": { name: "Steel Guitar", desc: "스틸 어쿠스틱 기타 샘플 — 포크·팝 스트로크", gm: 25, gain: 1.0, reverb: 0.22, release: 0.3 },
   "sf-bass": { name: "Finger Bass", desc: "핑거 일렉 베이스 실제 샘플", gm: 33, gain: 1.0, reverb: 0.05, release: 0.15 },
   "sf-strings": { name: "String Ensemble", desc: "현악 앙상블 샘플 — 신스 패드보다 진짜 현의 결", gm: 48, gain: 0.9, reverb: 0.4, release: 0.6 },
-  // 필하모니아 오케스트라 독주 현악 — 실제 연주자 녹음, 셈여림별(pp~ff) 진짜 음색 변화
-  "sf-violin": { name: "Violin (Phil.)", desc: "독주 바이올린 — 필하모니아 연주자 녹음, 셈여림 레이어", gm: 40, gain: 1.15, reverb: 0.3, release: 0.5, font: "philharmonia.sf2" },
-  "sf-viola": { name: "Viola (Phil.)", desc: "독주 비올라 — 바이올린보다 어둡고 따뜻한 중음역", gm: 41, gain: 1.25, reverb: 0.3, release: 0.5, font: "philharmonia.sf2" },
-  "sf-cello": { name: "Cello (Phil.)", desc: "독주 첼로 — 노래하는 저중음, 솔로 선율에 최적", gm: 42, gain: 1.1, reverb: 0.3, release: 0.5, font: "philharmonia.sf2" },
-  "sf-contrabass": { name: "Contrabass (Phil.)", desc: "독주 콘트라베이스 — 묵직한 최저음역 활", gm: 43, gain: 0.7, reverb: 0.25, release: 0.5, font: "philharmonia.sf2" },
-  "sf-violin-pizz": { name: "Violin Pizz (Phil.)", desc: "바이올린 피치카토 — 뜯는 소리, 경쾌한 반주·리듬", gm: 44, gain: 1.1, reverb: 0.25, release: 1.2, font: "philharmonia.sf2" },
-  "sf-viola-pizz": { name: "Viola Pizz (Phil.)", desc: "비올라 피치카토 — 중음역 뜯는 소리", gm: 45, gain: 1.15, reverb: 0.25, release: 1.2, font: "philharmonia.sf2" },
-  "sf-contrabass-pizz": { name: "Contrabass Pizz (Phil.)", desc: "콘트라베이스 피치카토 — 재즈·탱고 워킹 베이스", gm: 46, gain: 1.0, reverb: 0.15, release: 1.2, font: "philharmonia.sf2" },
-  "sf-violin-sord": { name: "Violin Sordino (Phil.)", desc: "약음기 바이올린 — 안개 낀 여린 음색, 서정 악절", gm: 48, gain: 1.2, reverb: 0.35, release: 0.5, font: "philharmonia.sf2" },
+  // 배포가 어려운 전용 샘플 대신 기본 GM 폰트의 악기군을 사용한다.
+  // id는 유지해 기존 곡의 노트·믹스·자동화를 건드리지 않고 음원만 안전하게 교체한다.
+  "sf-violin": { name: "Violin", desc: "바이올린 — 기본 GM 폰트의 독주 현악", gm: 40, gain: 1.15, reverb: 0.3, release: 0.5 },
+  "sf-viola": { name: "Viola", desc: "비올라 — 기본 GM 폰트의 따뜻한 중음 현악", gm: 41, gain: 1.25, reverb: 0.3, release: 0.5 },
+  "sf-cello": { name: "Cello", desc: "첼로 — 기본 GM 폰트의 저중음 현악", gm: 42, gain: 1.1, reverb: 0.3, release: 0.5 },
+  "sf-contrabass": { name: "Contrabass", desc: "콘트라베이스 — 기본 GM 폰트의 최저음 현악", gm: 43, gain: 0.7, reverb: 0.25, release: 0.5 },
+  "sf-violin-pizz": { name: "Pizzicato Strings (High)", desc: "고음역 피치카토 현악 — 기본 GM 피치카토 앙상블", gm: 45, gain: 1.1, reverb: 0.25, release: 1.2 },
+  "sf-viola-pizz": { name: "Pizzicato Strings (Mid)", desc: "중음역 피치카토 현악 — 기본 GM 피치카토 앙상블", gm: 45, gain: 1.15, reverb: 0.25, release: 1.2 },
+  "sf-contrabass-pizz": { name: "Acoustic Bass (Pizz.)", desc: "콘트라베이스 피치카토 대체음 — 기본 GM 어쿠스틱 베이스", gm: 32, gain: 1.0, reverb: 0.15, release: 1.2 },
+  "sf-violin-sord": { name: "Slow Strings", desc: "약음기 현악 대체음 — 기본 GM 슬로 스트링 앙상블", gm: 49, gain: 1.2, reverb: 0.35, release: 0.5 },
   "sf-choir": { name: "Choir Aahs", desc: "합창 아~ 샘플 — 영화적 배경", gm: 52, gain: 0.9, reverb: 0.45, release: 0.6 },
   "sf-brass": { name: "Brass Section", desc: "브라스 섹션 샘플 — 펑크·소울 스탭", gm: 61, gain: 0.95, reverb: 0.2, release: 0.2 },
-  "sf-sax": { name: "Alto Sax (Phil.)", desc: "알토 색소폰 — 필하모니아 연주자 녹음, 재즈 멜로디", gm: 65, gain: 1.0, reverb: 0.25, release: 0.25, font: "phil-winds.sf2" },
-  "sf-flute": { name: "Flute (Phil.)", desc: "플루트 — 필하모니아 연주자 녹음, 가볍고 맑은 고음", gm: 73, gain: 0.95, reverb: 0.3, release: 0.3, font: "phil-winds.sf2" },
-  "sf-oboe": { name: "Oboe (Phil.)", desc: "오보에 — 콧소리 섞인 서정적 목관, 솔로 선율", gm: 68, gain: 0.95, reverb: 0.3, release: 0.3, font: "phil-winds.sf2" },
-  "sf-english-horn": { name: "English Horn (Phil.)", desc: "코랑글레 — 오보에보다 어둡고 애수 어린 중음", gm: 69, gain: 1.0, reverb: 0.3, release: 0.3, font: "phil-winds.sf2" },
-  "sf-clarinet": { name: "Clarinet (Phil.)", desc: "클라리넷 — 매끄럽고 따뜻한 목관 전음역", gm: 71, gain: 0.95, reverb: 0.28, release: 0.3, font: "phil-winds.sf2" },
-  "sf-bass-clarinet": { name: "Bass Clarinet (Phil.)", desc: "베이스 클라리넷 — 어둡고 신비한 저음 목관", gm: 72, gain: 1.0, reverb: 0.28, release: 0.35, font: "phil-winds.sf2" },
-  "sf-bassoon": { name: "Bassoon (Phil.)", desc: "바순 — 노래하는 목관 저음, 해학·서정 양쪽", gm: 70, gain: 1.0, reverb: 0.28, release: 0.3, font: "phil-winds.sf2" },
-  "sf-contrabassoon": { name: "Contrabassoon (Phil.)", desc: "콘트라바순 — 목관 최저음, 으르렁대는 바닥", gm: 74, gain: 1.05, reverb: 0.25, release: 0.35, font: "phil-winds.sf2" },
-  "sf-horn": { name: "French Horn (Phil.)", desc: "프렌치 호른 — 필하모니아 녹음, 서사적 콜·온기 있는 중저음", gm: 60, gain: 0.95, reverb: 0.35, release: 0.4, font: "phil-brass.sf2" },
-  "sf-trumpet": { name: "Trumpet (Phil.)", desc: "트럼펫 — 찬란한 금관 고음, 팡파르·솔로", gm: 56, gain: 0.9, reverb: 0.3, release: 0.25, font: "phil-brass.sf2" },
-  "sf-trombone": { name: "Trombone (Phil.)", desc: "트롬본 — 넓고 당당한 금관 중저음", gm: 57, gain: 0.95, reverb: 0.3, release: 0.3, font: "phil-brass.sf2" },
-  "sf-tuba": { name: "Tuba (Phil.)", desc: "튜바 — 금관의 기초 저음, 묵직한 바닥", gm: 58, gain: 1.0, reverb: 0.25, release: 0.35, font: "phil-brass.sf2" },
+  "sf-sax": { name: "Alto Sax", desc: "알토 색소폰 — 기본 GM 폰트의 리드 음색", gm: 65, gain: 1.0, reverb: 0.25, release: 0.25 },
+  "sf-flute": { name: "Flute", desc: "플루트 — 기본 GM 폰트의 가벼운 고음 목관", gm: 73, gain: 0.95, reverb: 0.3, release: 0.3 },
+  "sf-oboe": { name: "Oboe", desc: "오보에 — 기본 GM 폰트의 서정적 목관", gm: 68, gain: 0.95, reverb: 0.3, release: 0.3 },
+  "sf-english-horn": { name: "English Horn", desc: "코랑글레 — 기본 GM 폰트의 어두운 중음 목관", gm: 69, gain: 1.0, reverb: 0.3, release: 0.3 },
+  "sf-clarinet": { name: "Clarinet", desc: "클라리넷 — 기본 GM 폰트의 부드러운 목관", gm: 71, gain: 0.95, reverb: 0.28, release: 0.3 },
+  "sf-bass-clarinet": { name: "Bass Clarinet (Sketch)", desc: "베이스 클라리넷 대체음 — 기본 GM 클라리넷을 저음역에서 사용", gm: 71, gain: 1.0, reverb: 0.28, release: 0.35 },
+  "sf-bassoon": { name: "Bassoon", desc: "바순 — 기본 GM 폰트의 저음 목관", gm: 70, gain: 1.0, reverb: 0.28, release: 0.3 },
+  "sf-contrabassoon": { name: "Contrabassoon (Sketch)", desc: "콘트라바순 대체음 — 기본 GM 바순을 최저음역에서 사용", gm: 70, gain: 1.05, reverb: 0.25, release: 0.35 },
+  "sf-horn": { name: "French Horn", desc: "프렌치 호른 — 기본 GM 폰트의 중저음 금관", gm: 60, gain: 0.95, reverb: 0.35, release: 0.4 },
+  "sf-trumpet": { name: "Trumpet", desc: "트럼펫 — 기본 GM 폰트의 밝은 금관", gm: 56, gain: 0.9, reverb: 0.3, release: 0.25 },
+  "sf-trombone": { name: "Trombone", desc: "트롬본 — 기본 GM 폰트의 중저음 금관", gm: 57, gain: 0.95, reverb: 0.3, release: 0.3 },
+  "sf-tuba": { name: "Tuba", desc: "튜바 — 기본 GM 폰트의 최저음 금관", gm: 58, gain: 1.0, reverb: 0.25, release: 0.35 },
   "sf-timpani": { name: "Timpani (VSCO)", desc: "팀파니 — 실녹음 다이내믹 3층, 오케스트라의 천둥, F#1~D#2 부근", gm: 47, gain: 1.0, reverb: 0.35, release: 0.8, font: "vsco.sf2" },
   "sf-harp": { name: "Harp (VSCO)", desc: "하프 — 아르페지오·글리산도, 서정적 색채", gm: 46, gain: 1.0, reverb: 0.35, release: 0.8, font: "vsco.sf2" },
   "sf-glockenspiel": { name: "Glockenspiel (VSCO)", desc: "글로켄슈필 — 반짝이는 금속 종소리 고음", gm: 9, gain: 0.9, reverb: 0.3, release: 0.6, font: "vsco.sf2" },
@@ -205,7 +206,7 @@ export const SF_PRESETS = {
   "sf-cello-pizz": { name: "Cello Pizz (VSCO)", desc: "첼로 섹션 피치카토 — 통통 튀는 저음 반주", gm: 45, gain: 1.05, reverb: 0.25, release: 1.0, font: "vsco.sf2" },
   "sf-bandoneon": { name: "Tango Accordion", desc: "탱고 아코디언(반도네온) 샘플 — 탱고·뮈제트의 심장", gm: 23, gain: 0.95, reverb: 0.25, release: 0.2 }
 };
-// 오케스트라 타악 전용 피스 (필하모니아 녹음) — sf-orch-kit에서만 유효
+// GM 확장 타악 피스 — sf-orch-kit의 기존 곡 호환용 이름을 유지한다.
 export const ORCH_PIECES = {
   kick: 36, snare: 38, "tom-l": 43, "tom-m": 47, "tom-h": 50, crash: 49, ride: 51,
   tamtam: 52, tambourine: 54, cowbell: 56, agogo: 67, cabasa: 69, guiro: 73,
@@ -219,8 +220,8 @@ export const SF_DRUM_KITS = {
   "sf-kit": { name: "Studio Kit", desc: "실제 드럼 녹음 샘플 킷 (GM Standard)", bank: 128, program: 0, release: 3.0 },
   "sf-band-kit": { name: "Band Kit (Salamander)", desc: "어쿠스틱 밴드 드럼 실녹음 — 팝·록·발라드, 벨로시티 다층 펀치", bank: 128, program: 0, release: 4.2, font: "salamander-kit.sf2", velRange: 0.7 },
   "sf-orch-kit": {
-    name: "Orch Percussion", desc: "오케스트라 타악 — 필하모니아 녹음. 피스: kick(큰북)·snare·tom-l/m/h·crash(합주 심벌)·ride(서스펜디드)·tamtam·triangle·tambourine·castanets·woodblock·sleigh·cowbell·agogo·cabasa·guiro",
-    bank: 128, program: 0, release: 6.0, font: "phil-perc.sf2", pieces: ORCH_PIECES, velRange: 0.9
+    name: "Extended GM Percussion", desc: "기본 GM 폰트의 확장 타악. 피스: kick·snare·tom-l/m/h·crash·ride·tamtam·triangle·tambourine·castanets·woodblock·sleigh·cowbell·agogo·cabasa·guiro",
+    bank: 128, program: 0, release: 6.0, pieces: ORCH_PIECES, velRange: 0.9
   }
 };
 
