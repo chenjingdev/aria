@@ -146,7 +146,7 @@ const res = writeSf2({ outPath: OUT, infoName: "VSCO 2 CE Selection", samples, i
 console.log(`\nvsco.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // ── 스윕: 전 녹음 음 × vel 3단 발음 확인 ──
-const { parseSf2, renderSf2Voice } = await import("/Users/chenjing/dev/tmp/2026-08-03/new-chat-1/aria/src/sf2.js");
+const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
 const sf = parseSf2(OUT);
 console.log(`파서: 프리셋 ${sf.presets.size}개, 샘플 ${sf.shdr.length}개`);
 let checked = 0, silent = 0, nan = 0;

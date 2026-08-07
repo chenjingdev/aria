@@ -82,7 +82,7 @@ const res = writeSf2({ outPath: OUT, infoName: "Salamander Drumkit", samples, in
 console.log(`\nsalamander-kit.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // 스윕
-const { parseSf2, renderSf2Voice } = await import("/Users/chenjing/dev/tmp/2026-08-03/new-chat-1/aria/src/sf2.js");
+const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
 const sf = parseSf2(OUT);
 let checked = 0, silent = 0, nan = 0;
 for (const key of [...new Set(zones.map(z => z.keyLo))]) {

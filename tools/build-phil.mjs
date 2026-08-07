@@ -153,7 +153,7 @@ console.log(`\n${fam.out}: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 $
 
 // ── 전수 스윕 검증: 모든 녹음 음 × vel 4단 — 무음 구멍·지속 끊김·펌핑 검사 ──
 // (이전의 4키×2vel 표본 검사는 리뷰에서 확정된 결함을 하나도 잡지 못했다)
-const { parseSf2, renderSf2Voice } = await import("/Users/chenjing/dev/tmp/2026-08-03/new-chat-1/aria/src/sf2.js");
+const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
 const sf = parseSf2(OUT);
 console.log(`파서: 프리셋 ${sf.presets.size}개, 샘플 ${sf.shdr.length}개`);
 let checked = 0, nan = 0, silent = 0, dropout = 0, pump = 0;

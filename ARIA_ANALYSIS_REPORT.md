@@ -1,6 +1,6 @@
 # Aria 아키텍처·문제점 분석 보고서
 
-- 분석 대상: `/Users/chenjing/dev/tmp/2026-08-03/new-chat-1/aria`
+- 분석 대상: `/Users/chenjing/dev/aria`
 - 기준 버전: `package.json`의 `0.1.0`
 - 분석 일자: 2026-08-06
 - 범위: 소스 구조, 상태·데이터 흐름, 오디오/SF2/MIDI, MCP·GUI, 저장, 테스트, 제품 UX

@@ -103,7 +103,7 @@ console.log(`\nphil-perc.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘�
 console.log(`피스: ${kitPieces.join(", ")}`);
 
 // ── 스윕: 전 키 × vel 3단 발음 확인 ──
-const { parseSf2, renderSf2Voice } = await import("/Users/chenjing/dev/tmp/2026-08-03/new-chat-1/aria/src/sf2.js");
+const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
 const sf = parseSf2(OUT);
 let checked = 0, silent = 0, nan = 0;
 const keys = [...new Set(zones.map(z => z.keyLo))];
