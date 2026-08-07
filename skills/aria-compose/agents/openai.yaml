@@ -1,0 +1,8 @@
+interface:
+  display_name: "Aria Vibe Composer"
+  short_description: "느낌을 편집 가능한 Aria 곡으로 바꾸고 다듬기"
+  brand_color: "#7C6CF2"
+  default_prompt: "Use $aria-compose to turn my genre, mood, and emotional arc into an editable Aria composition and refine it by listening."
+
+policy:
+  allow_implicit_invocation: true

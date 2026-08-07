@@ -1,0 +1,3266 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23131a24'/%3E%3Cpath d='M5 17h4l2-7 4 14 3-10 2 5h7' fill='none' stroke='%2378a8ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<title>aria</title>
+<style>
+  :root {
+    --bg:#121418; --panel:#1a1d23; --border:#262b33; --text:#d5dae3; --dim:#8a93a3;
+    --accent:#7aa2ff; --play:#ff6b6b; --ok:#5fd4a2;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:13px/1.45 -apple-system,"Apple SD Gothic Neo",sans-serif; height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; align-items:center; gap:10px; padding:8px 14px; background:var(--panel); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  header .logo { font-weight:700; color:var(--accent); letter-spacing:.5px; font-size:15px; }
+  header .title { font-weight:600; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  header .sep { width:1px; height:20px; background:var(--border); }
+  button, select, input { background:#232830; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font:inherit; }
+  button { cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button:disabled { opacity:.4; cursor:default; }
+  button:disabled:hover { border-color:var(--border); }
+  button.big { font-size:14px; padding:7px 18px; border-radius:8px; }
+  #btnPlay.primary { background:var(--ok); color:#0c1017; }
+  button.stop { background:#3a2126; color:#ff8f8f; border-color:#7a3a3a; font-weight:700; }
+  button.stop:hover { background:#5a2530; border-color:#ff6b6b; }
+  #btnLive.on { background:#20331f; border-color:var(--ok); color:var(--ok); font-weight:700; }
+  button.primary { background:var(--accent); color:#0c1017; font-weight:700; border-color:transparent; }
+  button.danger-arm { background:#5a2b2b; }
+  input[type=number] { width:58px; }
+  input[type=range] { padding:0; height:16px; }
+  label.chk { display:flex; align-items:center; gap:4px; color:var(--dim); cursor:pointer; }
+  .dot { width:8px; height:8px; border-radius:50%; background:#666; }
+  .dot.on { background:var(--ok); }
+  /* 확대율 — 휠로 바꾸는 게 본 조작이고, 이 칸은 지금 배율을 보여 주며 되돌릴 자리를 준다 */
+  .zoomctl { display:flex; align-items:center; gap:3px; color:var(--dim); }
+  .zoomctl button { padding:4px 9px; font-size:12px; line-height:1.2; }
+  .zoomctl .val { min-width:64px; text-align:center; font-size:11px; font-variant-numeric:tabular-nums; }
+
+  main { flex:1; display:grid; grid-template-columns:1fr 240px; min-height:0; }
+  #left { display:flex; flex-direction:column; min-width:0; min-height:0; }
+  .panel { background:var(--panel); overflow-y:auto; padding:10px; border-left:1px solid var(--border); }
+  .panel h2 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim); margin:4px 0 8px; }
+
+  /* ---- 어레인지(트랙 레인) 영역 ---- */
+  #arrWrap { flex:1; min-height:120px; overflow:auto; position:relative; background:var(--bg); }
+  #arrGrid { display:grid; grid-template-columns:170px max-content; grid-template-rows:26px max-content; width:max-content; }
+  #corner { position:sticky; top:0; left:0; z-index:5; background:var(--panel); border-bottom:1px solid var(--border); border-right:1px solid var(--border);
+            display:flex; align-items:center; padding:0 8px; font-size:10px; color:var(--dim); letter-spacing:1px; }
+  #ruler { position:sticky; top:0; z-index:3; display:block; cursor:crosshair; }
+  #laneHeads { position:sticky; left:0; z-index:4; background:var(--panel); border-right:1px solid var(--border); }
+  #lanes { display:block; }
+  .strip { height:52px; padding:5px 8px 4px; border-bottom:1px solid var(--border); cursor:pointer; overflow:hidden; }
+  .strip.sel { background:#1e232d; box-shadow:inset 3px 0 0 var(--accent); }
+  .strip .name { display:flex; align-items:center; gap:5px; font-weight:600; font-size:12px; white-space:nowrap; }
+  .strip .name .nm { overflow:hidden; text-overflow:ellipsis; flex:1; min-width:0; }
+  .strip .name .meta { color:var(--dim); font-weight:400; font-size:10px; }
+  .strip .swatch { width:9px; height:9px; border-radius:3px; flex:none; }
+  .strip .mute { padding:0 6px; font-size:11px; line-height:1.5; flex:none; }
+  .strip .solo { padding:0 6px; font-size:10px; font-weight:700; line-height:1.5; flex:none; color:var(--dim); }
+  .strip .solo.on { background:#3a3320; border-color:#ffd766; color:#ffd766; }
+  .velbtn.on { background:#1e2b45; border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .strip .mute.on { background:#4a2a30; border-color:#a05555; }
+  .strip input[type=range] { width:100%; margin-top:5px; display:block; }
+  .strip.muted .name .nm, .strip.muted .name .meta { opacity:.35; }
+  .addtrack { display:block; width:calc(100% - 12px); margin:6px; padding:4px; font-size:11px; color:var(--dim); background:transparent; border-style:dashed; }
+  .addtrack:hover { color:var(--text); }
+
+  /* ---- 상세 피아노롤 ---- */
+  #detail { height:40%; min-height:170px; border-top:1px solid var(--border); display:flex; flex-direction:column; background:var(--bg); }
+  #detHead { display:flex; align-items:center; gap:8px; padding:5px 10px; background:var(--panel); border-bottom:1px solid var(--border); font-size:12px; flex-wrap:wrap; }
+  #detHead .swatch { width:10px; height:10px; border-radius:3px; }
+  #detHead .nm { font-weight:700; }
+  #detHead .meta { color:var(--dim); font-size:11px; }
+  #detHead select { font-size:12px; padding:3px 8px; max-width:220px; }
+  #detHead .pen { padding:3px 10px; font-size:12px; }
+  #detHead .pen.on { background:#3a3320; border-color:#ffd766; color:#ffd766; font-weight:700; }
+  #detHead .tdel { padding:3px 8px; font-size:12px; margin-left:auto; }
+  #detWrap { flex:1; overflow:auto; position:relative; }
+  #detRoll { display:block; }
+  /* 강약 흐름 — 상세롤과 가로로 같이 움직이되 한 음씩 집는 막대가 아니라 시간 흐름을 그린다 */
+  #velWrap { flex:none; position:relative; border-top:1px solid var(--border); overflow:hidden; background:#12151a; }
+  #velLane { display:block; cursor:crosshair; touch-action:none; }
+  .vel-heading { position:absolute; z-index:2; left:9px; top:6px; display:flex; align-items:baseline; gap:7px;
+    max-width:calc(100% - 230px); pointer-events:none; white-space:nowrap; }
+  .vel-heading strong { color:#b9c6d8; font:700 10.5px/1 "Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  .vel-heading span { overflow:hidden; color:#687688; font-size:9.5px; text-overflow:ellipsis; }
+  .vel-presets { position:absolute; z-index:3; right:6px; top:4px; display:flex; gap:4px; }
+  .vel-presets button { min-height:23px; height:23px; padding:0 7px; border-color:#2c3949; color:#8f9db0;
+    background:rgba(25,33,44,.92); font-size:9.5px; }
+  .vel-presets button:hover { color:#c8d7ea; border-color:#48617f; background:#202b39; }
+
+  #logPanel { min-width:0; }
+  .logEntry { padding:5px 6px; border-bottom:1px solid #20242c; font-size:11.5px; word-break:break-all; }
+  .logEntry time { color:var(--dim); margin-right:6px; font-variant-numeric:tabular-nums; }
+  .logEntry .src { display:inline-block; font-size:9.5px; padding:0 5px; border-radius:4px; margin-right:5px; vertical-align:1px; }
+  .logEntry .src.mcp { background:#2b3a5e; color:#9db8f5; }
+  .logEntry .src.gui { background:#2e4237; color:#8fd8b0; }
+  footer { border-top:1px solid var(--border); background:var(--panel); max-height:40vh; overflow:auto; }
+  footer summary { padding:6px 14px; cursor:pointer; color:var(--dim); user-select:none; }
+  footer pre { margin:0; padding:0 14px 12px; font-size:11px; color:#aeb6c4; }
+  #empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); text-align:center; padding:20px; z-index:6; }
+  #empty[hidden] { display:none; }
+  #empty .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px 32px; max-width:460px; }
+  #empty b { color:var(--text); }
+  #toast { position:fixed; left:14px; bottom:14px; max-width:420px; background:#232830; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; white-space:pre-wrap; opacity:0; transition:opacity .25s; pointer-events:none; z-index:9; }
+  #toast.show { opacity:1; }
+  #toast.err { border-color:var(--play); }
+
+  /* 구간 피드백 팝오버 */
+  #fbPop { position:fixed; z-index:30; background:var(--panel); border:1px solid #c9a94e66; border-radius:8px; padding:10px; width:300px; box-shadow:0 6px 24px #0008; }
+  #fbPop .fbhead { font-weight:600; margin-bottom:6px; color:#ffd766; }
+  #fbPop textarea { width:100%; resize:vertical; background:#232830; color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px; font:inherit; }
+  #fbPop .fbrow { display:flex; gap:6px; justify-content:flex-end; margin-top:8px; }
+  #fbPop .fbitem { display:flex; gap:8px; align-items:flex-start; justify-content:space-between; padding:5px 0; border-top:1px solid var(--border); }
+  #fbPop .fbitem span { flex:1; word-break:break-all; }
+  #fbPop .fbedit { border-top:1px solid var(--border); margin-top:10px; padding-top:8px; }
+  #fbPop .fbedit .fbhead { color:#8fd8b0; }
+  #fbPop select { width:100%; margin-bottom:2px; }
+  #fbPop .fbrow2 { display:flex; gap:6px; align-items:center; margin-top:6px; flex-wrap:wrap; }
+  #fbPop .fbcur { color:var(--dim); font-size:11px; margin-left:auto; }
+  /* 음색 판 — 반대말 라벨 사이에 손잡이 하나. 숫자는 일부러 보여주지 않는다 */
+  #fbPop.wide { width:360px; }
+  #fbPop .tone { display:flex; align-items:center; gap:7px; margin-top:7px; }
+  #fbPop .tone .tl, #fbPop .tone .tr { color:var(--dim); font-size:11px; white-space:nowrap; }
+  #fbPop .tone .tl { width:52px; text-align:right; flex:none; }
+  #fbPop .tone .tr { width:52px; flex:none; }
+  #fbPop .tone input[type=range] { flex:1; min-width:0; margin:0; }
+  #fbPop .tone .rst { flex:none; padding:0 5px; font-size:11px; line-height:1.5; color:var(--dim);
+    visibility:hidden; background:none; border-color:transparent; }
+  #fbPop .tone.changed .rst { visibility:visible; color:#ffd766; border-color:var(--border); }
+  #fbPop .tone.changed .tl, #fbPop .tone.changed .tr { color:var(--text); }
+  #fbPop .tonenote { color:var(--dim); font-size:10.5px; margin-top:9px; line-height:1.5; }
+
+  /* ---- Listening room UI -------------------------------------------------
+     Aria는 작은 DAW가 아니라, AI가 만든 곡을 듣고 감각적으로 다듬는 도구다.
+     전문 기능은 지우지 않고 두 번째 층으로 물리고, 재생·악기·느낌을 첫 층에 둔다. */
+  :root {
+    --bg:#0b0e13; --panel:#131923; --panel2:#1c2531; --lift:#222c39;
+    --border:#2a3543; --text:#e8edf5; --dim:#94a0b2; --faint:#667286;
+    --accent:#78a8ff; --play:#65d6a6; --warn:#e6b86a; --danger:#f07878;
+    --shadow:0 18px 52px rgba(0,0,0,.45); --track-head:200px;
+  }
+  html { color-scheme:dark; }
+  body { background:var(--bg); color:var(--text); font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; }
+  button, select, input, textarea { font-family:inherit; }
+  button, select, input {
+    background:var(--panel2); color:var(--text); border-color:var(--border); border-radius:7px;
+  }
+  button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:30px; }
+  button:hover { background:var(--lift); border-color:#45556b; }
+  button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible, textarea:focus-visible {
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+  .sr-only { position:absolute!important; width:1px!important; height:1px!important; padding:0!important; margin:-1px!important;
+    overflow:hidden!important; clip:rect(0,0,0,0)!important; white-space:nowrap!important; border:0!important; }
+  .icon-sprite { position:absolute; width:0; height:0; overflow:hidden; pointer-events:none; }
+  .icon { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .icon.fill { fill:currentColor; stroke:none; }
+  .icon-button { width:34px; min-width:34px; height:34px; padding:0; }
+  .label { white-space:nowrap; }
+
+  /* 상단은 프로젝트 / 재생 / 보조 도구의 세 구역. 어떤 폭에서도 버튼 덩어리가 무작정 감기지 않는다. */
+  header.appbar {
+    min-height:64px; padding:8px 12px; display:grid; grid-template-columns:minmax(240px,1fr) auto minmax(240px,1fr);
+    align-items:center; gap:12px; flex-wrap:nowrap; background:rgba(19,25,35,.96); border-bottom:1px solid var(--border);
+    box-shadow:0 1px 0 rgba(255,255,255,.02); z-index:20;
+  }
+  .project-cluster, .transport-cluster, .header-tools { display:flex; align-items:center; min-width:0; }
+  .project-cluster { gap:9px; }
+  .brand { display:flex; align-items:center; gap:7px; flex:none; color:#cbd8eb; font:700 13px/1 "Avenir Next","Apple SD Gothic Neo",sans-serif;
+    letter-spacing:.13em; }
+  .brand-mark { width:24px; height:24px; display:grid; place-items:center; color:var(--accent); border:1px solid #3b4c63;
+    background:#111824; transform:rotate(45deg); border-radius:6px; }
+  .brand-mark .icon { width:14px; height:14px; transform:rotate(-45deg); }
+  .project-title { min-width:0; max-width:190px; display:flex; flex-direction:column; gap:1px; }
+  header .title { max-width:none; color:var(--text); font:600 14px/1.2 "Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  .project-kicker { color:var(--faint); font:9px/1.2 "SFMono-Regular",Menlo,monospace; letter-spacing:.08em; text-transform:uppercase; }
+  #libSel { width:118px; min-width:76px; padding:5px 25px 5px 9px; color:var(--dim); font-size:11px; }
+
+  .transport-cluster {
+    justify-content:center; gap:6px; padding:5px 7px; border:1px solid #273240; border-radius:12px;
+    background:#0f141c; box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 8px 24px rgba(0,0,0,.18);
+  }
+  .transport-button { height:38px; min-height:38px; border-radius:9px; }
+  #btnPlay.primary { min-width:84px; padding:0 16px; background:var(--play); color:#07140f; border-color:transparent;
+    box-shadow:0 4px 16px rgba(101,214,166,.16); }
+  #btnPlay.primary:hover { background:#76e1b3; }
+  #btnStop.stop { width:38px; min-width:38px; padding:0; background:#191f29; color:#aeb8c7; border-color:#303b49; }
+  #btnStop.stop:hover { color:var(--text); background:#222b37; border-color:#48576a; }
+  #btnLive { height:34px; padding:0 10px; color:var(--dim); background:transparent; }
+  #btnLive.on { background:#142b25; border-color:#356f5b; color:var(--play); box-shadow:inset 0 0 0 1px rgba(101,214,166,.08); }
+  .tempo-field, .range-field { display:flex; align-items:center; gap:4px; height:34px; padding:0 8px; color:var(--faint); border-left:1px solid #27313d; }
+  .tempo-field .field-label, .range-field .field-label { font-size:10px; letter-spacing:.04em; white-space:nowrap; }
+  .tempo-field .unit { color:var(--faint); font:9px/1 "SFMono-Regular",Menlo,monospace; }
+  .tempo-field input { width:48px; padding:4px 3px; border:0; background:transparent; color:var(--text); text-align:center;
+    font:600 13px/1 "SFMono-Regular",Menlo,monospace; }
+  .range-field input { width:48px; padding:4px 5px; text-align:center; background:#171e28; font:11px/1 "SFMono-Regular",Menlo,monospace; }
+  .range-dash { color:#4f5b6c; }
+
+  .header-tools { justify-content:flex-end; gap:5px; }
+  .header-tools > button:not(.icon-button) { height:34px; padding:0 10px; color:var(--dim); background:transparent; }
+  .header-tools .safety { color:#8f9aae; background:transparent; }
+  #btnActivity.on { color:var(--accent); border-color:#48658c; background:#17243a; }
+  .conn-wrap { width:22px; height:34px; display:grid; place-items:center; }
+  .dot { width:7px; height:7px; background:#5a6371; box-shadow:0 0 0 3px rgba(90,99,113,.09); }
+  .dot.on { background:var(--play); box-shadow:0 0 0 3px rgba(101,214,166,.1); }
+  details.utility-menu { position:relative; }
+  details.utility-menu > summary { list-style:none; width:34px; height:34px; display:grid; place-items:center; border:1px solid var(--border);
+    border-radius:7px; color:var(--dim); background:var(--panel2); cursor:pointer; }
+  details.utility-menu > summary::-webkit-details-marker, .precision-tools > summary::-webkit-details-marker,
+  .fbedit > summary::-webkit-details-marker { display:none; }
+  details.utility-menu[open] > summary { color:var(--accent); border-color:#48658c; background:#17243a; }
+  .utility-panel { position:absolute; right:0; top:42px; width:260px; z-index:40; padding:8px; border:1px solid #344254;
+    border-radius:11px; background:#171e28; box-shadow:var(--shadow); }
+  .menu-heading { padding:6px 7px 4px; color:var(--faint); font:9px/1 "SFMono-Regular",Menlo,monospace; letter-spacing:.12em; text-transform:uppercase; }
+  .utility-panel > button { width:100%; justify-content:flex-start; min-height:34px; padding:6px 9px; background:transparent; border-color:transparent; }
+  .utility-panel > button:hover { background:#222c39; border-color:#303d4e; }
+  .utility-panel #btnABMenu, .utility-panel .mobile-library { display:none; }
+  .utility-panel .mobile-library { width:100%; margin:2px 0 5px; color:#b6c1d0; }
+  .utility-panel .zoomctl { display:grid; grid-template-columns:1fr auto auto auto; gap:4px; padding:5px 7px 8px; color:var(--dim); }
+  .utility-panel .zoomctl button { width:32px; height:30px; min-height:30px; padding:0; }
+  .utility-panel .zoomctl .val { min-width:58px; align-self:center; text-align:left; }
+  .menu-divider { height:1px; margin:6px 4px; background:var(--border); }
+
+  .guidebar { flex:none; min-height:32px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    color:#8794a8; background:#0f141c; border-bottom:1px solid #202936; font-size:11px; }
+  .guide-copy { min-width:0; display:flex; align-items:center; gap:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .guide-copy .icon { color:var(--accent); }
+  .guide-copy strong { color:#b8c4d4; font-weight:600; }
+  #mobileViewToggle { display:none; min-height:24px; height:24px; padding:0 8px; color:#aab7c8; background:#1a2330; }
+  .sound-status { max-width:360px; height:24px; min-height:24px; padding:0 8px; border:0; background:transparent; color:#7f8b9e;
+    font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sound-status .status-dot { width:6px; height:6px; flex:none; border-radius:50%; background:#566172; }
+  .sound-status.ok { color:#a6d9c5; }.sound-status.ok .status-dot { background:var(--play); }
+  .sound-status.warn { color:#e2c68d; }.sound-status.warn .status-dot { background:var(--warn); }
+  .sound-status.critical { color:#ef9b9b; }.sound-status.critical .status-dot { background:var(--danger); }
+
+  /* 작업 기록은 캔버스 폭을 뺏지 않는 overlay drawer다. */
+  main { grid-template-columns:minmax(0,1fr); background:var(--bg); }
+  #logPanel { position:fixed; top:0; right:0; bottom:0; width:min(360px,calc(100vw - 20px)); z-index:50; padding:0;
+    background:#141b25; border-left:1px solid #334154; box-shadow:var(--shadow); transform:translateX(104%); visibility:hidden;
+    transition:transform .2s ease,visibility .2s; }
+  body.activity-open #logPanel { transform:translateX(0); visibility:visible; }
+  #activityScrim { position:fixed; inset:0; z-index:49; background:rgba(2,5,9,.55); opacity:0; visibility:hidden; transition:opacity .2s,visibility .2s; }
+  body.activity-open #activityScrim { opacity:1; visibility:visible; }
+  .drawer-head { height:58px; padding:0 12px 0 16px; display:flex; align-items:center; gap:9px; border-bottom:1px solid var(--border); }
+  .drawer-head .icon { color:var(--accent); }
+  .drawer-title { flex:1; font:600 14px/1 "Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  .drawer-sub { color:var(--faint); font-size:10px; }
+  #log { height:calc(100% - 122px); overflow:auto; padding:4px 12px 16px; }
+  .logEntry { padding:9px 4px; border-bottom:1px solid #222c38; color:#bdc6d3; line-height:1.5; }
+  .logEntry time { font-family:"SFMono-Regular",Menlo,monospace; color:#687589; }
+  .logEntry .src { min-width:28px; text-align:center; padding:1px 5px; font-size:9px; }
+  .logEntry .src.mcp { background:#1d3151; color:#9fbcf3; }
+  .logEntry .src.gui { background:#1b342c; color:#91d4b8; }
+  .dev-details { position:absolute; left:0; right:0; bottom:0; max-height:42%; overflow:auto; border-top:1px solid var(--border); background:#111720; }
+  .dev-details summary { padding:10px 15px; color:#6e7b8e; cursor:pointer; font-size:10px; }
+  .dev-details pre { margin:0; padding:0 14px 14px; font:10px/1.45 "SFMono-Regular",Menlo,monospace; color:#8f9bad; white-space:pre-wrap; }
+
+  /* 어레인지: 악기는 읽기 좋게, 음악 데이터는 화면의 대부분을 차지하게 한다. */
+  #arrGrid { grid-template-columns:var(--track-head) max-content; }
+  #corner { padding:0 10px; color:#778397; letter-spacing:0; justify-content:space-between; }
+  #corner strong { color:#aab5c5; font-size:10px; font-weight:600; }
+  #corner small { color:#566275; font-size:9px; }
+  #ruler { cursor:pointer; }
+  .strip { padding:4px 8px; background:#151b24; }
+  .strip:nth-child(even) { background:#141a22; }
+  .strip.sel { background:#1a2330; box-shadow:inset 3px 0 0 var(--accent); }
+  .strip .name { height:20px; gap:7px; }
+  .strip .swatch { width:7px; height:16px; border-radius:2px; }
+  .track-copy { min-width:0; flex:1; display:flex; align-items:baseline; gap:6px; }
+  .strip .name .nm { flex:1; color:#dde3ec; font:600 12px/1.2 "Avenir Next","Apple SD Gothic Neo",sans-serif; cursor:text; }
+  .track-name-input { min-width:0; height:23px; padding:2px 6px; border-color:#6488bf; outline:none;
+    background:#111822; color:#edf3ff; box-shadow:0 0 0 2px rgba(122,162,255,.14);
+    font:600 12px/1.2 "Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  .track-copy .track-name-input { flex:1; width:0; }
+  .strip .instrument { max-width:68px; overflow:hidden; text-overflow:ellipsis; color:#69768a; font-size:9.5px; white-space:nowrap; }
+  .track-actions { display:flex; gap:3px; opacity:.55; transition:opacity .15s; }
+  .strip:hover .track-actions, .strip.sel .track-actions, .strip:focus-within .track-actions { opacity:1; }
+  .strip .mute, .strip .solo { width:23px; min-width:23px; height:21px; min-height:21px; padding:0; border-radius:5px; }
+  .strip .solo { color:#8490a2; }
+  .strip .solo.on { background:#28311f; border-color:#8c9d51; color:#d8df87; }
+  .strip .mute.on { background:#3d252d; border-color:#77414f; color:#f0a0ac; }
+  .strip.muted .track-copy, .strip.muted .track-volume { opacity:.33; }
+  .track-volume { height:22px; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:6px; }
+  .track-volume .volume-word { min-width:28px; color:#778396; font-size:9px; }
+  .track-volume output { min-width:42px; color:#7f8b9e; text-align:right; font:9px/1 "SFMono-Regular",Menlo,monospace; }
+  .strip input[type=range] { width:100%; margin:0; accent-color:var(--accent); }
+  input[type=range] { appearance:none; height:14px; background:transparent; }
+  input[type=range]::-webkit-slider-runnable-track { height:3px; border-radius:2px; background:#354153; }
+  input[type=range]::-webkit-slider-thumb { appearance:none; width:11px; height:11px; margin-top:-4px; border:2px solid #10151d;
+    border-radius:50%; background:#a8c3ff; box-shadow:0 0 0 1px #526d9a; }
+  .addtrack { height:32px; margin:7px; color:#7f8b9d; border-color:#344153; border-radius:7px; }
+
+  /* 상세롤: 감각 조절이 먼저, 악보 직접 편집은 접힌 두 번째 층. */
+  #detail { border-color:#303b49; box-shadow:0 -10px 26px rgba(0,0,0,.12); }
+  #detHead { min-height:46px; padding:6px 9px; gap:8px; flex-wrap:nowrap; overflow:visible; }
+  .det-identity { min-width:0; display:flex; align-items:center; gap:7px; }
+  .det-identity .nm { max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:text;
+    font:600 13px/1 "Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  .det-identity .track-name-input { width:120px; flex:none; font-size:13px; }
+  .rename-track { width:25px; min-width:25px; height:25px; min-height:25px; padding:0; color:#7e8a9c;
+    border-color:transparent; background:transparent; }
+  .rename-track:hover, .rename-track:focus-visible { color:#bad0ff; border-color:#425675; background:#202a37; }
+  .det-identity select { max-width:170px; height:32px; padding:4px 24px 4px 8px; }
+  .det-vibe { display:flex; align-items:center; gap:5px; padding-left:8px; border-left:1px solid var(--border); }
+  #detHead .pen { min-height:32px; padding:4px 10px; color:#aab5c4; background:#202936; }
+  #detHead .pen.tone, #detHead .pen.feel { border-color:#344255; }
+  #detHead .pen.on { background:#1d3150; border-color:#5574a5; color:#bdd0f6; }
+  .det-meta { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#667386; font-size:10px; }
+  .precision-tools { position:relative; margin-left:auto; }
+  .precision-tools > summary { height:32px; display:flex; align-items:center; gap:6px; padding:0 9px; border:1px solid var(--border);
+    border-radius:7px; color:#8e9aac; background:#1b232e; cursor:pointer; }
+  .precision-tools[open] > summary { color:var(--accent); border-color:#48658c; }
+  .precision-panel { position:absolute; right:0; bottom:40px; width:220px; z-index:24; padding:7px; border:1px solid #344254;
+    border-radius:10px; background:#171e28; box-shadow:var(--shadow); }
+  .precision-panel button { width:100%; justify-content:flex-start; margin:2px 0; background:transparent; border-color:transparent; }
+  .precision-panel .tdel { margin-top:7px; padding-top:7px; border-top:1px solid #3b3035; color:#d98f98; }
+  #velWrap { background:#0f141b; }
+
+  @media (max-width:520px) {
+    .vel-heading { max-width:76px; }
+    .vel-heading span { display:none; }
+    .vel-presets { gap:3px; right:4px; }
+    .vel-presets button { padding:0 5px; font-size:9px; }
+  }
+
+  #fbPop { border-color:#405064; border-radius:12px; background:#171e28; box-shadow:var(--shadow); }
+  #fbPop.wide { width:min(380px,calc(100vw - 8px)); }
+  #fbPop .fbhead { display:flex; align-items:center; gap:7px; color:#dce5f1; font-family:"Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  #fbPop .fbedit { margin-top:10px; padding-top:0; border-top:1px solid var(--border); }
+  #fbPop .fbedit > summary { padding:9px 2px 2px; color:#8e9bad; cursor:pointer; font-size:11px; list-style:none; }
+  #fbPop .fbedit[open] > summary { color:#b8c6d9; }
+  .quick-feedback { display:flex; gap:5px; flex-wrap:wrap; margin:7px 0; }
+  .quick-feedback button { min-height:27px; padding:3px 8px; color:#9ca9bb; font-size:10.5px; background:#202936; }
+  #fbPop textarea { background:#111720; border-color:#303d4d; }
+  #toast { border-color:#3c4a5d; background:#1a222d; box-shadow:0 12px 34px rgba(0,0,0,.35); }
+  #toast.err { border-color:#9a555d; }
+
+  @media (max-width:1180px) {
+    header.appbar { grid-template-columns:minmax(200px,1fr) auto; grid-template-rows:42px 48px; min-height:98px; gap:2px 10px; padding:5px 9px; }
+    .project-cluster { grid-column:1; grid-row:1; }
+    .header-tools { grid-column:2; grid-row:1; }
+    .transport-cluster { grid-column:1 / -1; grid-row:2; justify-self:center; }
+    .guidebar { min-height:30px; }
+  }
+  @media (max-width:760px) {
+    :root { --track-head:200px; }
+    .project-title { max-width:120px; }
+    #libSel { display:none; }
+    .utility-panel .mobile-library { display:block; }
+    .header-tools .optional-label { display:none; }
+    .header-tools > button:not(.icon-button) { width:34px; min-width:34px; padding:0; }
+    .guide-copy span:last-child { overflow:hidden; text-overflow:ellipsis; }
+    .sound-status { max-width:150px; }
+    #detHead { min-height:44px; }
+    .det-identity select { max-width:112px; }
+    .det-meta { display:none; }
+    #detHead .pen { width:34px; min-width:34px; padding:0; }
+    #detHead .pen .label { display:none; }
+    .precision-tools > summary .label { display:none; }
+    .precision-tools > summary { width:34px; padding:0; justify-content:center; }
+  }
+  @media (max-width:520px) {
+    header.appbar { grid-template-columns:minmax(0,1fr) auto; min-height:98px; }
+    .brand .brand-word, .project-kicker { display:none; }
+    .project-title { max-width:118px; }
+    #btnAB { display:none; }
+    .utility-panel #btnABMenu { display:flex; }
+    .transport-cluster { width:100%; gap:3px; padding:4px; }
+    #btnPlay.primary { min-width:68px; padding:0 11px; }
+    #btnLive { width:36px; min-width:36px; padding:0; }
+    #btnLive .label, .tempo-field .field-label, .range-field .field-label, .range-end { display:none; }
+    .tempo-field, .range-field { padding:0 4px; }
+    .guide-copy { display:none; }
+    #mobileViewToggle { display:flex; }
+    .sound-status { max-width:220px; margin-left:auto; }
+    #detail { height:42%; min-height:155px; }
+    #detHead { gap:5px; padding-inline:6px; }
+    .det-identity { gap:4px; }
+    .det-identity .swatch { display:none; }
+    .det-identity .nm { max-width:48px; }
+    .det-identity select { display:block; width:86px; max-width:86px; min-width:0; padding-inline:6px 18px; }
+    .det-vibe { margin-left:0; padding-left:5px; gap:3px; }
+    #detHead .pen { width:auto; min-width:43px; padding:0 5px; }
+    #detHead .pen .label { display:inline; font-size:0; }
+    #detHead .pen .label::after { content:attr(data-short); font-size:10px; }
+    .precision-tools > summary { width:auto; min-width:43px; padding:0 5px; }
+    .precision-tools > summary .label { display:inline; font-size:0; }
+    .precision-tools > summary .label::after { content:attr(data-short); font-size:10px; }
+    .strip { padding:1px 6px; }
+    .strip .name { height:28px; gap:5px; }
+    .strip .mute, .strip .solo { width:30px; min-width:30px; height:28px; min-height:28px; }
+    .track-volume { height:21px; }
+    .strip input[type=range]::-webkit-slider-thumb { width:15px; height:15px; margin-top:-6px; }
+    body.timeline-focus { --track-head:52px; }
+    body.timeline-focus .track-copy,
+    body.timeline-focus .track-actions,
+    body.timeline-focus .track-volume,
+    body.timeline-focus .addtrack,
+    body.timeline-focus #corner small { display:none; }
+    body.timeline-focus .strip { display:flex; align-items:center; justify-content:center; padding:0; }
+    body.timeline-focus .strip .name { height:52px; justify-content:center; }
+    body.timeline-focus .strip .swatch { width:8px; height:32px; }
+    body.timeline-focus #corner { justify-content:center; padding:0; }
+    body.timeline-focus #corner strong { font-size:0; }
+    body.timeline-focus #corner strong::after { content:"악기색"; font-size:9px; }
+    .precision-panel { position:fixed; right:4px; bottom:8px; max-height:70vh; overflow:auto; }
+    #fbPop { max-width:calc(100vw - 8px); }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; }
+  }
+</style>
+</head>
+<body>
+<svg class="icon-sprite" aria-hidden="true">
+  <symbol id="i-aria" viewBox="0 0 24 24"><path d="M3 12h3l2.5-7 4.5 14 3-9 2 5h3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="m13 2-10 12h9l-1 8 10-12h-9z"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="m9 14-4-4 4-4"/><path d="M5 10h8a6 6 0 0 1 6 6v2"/></symbol>
+  <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 4-4-4-4"/><path d="M19 10h-8a6 6 0 0 0-6 6v2"/></symbol>
+  <symbol id="i-compare" viewBox="0 0 24 24"><path d="m16 3 4 4-4 4M20 7H4M8 21l-4-4 4-4M4 17h16"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+  <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6"/></symbol>
+  <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 14a8 8 0 0 1 16 0"/><path d="M18 19v-5h3v5a2 2 0 0 1-2 2h-1M6 19v-5H3v5a2 2 0 0 0 2 2h1"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></symbol>
+  <symbol id="i-volume-x" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zM16 10l5 5M21 10l-5 5"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+  <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3 1.3 3.7L17 8l-3.7 1.3L12 13l-1.3-3.7L7 8l3.7-1.3zM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8zM5 14l.7 1.8L8 16.5l-2.3.7L5 19l-.7-1.8-2.3-.7 2.3-.7z"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10zM14 7l3 3"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="7" r="3"/><circle cx="6" cy="17" r="3"/><path d="m8.5 8.5 11 7.5M8.5 15.5 19 8"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
+  <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M3 8h5V3M21 8h-5V3M3 16h5v5M21 16h-5v5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-message" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></symbol>
+</svg>
+<header class="appbar">
+  <div class="project-cluster">
+    <span class="brand"><span class="brand-mark"><svg class="icon"><use href="#i-aria"></use></svg></span><span class="brand-word">ARIA</span></span>
+    <span class="project-title"><span class="title" id="songTitle">—</span><span class="project-kicker">AI composition</span></span>
+    <select id="libSel" title="보관한 곡 열기" aria-label="보관한 곡 열기"></select>
+    <button id="btnSave" class="icon-button" title="현재 곡 보관" aria-label="현재 곡 보관"><svg class="icon"><use href="#i-save"></use></svg></button>
+  </div>
+  <div class="transport-cluster" role="group" aria-label="재생">
+    <button id="btnStop" class="stop transport-button" title="정지" aria-label="정지"><svg class="icon"><use href="#i-stop"></use></svg></button>
+    <button id="btnPlay" class="primary transport-button"><svg class="icon fill"><use href="#i-play"></use></svg><span class="label">재생</span></button>
+    <label class="tempo-field"><span class="field-label">빠르기</span><input type="number" id="bpm" min="20" max="300" step="1" aria-label="빠르기"><span class="unit">BPM</span></label>
+    <label class="range-field" title="눈금자를 클릭해 시작 마디를 정할 수도 있습니다"><span class="field-label">들을 구간</span><input type="number" id="fromBar" min="1" step="1" placeholder="처음" aria-label="재생 시작 마디"><span class="range-end"><span class="range-dash">–</span><input type="number" id="toBar" min="1" step="1" placeholder="끝" aria-label="재생 종료 마디"></span></label>
+    <button id="btnLive" title="켜 두면 악기를 끄거나 음량을 바꿀 때 기다리지 않고 바로 들립니다" aria-pressed="false"><svg class="icon"><use href="#i-zap"></use></svg><span class="label">바로 듣기</span></button>
+  </div>
+  <div class="header-tools">
+    <button id="btnUndo" class="icon-button safety" title="되돌리기 (⌘Z)" aria-label="되돌리기"><svg class="icon"><use href="#i-undo"></use></svg></button>
+    <button id="btnRedo" class="icon-button safety" title="다시 적용 (⇧⌘Z)" aria-label="다시 적용"><svg class="icon"><use href="#i-redo"></use></svg></button>
+    <button id="btnAB" title="두 안을 담아 두고 같은 부분을 번갈아 들어 봅니다"><svg class="icon"><use href="#i-compare"></use></svg><span class="label optional-label">두 안 비교</span></button>
+    <button id="btnActivity" title="AI와 직접 편집의 작업 기록" aria-pressed="false"><svg class="icon"><use href="#i-activity"></use></svg><span class="label optional-label">AI 작업</span></button>
+    <details class="utility-menu" id="utilityMenu">
+      <summary title="프로젝트와 내보내기" aria-label="프로젝트와 내보내기"><svg class="icon"><use href="#i-more"></use></svg></summary>
+      <div class="utility-panel">
+        <div class="menu-heading">프로젝트</div>
+        <select id="libSelMenu" class="mobile-library" title="보관한 곡 열기" aria-label="보관한 곡 열기"></select>
+        <button id="btnNew"><svg class="icon"><use href="#i-plus"></use></svg><span class="label">새 곡</span></button>
+        <div class="menu-divider"></div>
+        <div class="menu-heading">내보내기</div>
+        <button id="btnWav"><svg class="icon"><use href="#i-download"></use></svg><span class="label">오디오 파일</span></button>
+        <button id="btnMidi"><svg class="icon"><use href="#i-file"></use></svg><span class="label">MIDI</span></button>
+        <button id="btnStems" title="악기마다 오디오 파일을 따로 만듭니다"><svg class="icon"><use href="#i-layers"></use></svg><span class="label">악기별 오디오</span></button>
+        <div class="menu-divider"></div>
+        <div class="menu-heading">보기</div>
+        <button id="btnABMenu"><svg class="icon"><use href="#i-compare"></use></svg><span class="label">두 안 비교</span></button>
+        <span class="zoomctl" title="⌘/Ctrl + 휠 = 가로 확대 · ⌥/Alt + 휠 = 세로 확대">
+          <span class="val" id="zoomVal">100%</span>
+          <button id="zoomOut" title="축소 (−)" aria-label="축소"><svg class="icon"><use href="#i-zoom-out"></use></svg></button>
+          <button id="zoomIn" title="확대 (+)" aria-label="확대"><svg class="icon"><use href="#i-zoom-in"></use></svg></button>
+          <button id="zoomFit" title="화면에 맞추기 (0)" aria-label="화면에 맞추기"><svg class="icon"><use href="#i-fit"></use></svg></button>
+        </span>
+      </div>
+    </details>
+    <span class="conn-wrap"><span class="dot" id="connDot" title="서버 연결"></span></span>
+  </div>
+</header>
+<div class="guidebar">
+  <div class="guide-copy"><svg class="icon"><use href="#i-sparkles"></use></svg><strong>느낌으로 다듬기</strong><span>악기를 켜고 끄며 찾고, 소리·연주 느낌을 조절하세요. 눈금 드래그는 AI에게 남기는 메모입니다.</span></div>
+  <button id="mobileViewToggle" title="악기 조절과 확대된 곡 보기를 바꿉니다"><svg class="icon"><use href="#i-expand"></use></svg><span class="label">곡 크게 보기</span></button>
+  <button id="soundStatus" class="sound-status" title="재생하면 완성된 소리의 상태를 확인합니다"><span class="status-dot"></span><span id="soundStatusLabel">재생하면 소리 상태를 확인합니다</span></button>
+</div>
+<main>
+  <div id="left">
+    <div id="arrWrap">
+      <div id="arrGrid">
+        <div id="corner"><strong>악기</strong><small>켜고 끄며 찾기</small></div>
+        <canvas id="ruler" title="클릭: 재생 시작 마디 · 드래그: 구간 피드백"></canvas>
+        <div id="laneHeads"></div>
+        <canvas id="lanes" title="색이 짙고 아래 띠가 높은 곳은 음표의 세기와 겹침이 많은 구간입니다. 실제 오디오 음량은 재생하며 확인하세요" aria-label="곡 전체 악기 배치"></canvas>
+      </div>
+      <div id="empty" hidden><div class="card">
+        <b>원하는 장면과 느낌부터 말해 보세요.</b><br><br>
+        Codex나 Claude Code에서<br><b>“비 오는 밤, 후렴에서 크게 열리는 시티팝”</b>처럼 부탁하면<br>
+        AI가 곡을 만드는 동안 이 화면에 바로 들리고 보입니다.<br><br>
+        직접 시작하고 싶다면 메뉴에서 <b>새 곡</b>을 고르세요.
+      </div></div>
+    </div>
+    <div id="detail">
+      <div id="detHead"></div>
+      <div id="detWrap"><canvas id="detRoll"></canvas></div>
+      <div id="velWrap">
+        <div class="vel-heading"><strong>강약 흐름</strong><span id="velHintText">선을 그어 점점 세게·여리게 만드세요</span></div>
+        <div class="vel-presets" role="group" aria-label="보이는 구간 강약 빠른 설정">
+          <button id="velRise" title="현재 화면에 보이는 음을 점점 세게 연주합니다">점점 세게</button>
+          <button id="velEven" title="현재 화면에 보이는 음의 세기를 고르게 맞춥니다">고르게</button>
+          <button id="velFall" title="현재 화면에 보이는 음을 점점 여리게 연주합니다">점점 여리게</button>
+        </div>
+        <canvas id="velLane" title="강약 흐름 — 원하는 구간에 선을 그으면 시작과 끝 사이가 점점 세지거나 여려집니다" aria-label="선택한 악기의 강약 흐름 그래프"></canvas>
+      </div>
+    </div>
+  </div>
+  <aside class="panel" id="logPanel" aria-label="AI 작업 기록">
+    <div class="drawer-head"><svg class="icon"><use href="#i-activity"></use></svg><span class="drawer-title">AI 작업</span><span class="drawer-sub">무엇을 바꿨는지</span><button id="btnActivityClose" class="icon-button" aria-label="닫기"><svg class="icon"><use href="#i-x"></use></svg></button></div>
+    <div id="log"></div>
+    <details class="dev-details"><summary>개발자용 곡 데이터</summary><pre id="songJson"></pre></details>
+  </aside>
+</main>
+<div id="activityScrim"></div>
+<div id="toast"></div>
+<div id="fbPop" hidden></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const uiIcon = (name, cls = "") => `<svg class="icon${cls ? " " + cls : ""}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+const setUiButton = (button, icon, label) => {
+  button.innerHTML = `${uiIcon(icon)}<span class="label">${escapeHtml(label)}</span>`;
+};
+const COLORS = ["#7aa2ff","#5fd4a2","#f2b06b","#e58fe0","#6bd5f2","#eded8a","#ff8f8f","#b49bff"];
+let song = null, meta = null, selected = 0, playing = null;
+// 조성 판정과 "그 조에서 벗어난 음" — 서버가 확신할 때만 보내 준다(확신 없으면 key만 오고 목록은 빈다)
+let songKey = null, offKey = new Map();
+const noteKeyOf = n => `${n.bar}:${+(Number(n.beat) || 0).toFixed(4)}:${n.pitch}`;
+let drumPieceOrder = [];
+
+// ---------- 서버 통신 ----------
+let playRequestSeq = 0, playbackRangeRevision = 0;
+async function rpc(tool, args) {
+  // 구버전 서버도 GUI 재생 결과에는 레벨 문장을 돌려준다. 응답이 늦게 와서 새 곡/새 구간의
+  // 판정을 덮지 못하도록 요청 시점의 곡 signature·구간 revision·최신 재생 번호를 함께 붙든다.
+  const playGuard = tool === "play" ? {
+    seq: ++playRequestSeq,
+    signature: soundStateSignature,
+    rangeRevision: playbackRangeRevision,
+    fromBar: args?.from_bar ?? 1,
+    toBar: args?.to_bar ?? (song ? totalBars() : 1)
+  } : null;
+  try {
+    const r = await fetch("/api/rpc", { method:"POST", body: JSON.stringify({ tool, args }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error);
+    toast(j.result.split("\n")[0]);
+    if (playGuard && playGuard.seq === playRequestSeq &&
+        playGuard.signature === soundStateSignature && playGuard.rangeRevision === playbackRangeRevision) {
+      updateSoundStatus(j.result, playGuard);
+    }
+    return j.result;
+  } catch (e) {
+    toast("오류: " + e.message, true);
+    renderAll(); // 실패한 변경이 컨트롤(셀렉트·슬라이더)에 남지 않게 현재 상태로 복원
+    throw e;
+  }
+}
+
+let soundStatusDetail = "";
+let soundStatusValid = false;
+let soundStateSignature = "";
+function soundSignatureOf(s) {
+  if (!s) return "";
+  const { feedback, sections, title, ...audible } = s;
+  return JSON.stringify(audible);
+}
+function invalidateSoundStatus(labelText = "바뀐 소리는 재생 후 확인", detailText = "곡이나 믹스가 바뀌었습니다. 완성 음질로 재생하면 새 출력 상태를 확인합니다.") {
+  if (!soundStatusValid) return;
+  const el = $("soundStatus"), label = $("soundStatusLabel");
+  soundStatusValid = false;
+  el.className = "sound-status";
+  label.textContent = labelText;
+  soundStatusDetail = detailText;
+  el.title = soundStatusDetail;
+}
+function updateSoundStatus(result, range = null) {
+  const line = String(result ?? "").split("\n").find(x => x.startsWith("레벨:"));
+  if (!line) return;
+  const el = $("soundStatus"), label = $("soundStatusLabel");
+  let state = "ok", text = "출력 상태가 안정적이에요";
+  if (line.includes("왜곡")) { state = "critical"; text = "소리가 찌그러질 수 있어요"; }
+  else if (line.includes("리미터가 많이")) { state = "warn"; text = "겹친 소리가 너무 세게 몰려 있어요"; }
+  else if (line.includes("너무 조용")) { state = "warn"; text = "전체 소리가 아주 작아요"; }
+  el.className = `sound-status ${state}`;
+  label.textContent = text;
+  soundStatusValid = true;
+  const checked = range?.fromBar ? `\n확인 구간: ${range.fromBar}${range.toBar !== range.fromBar ? `~${range.toBar}` : ""}마디` : "";
+  soundStatusDetail = `${text}${checked}\n${line}`;
+  el.title = soundStatusDetail;
+}
+function currentPlaybackRange() {
+  if (!song) return { fromBar: 1, toBar: 1 };
+  const last = totalBars();
+  const rawFrom = Number($("fromBar").value), rawTo = Number($("toBar").value);
+  const fromBar = $("fromBar").value && Number.isInteger(rawFrom) ? Math.max(1, Math.min(last, rawFrom)) : 1;
+  const toBar = $("toBar").value && Number.isInteger(rawTo) ? Math.max(fromBar, Math.min(last, rawTo)) : last;
+  return { fromBar, toBar };
+}
+
+let toastTimer;
+function toast(msg, err = false) {
+  const t = $("toast");
+  t.textContent = msg; t.className = "show" + (err ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = "", 3500);
+}
+
+const es = new EventSource("/events");
+es.onopen = () => $("connDot").classList.add("on");
+es.onerror = () => $("connDot").classList.remove("on");
+es.onmessage = ev => {
+  const msg = JSON.parse(ev.data);
+  if (msg.type === "state") {
+    const nextSoundSignature = soundSignatureOf(msg.song);
+    if (soundStateSignature && nextSoundSignature !== soundStateSignature) invalidateSoundStatus();
+    soundStateSignature = nextSoundSignature;
+    const viewAnchor = captureMusicView(); // AI/GUI 편집으로 곡 길이·음역이 바뀌어도 보던 위치를 복원
+    // 서버/AI가 곡을 교체하면 드래그 시작 때 잡은 옛 노트 객체는 더 이상 유효하지 않다.
+    // 로컬 미리보기는 곧 새 song 객체로 덮이므로 되돌리지 않고 제스처만 끝낸다.
+    if (velDrag) cancelVelGesture(false, false);
+    song = msg.song;
+    detDrag = null; detSel = null; detMarq = null; detSelSet = new Set(); detDraw = null; splitHover = null; // 곡 객체 교체 — 옛 노트 참조는 무효
+    if (pendingSelectLast && song?.tracks.length) { selected = song.tracks.length - 1; pendingSelectLast = false; } // 방금 추가한 트랙 선택
+    if (Array.isArray(msg.songs)) { librarySongs = msg.songs; renderLibrary(); }
+    songKey = msg.key ?? null;
+    offKey = new Map(Object.entries(msg.outOfKey ?? {}).map(([k, v]) => [k, new Set(v)]));
+    if (!msg.playing) { if (!live.playing) playing = null; } // 서버 정지 = 유령 헤드 제거 (즉시 믹스 재생 중이면 유지)
+    else if (!playing) {
+      // 재생 도중 접속: 서버 시각으로 t0를 되감아 위치를 맞추고 애니메이션 시작
+      const behind = msg.playing.startedAt ? Date.now() - msg.playing.startedAt : 0;
+      playing = { ...msg.playing, t0: performance.now() - behind };
+      tick();
+    } // 이미 재생 표시 중이면 t0를 유지 — 뮤테이션 브로드캐스트로 헤드가 리셋되지 않게
+    renderAll();
+    if (viewAnchor && viewAnchor.songTitle === song?.title &&
+        viewAnchor.trackName === song?.tracks[selected]?.name) restoreMusicView(viewAnchor);
+    liveGainAll(); // 즉시 믹스 재생 중이면 바뀐 볼륨·음소거를 게인에 반영
+    liveResyncSoon(); // 파형에 구워진 값(음색·노트·덕킹)이 바뀌었으면 다시 구워 이어 붙인다
+    if (fbRefresh) fbRefresh(); // 팝오버가 열려 있으면 갱신된 곡 기준으로 현재 dB를 다시 표시
+  }
+  else if (msg.type === "log") addLogEntry(msg.entry);
+  else if (msg.type === "level") {
+    // 렌더 중 사용자가 다음 재생 구간을 바꿨다면, 늦게 온 옛 구간 판정으로 새 선택을 덮지 않는다.
+    const cur = currentPlaybackRange();
+    if (+msg.fromBar === cur.fromBar && +msg.toBar === cur.toBar) updateSoundStatus(msg.text, msg);
+  }
+  else if (msg.type === "play") { playing = { ...msg, t0: performance.now() }; tick(); }
+  else if (msg.type === "stop") { if (!live.playing) { playing = null; draw(); } }
+};
+
+fetch("/api/meta").then(r => r.json()).then(m => {
+  meta = m;
+  drumPieceOrder = m.drumPieces;
+  renderAll();
+});
+
+// ---------- 헤더 동작 ----------
+const setActivityOpen = on => {
+  document.body.classList.toggle("activity-open", on);
+  $("btnActivity").classList.toggle("on", on);
+  $("btnActivity").setAttribute("aria-pressed", String(on));
+};
+$("btnActivity").onclick = () => setActivityOpen(!document.body.classList.contains("activity-open"));
+$("btnActivityClose").onclick = () => setActivityOpen(false);
+$("activityScrim").onclick = () => setActivityOpen(false);
+$("utilityMenu").ontoggle = ev => { if (ev.currentTarget.open) hideFbPop(); };
+$("soundStatus").onclick = () => toast(soundStatusDetail || "곡을 재생하면 왜곡·음량 상태를 확인합니다");
+let mobileZoomBefore = 1;
+$("mobileViewToggle").onclick = ev => {
+  const on = !document.body.classList.contains("timeline-focus");
+  const anchor = song ? captureMusicView() : null;
+  if (on) { mobileZoomBefore = zoomX; zoomX = Math.max(3, zoomX); }
+  else zoomX = mobileZoomBefore;
+  document.body.classList.toggle("timeline-focus", on);
+  setUiButton(ev.currentTarget, on ? "sliders" : "expand", on ? "악기 보기" : "곡 크게 보기");
+  if (song) { draw(); restoreMusicView(anchor); }
+  renderZoom();
+  ev.currentTarget.blur();
+};
+$("btnUndo").onclick = () => rpc("undo_edit", {}).catch(() => {});
+$("btnRedo").onclick = () => rpc("redo_edit", {}).catch(() => {});
+$("btnPlay").onclick = () => {
+  if (live.on) { livePlay(); return; }
+  const args = {};
+  if ($("fromBar").value) args.from_bar = +$("fromBar").value;
+  if ($("toBar").value) args.to_bar = +$("toBar").value;
+  rpc("play", args);
+};
+for (const id of ["fromBar", "toBar"]) {
+  // 숫자로 직접 고친 시작·종료 위치도 캔버스의 고정 시작선에 바로 반영한다.
+  $(id).addEventListener("input", () => {
+    playbackRangeRevision++;
+    invalidateSoundStatus("재생 구간을 다시 확인하세요", "재생할 구간이 바뀌었습니다. 새 구간을 재생하면 그 구간의 출력 상태를 확인합니다.");
+    if (song) draw();
+  });
+}
+$("fromBar").addEventListener("change", () => {
+  if (!song) return;
+  const from = Number($("fromBar").value), to = Number($("toBar").value);
+  if ($("fromBar").value && Number.isInteger(from)) {
+    $("fromBar").value = String(Math.max(1, Math.min(totalBars(), from)));
+  }
+  if ($("toBar").value && Number.isInteger(to) && to < +$("fromBar").value) {
+    $("toBar").value = "";
+    toast("종료 마디를 비웠습니다 — 선택한 마디부터 곡 끝까지 재생합니다");
+  }
+  draw();
+});
+$("toBar").addEventListener("change", () => {
+  if (!song) return;
+  const to = Number($("toBar").value);
+  if ($("toBar").value && Number.isInteger(to)) {
+    $("toBar").value = String(Math.max(1, Math.min(totalBars(), to)));
+  }
+  const from = Number($("fromBar").value);
+  if ($("fromBar").value && $("toBar").value && Number.isInteger(from) && +$("toBar").value < from) {
+    $("toBar").value = "";
+    toast("종료 마디를 비웠습니다 — 선택한 마디부터 곡 끝까지 재생합니다");
+  }
+  draw();
+});
+$("btnStop").onclick = () => {
+  if (live.playing) { liveStop(); return; }
+  rpc("stop", {});
+};
+$("btnLive").onclick = () => {
+  live.on = !live.on;
+  $("btnLive").classList.toggle("on", live.on);
+  $("btnLive").setAttribute("aria-pressed", String(live.on));
+  if (live.on) toast("바로 듣기 켬 — 재생 중에도 악기 끄기와 음량이 즉시 반영됩니다");
+  else { liveStop(); toast("바로 듣기 끔 — 완성 음질로 재생합니다"); }
+};
+$("btnMidi").onclick = () => rpc("export", { format:"midi" });
+$("btnWav").onclick = () => rpc("export", { format:"wav" });
+$("btnAB").onclick = e => {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.blur();
+  showAbPop(r.right - 300, r.bottom);
+};
+$("btnABMenu").onclick = e => {
+  const r = e.currentTarget.getBoundingClientRect();
+  $("utilityMenu").open = false;
+  showAbPop(r.right - 300, r.bottom);
+  e.currentTarget.blur();
+};
+$("btnStems").onclick = () => rpc("export", { stems:true, from_bar:+($("fromBar").value||1) || undefined, to_bar:+($("toBar").value) || undefined });
+$("bpm").onchange = () => rpc("set_tempo", { bpm: +$("bpm").value });
+let newArmed = false, newTimer;
+$("btnNew").onclick = () => {
+  if (!song || !song.tracks.some(t => t.notes.length)) return doNew();
+  if (!newArmed) {
+    newArmed = true; setUiButton($("btnNew"), "trash", "지금 곡을 버릴까요?"); $("btnNew").classList.add("danger-arm");
+    newTimer = setTimeout(disarmNew, 2500); return;
+  }
+  doNew();
+};
+function disarmNew() { newArmed = false; clearTimeout(newTimer); setUiButton($("btnNew"), "plus", "새 곡"); $("btnNew").classList.remove("danger-arm"); }
+function doNew() { disarmNew(); rpc("new_song", {}); }
+
+// ---------- 로그 ----------
+const logSeen = new Set();
+function addLogEntry(e) {
+  const key = e.id ?? `${e.at}|${e.source}|${e.text}`; // 이전 서버 기록에는 id가 없을 수 있다
+  if (logSeen.has(key)) return; // SSE 재접속 때 서버가 최근 기록을 다시 보내도 한 번만 보인다
+  logSeen.add(key);
+  const d = new Date(e.at);
+  const hh = String(d.getHours()).padStart(2,"0"), mm = String(d.getMinutes()).padStart(2,"0"), ss = String(d.getSeconds()).padStart(2,"0");
+  const div = document.createElement("div");
+  div.className = "logEntry";
+  div.dataset.key = key;
+  const sourceLabel = e.source === "mcp" ? "AI" : e.source === "gui" ? "직접" : e.source;
+  div.innerHTML = `<time>${hh}:${mm}:${ss}</time><span class="src ${e.source}">${sourceLabel}</span>${escapeHtml(e.text)}`;
+  const log = $("log");
+  log.prepend(div);
+  while (log.children.length > 100) {
+    logSeen.delete(log.lastChild.dataset.key);
+    log.lastChild.remove();
+  }
+}
+function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+
+// ---------- 곡 라이브러리 ----------
+let librarySongs = [];
+function renderLibrary() {
+  const cur = song?.title;
+  const html = `<option value="">곡 목록 (${librarySongs.length})</option>` +
+    librarySongs.map(n => `<option value="${escapeHtml(n)}"${n === cur ? " selected" : ""}>${escapeHtml(n)}</option>`).join("");
+  for (const sel of [$("libSel"), $("libSelMenu")]) {
+    if (document.activeElement !== sel) sel.innerHTML = html; // 드롭다운이 열려 있는 동안 파괴 금지
+  }
+}
+const openLibrarySong = ev => {
+  const v = ev.currentTarget.value;
+  ev.currentTarget.blur();
+  $("utilityMenu").open = false;
+  if (v && v !== song?.title) rpc("load_song", { name: v });
+};
+$("libSel").onchange = openLibrarySong;
+$("libSelMenu").onchange = openLibrarySong;
+$("btnSave").onclick = () => rpc("save_song", {});
+
+// ---------- ⚡ 즉시 믹스: 트랙별 스템을 캐시해 Web Audio로 실시간 믹스 ----------
+// 서버 렌더(수 초)는 악보가 바뀐 트랙에만 다시 필요하고, 음소거·볼륨은 게인 노드라 즉시 반영된다.
+// 스템은 트랙 볼륨·음소거 없이 구워지므로(구간 게인·리버브·팬은 포함) 켜고 끄는 게 실시간이다.
+const live = { on: false, busy: false, ctx: null, master: null, stems: new Map(), playing: null, endTimer: null };
+
+// 덕킹(e808 킥이 다른 트랙을 누름)은 모든 스템에 구워지므로, 킥이 바뀌면 전 스템이 낡는다
+const duckSig = () => JSON.stringify(song.tracks
+  .filter(t => t.preset.includes("808"))
+  .map(t => [t.name, !!t.mute, !!t.solo, t.notes.filter(n => n.pitch === "kick")]));
+// 볼륨 페이더는 dB 눈금 — 사람 귀는 배수(dB)로 듣지 비율로 듣지 않는다.
+// 0.8(예전 기본)은 -1.9dB, 1.0이 0dB(원래 크기), 2.0이 +6dB. -40dB는 사실상 무음이라 0으로 접는다.
+const VOL_MIN_DB = -40, VOL_MAX_DB = 6;
+const dbToVol = db => db <= VOL_MIN_DB ? 0 : Math.round(Math.pow(10, db / 20) * 1000) / 1000;
+const volToDb = v => v <= 0.0001 ? VOL_MIN_DB
+  : Math.max(VOL_MIN_DB, Math.min(VOL_MAX_DB, Math.round(20 * Math.log10(v) * 2) / 2));
+const dbLabel = v => v <= 0.0001 ? "−∞" : `${volToDb(v) > 0 ? "+" : ""}${volToDb(v).toFixed(1)}dB`;
+
+const anySolo = () => song.tracks.some(t => t.solo);
+// 솔로가 켜져 있으면 솔로 트랙만, 아니면 음소거 아닌 트랙만 들린다
+const liveGainOf = t => (anySolo() ? !!t.solo : !t.mute) ? t.volume : 0;
+const stemHash = (t, from, to, ds) => JSON.stringify([
+  t.preset, t.notes, t.gains ?? null, t.pan, t.velRange ?? null, t.attack ?? null,
+  t.release ?? null, t.reverb ?? null, t.ensemble ?? null,
+  t.eqLow ?? null, t.eqMid ?? null, t.eqHigh ?? null, t.vibrato ?? null,
+  song.bpm, song.timeSig, song.tempoMap ?? [], from, to, ds]);
+
+async function ensureStems(from, to) {
+  const ds = duckSig();
+  const need = song.tracks.filter(t => live.stems.get(t.name)?.hash !== stemHash(t, from, to, ds));
+  for (let i = 0; i < need.length; i++) {
+    const t = need[i];
+    toast(`⚡ 렌더 중 ${i + 1}/${need.length} — ${t.name} (바뀐 악기만 다시 굽습니다)`);
+    const r = await fetch(`/api/stem?track=${encodeURIComponent(t.name)}&from=${from}&to=${to}`);
+    if (!r.ok) throw new Error(await r.text());
+    const buffer = await live.ctx.decodeAudioData(await r.arrayBuffer());
+    live.stems.set(t.name, { buffer, hash: stemHash(t, from, to, ds) });
+  }
+  for (const k of [...live.stems.keys()]) if (!song.tracks.some(t => t.name === k)) live.stems.delete(k);
+}
+
+function liveMaster() {
+  if (!live.master) {
+    const c = live.ctx.createDynamicsCompressor(); // 서버 마스터의 글루 컴프 근사
+    c.threshold.value = -9; c.knee.value = 6; c.ratio.value = 2.5; c.attack.value = 0.005; c.release.value = 0.15;
+    c.connect(live.ctx.destination);
+    live.master = c;
+  }
+  return live.master;
+}
+
+async function livePlay() {
+  if (!song || !song.tracks.some(t => t.notes.length)) { toast("재생할 노트가 없습니다", true); return; }
+  if (live.busy) return;
+  live.busy = true;
+  try {
+    liveStop();
+    if (!live.ctx) live.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await live.ctx.resume();
+    const tb = totalBars();
+    const from = Math.max(1, Math.min(+($("fromBar").value || 1), tb));
+    const to = Math.max(from, Math.min(+($("toBar").value || tb), tb));
+    await ensureStems(from, to);
+    const t0 = live.ctx.currentTime + 0.08;
+    const nodes = new Map();
+    let maxDur = 0;
+    for (const t of song.tracks) {
+      const s = live.stems.get(t.name);
+      if (!s) continue;
+      const src = live.ctx.createBufferSource();
+      src.buffer = s.buffer;
+      const g = live.ctx.createGain();
+      g.gain.value = liveGainOf(t);
+      src.connect(g); g.connect(liveMaster());
+      src.start(t0);
+      nodes.set(t.name, { src, g });
+      maxDur = Math.max(maxDur, s.buffer.duration);
+    }
+    live.playing = { nodes, from, to, t0, at: 0 }; // t0: 이 소스들이 시작한 오디오 시각, at: 그 시각의 곡 내 위치(초)
+    const segs = tempoSegs(), bpb = beatsPerBar();
+    const rangeSec = beatToSec(segs, to * bpb) - beatToSec(segs, (from - 1) * bpb);
+    playing = { fromBar: from, toBar: to, rangeSec, t0: performance.now() + 80 };
+    tick();
+    toast(`⚡ ${from}~${to}마디 즉시 재생 — 음소거·볼륨이 실시간 반영됩니다`);
+    live.endTimer = setTimeout(liveStop, (maxDur + 0.3) * 1000);
+  } catch (e) {
+    toast("오류: " + e.message, true);
+  } finally {
+    live.busy = false;
+  }
+}
+
+function liveStop() {
+  clearTimeout(live.endTimer);
+  clearTimeout(resyncTimer); // 멈춘 뒤에 다시 굽기가 깨어나 혼자 재생을 시작하지 않게
+  if (!live.playing) return;
+  for (const { src } of live.playing.nodes.values()) { try { src.stop(); } catch { /* 이미 정지 */ } }
+  live.playing = null;
+  playing = null;
+  if (song) draw();
+}
+
+// 파형에 구워진 값이 재생 중에 바뀌면 다시 굽고 "듣던 자리에서" 이어 붙인다.
+// 예전에는 재생 시작 때 한 번만 구워서, 재생 중 음색·노트를 바꾸면 다음 ▶ 까지 안 들렸다.
+// 특히 e808 킥을 음소거해도 다른 스템에 구워진 덕킹(눌림)이 그대로 남아 있었다.
+let resyncTimer = null, resyncBusy = false;
+function liveResyncSoon() {
+  if (!live.playing) return;
+  clearTimeout(resyncTimer);
+  resyncTimer = setTimeout(liveResync, 300); // AI가 연속 편집을 쏟아내도 한 번으로 모은다
+}
+
+async function liveResync() {
+  if (!live.playing || resyncBusy || !song) return;
+  const { from, to } = live.playing;
+  const ds = duckSig();
+  if (!song.tracks.some(t => live.stems.get(t.name)?.hash !== stemHash(t, from, to, ds))) return;
+  resyncBusy = true;
+  const wasPlaying = live.playing;
+  try {
+    // 굽는 동안에도 옛 소리는 계속 흐른다 — 여기서 멈추면 렌더 시간만큼 정적이 생긴다
+    await ensureStems(from, to);
+    // 곡이 사라졌거나 사용자가 그새 멈췄으면 조용히 포기 (구운 스템은 다음 재생에 쓰인다)
+    if (live.playing !== wasPlaying || !song) return;
+    const now = live.ctx.currentTime;
+    const t1 = now + 0.06; // 스케줄 여유 — 이보다 짧으면 시작이 밀려 소리가 튄다
+    // 옛 소스는 t1에 멈추고 새 소스는 t1에 그 지점부터 시작한다 — 정확히 이어져야 끊김도 겹침도 없다
+    const at = wasPlaying.at + (t1 - wasPlaying.t0); // t1 시점의 곡 내 위치(초)
+    for (const { src } of wasPlaying.nodes.values()) { try { src.stop(t1); } catch { /* 이미 끝난 소스 */ } }
+    clearTimeout(live.endTimer);
+    const nodes = new Map();
+    let maxRest = 0;
+    for (const t of song.tracks) {
+      const s = live.stems.get(t.name);
+      if (!s || at >= s.buffer.duration) continue; // 이미 끝난 트랙은 다시 걸지 않는다
+      const src = live.ctx.createBufferSource();
+      src.buffer = s.buffer;
+      const g = live.ctx.createGain();
+      g.gain.value = liveGainOf(t);
+      src.connect(g); g.connect(liveMaster());
+      src.start(t1, at); // 듣던 지점부터
+      nodes.set(t.name, { src, g });
+      maxRest = Math.max(maxRest, s.buffer.duration - at);
+    }
+    live.playing = { nodes, from, to, t0: t1, at };
+    live.endTimer = setTimeout(liveStop, (maxRest + 0.3) * 1000);
+    toast("⚡ 바뀐 소리로 이어서 재생 중");
+  } catch (e) {
+    toast("다시 굽지 못했습니다: " + e.message, true);
+  } finally {
+    resyncBusy = false;
+  }
+}
+
+// 현재 곡 상태(볼륨·음소거)를 재생 중인 게인에 반영 — AI가 set_track으로 바꿔도 즉시 들린다
+function liveGainAll() {
+  if (!live.playing || !song) return;
+  for (const [name, n] of live.playing.nodes) {
+    const t = song.tracks.find(x => x.name === name);
+    if (t) n.g.gain.value = liveGainOf(t);
+  }
+}
+
+// ---------- 공통: 음이름·템포 ----------
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const BLACK = new Set([1,3,6,8,10]);
+function pitchToMidi(p) {
+  const m = /^([A-Ga-g])([#b]?)(-?\d)$/.exec(p);
+  if (!m) return null;
+  const S = { C:0,D:2,E:4,F:5,G:7,A:9,B:11 };
+  return S[m[1].toUpperCase()] + (m[2]==="#"?1:m[2]==="b"?-1:0) + (+m[3]+1)*12;
+}
+const beatsPerBar = () => song.timeSig[0] * 4 / song.timeSig[1];
+const isDrumTrack = t => meta && Object.hasOwn(meta.drumKits, t.preset);
+
+// 템포 맵 — src/song.js와 같은 계산. 재생 헤드가 rit./accel. 중에도 어긋나지 않게 한다.
+function tempoSegs() {
+  const bpb = beatsPerBar();
+  const points = [{ beat: 0, bpm: song.bpm, ramp: false }];
+  for (const t of song.tempoMap ?? []) {
+    const beat = (t.bar - 1) * bpb;
+    if (beat <= 0) points[0].bpm = t.bpm;
+    else points.push({ beat, bpm: t.bpm, ramp: !!t.ramp });
+  }
+  points.sort((a, b) => a.beat - b.beat);
+  const segs = []; let sec = 0;
+  for (let i = 0; i < points.length; i++) {
+    const cur = points[i], next = points[i+1];
+    const seg = {
+      startBeat: cur.beat, endBeat: next ? next.beat : Infinity,
+      bpm0: cur.bpm, bpm1: next && next.ramp ? next.bpm : cur.bpm, startSec: sec
+    };
+    segs.push(seg);
+    if (next) sec += segSec(seg, seg.endBeat - seg.startBeat);
+  }
+  return segs;
+}
+function segSec(seg, u) {
+  if (u <= 0) return 0;
+  if (seg.bpm1 === seg.bpm0 || !isFinite(seg.endBeat)) return 60 * u / seg.bpm0;
+  const k = (seg.bpm1 - seg.bpm0) / (seg.endBeat - seg.startBeat);
+  return (60 / k) * Math.log1p((k * u) / seg.bpm0);   // log1p — bpm 차가 극히 작을 때 유효숫자 소실 방지
+}
+function findSeg(segs, pick, value) {
+  let lo = 0, hi = segs.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (pick(segs[mid]) <= value) lo = mid; else hi = mid - 1; }
+  return segs[lo];
+}
+function beatToSec(segs, beat) {
+  if (beat <= 0) return 0;
+  const seg = findSeg(segs, s => s.startBeat, beat);
+  return seg.startSec + segSec(seg, Math.min(beat, seg.endBeat) - seg.startBeat);
+}
+// beatToSec의 역함수 — 경과 초로 재생 헤드의 박 위치를 찾는다
+function secToBeat(segs, sec) {
+  if (sec <= 0) return 0;
+  const seg = findSeg(segs, s => s.startSec, sec);
+  const d = sec - seg.startSec;
+  if (seg.bpm1 === seg.bpm0 || !isFinite(seg.endBeat)) return seg.startBeat + seg.bpm0 * d / 60;
+  const k = (seg.bpm1 - seg.bpm0) / (seg.endBeat - seg.startBeat);
+  return seg.startBeat + (seg.bpm0 * Math.expm1(k * d / 60)) / k;
+}
+function totalBars() {
+  const bpb = beatsPerBar();
+  let max = 8;
+  for (const t of song.tracks) for (const n of t.notes)
+    max = Math.max(max, Math.ceil(((n.bar-1)*bpb + n.beat + n.dur) / bpb));
+  return max;
+}
+// 비어 있으면 기존처럼 첫 마디부터 재생한다. 숫자가 있을 때만 고정 시작선을 보여 준다.
+function playbackStartBar() {
+  if (!song || !$("fromBar").value) return null;
+  const bar = Number($("fromBar").value);
+  if (!Number.isInteger(bar)) return null;
+  return Math.max(1, Math.min(totalBars(), bar));
+}
+function setPlaybackStart(bar) {
+  if (!song) return;
+  const start = Math.max(1, Math.min(totalBars(), Math.round(bar)));
+  $("fromBar").value = String(start);
+  const end = Number($("toBar").value);
+  // 예전 종료점이 새 시작점 앞에 남으면 일반 재생은 오류가 나므로, 자연스럽게 곡 끝으로 되돌린다.
+  if ($("toBar").value && (!Number.isInteger(end) || end < start)) $("toBar").value = "";
+  playbackRangeRevision++;
+  invalidateSoundStatus("재생 구간을 다시 확인하세요", "재생 시작 마디가 바뀌었습니다. 새 구간을 재생하면 그 구간의 출력 상태를 확인합니다.");
+  draw();
+  toast(`${start}마디부터 재생합니다 — 재생을 누르세요`);
+}
+// 재생 헤드의 현재 박 위치 (없으면 null)
+function playheadBeat() {
+  if (!playing || !song) return null;
+  const bpb = beatsPerBar(), segs = tempoSegs();
+  const startSec = beatToSec(segs, (playing.fromBar - 1) * bpb);
+  const elapsed = (performance.now() - playing.t0) / 1000;
+  const range = playing.rangeSec ?? (beatToSec(segs, playing.toBar * bpb) - startSec);
+  let e = elapsed;
+  // 루프는 반복마다 서버가 play 이벤트로 재동기화하므로 끝에서 홀드(모듈로로 거짓 진행하지 않음)
+  if (e > range) { if (!playing.loop && e > range + 2) return null; e = range; }
+  return secToBeat(segs, startSec + e);
+}
+
+// ---------- 채널 스트립 (트랙 헤더) ----------
+function volumeWord(v) {
+  const d = volToDb(v);
+  if (d <= -14) return "많이 낮춤";
+  if (d <= -2) return "낮춤";
+  if (d < 2) return "기본";
+  if (d < 4.5) return "올림";
+  return "많이 올림";
+}
+function cleanInstrumentName(name) {
+  // 일부 프리셋 이름의 내부 분류 기호는 일반 사용자에게 의미가 없어 화면에서만 숨긴다.
+  return String(name).replace(/\s*⬡\s*$/, "");
+}
+function instrumentName(t) {
+  return cleanInstrumentName(meta?.presets?.[t.preset]?.name ?? meta?.drumKits?.[t.preset]?.name ?? t.preset);
+}
+
+// 트랙 이름은 음악 데이터의 식별자이기도 하지만, 사람에게는 곡 속 역할을 적는 제목이다.
+// 목록·상세 양쪽에서 같은 작은 인라인 편집기를 써서 별도 설정창 없이 바로 고친다.
+let activeTrackRename = null;
+function beginTrackRename(label, t) {
+  if (!label || !t || activeTrackRename) {
+    activeTrackRename?.focus();
+    activeTrackRename?.select();
+    return;
+  }
+  const oldName = t.name;
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "track-name-input";
+  input.value = oldName;
+  input.maxLength = 80;
+  input.setAttribute("aria-label", `트랙 '${oldName}' 이름 수정`);
+  input.title = "Enter 또는 바깥 클릭으로 저장 · Esc로 취소";
+  label.replaceWith(input);
+  activeTrackRename = input;
+
+  // 스트립 선택이나 다른 편집 제스처로 입력 동작이 새지 않게 막는다.
+  for (const type of ["pointerdown", "click", "dblclick"]) input.addEventListener(type, ev => ev.stopPropagation());
+
+  let settled = false;
+  const finish = save => {
+    if (settled) return;
+    settled = true;
+    const nextName = input.value.trim();
+    input.onblur = null;
+    input.blur();
+    if (activeTrackRename === input) activeTrackRename = null;
+    renderAll();
+    if (!save || nextName === oldName) return;
+    if (!nextName) {
+      toast("트랙 이름은 비워둘 수 없습니다 — 기존 이름을 유지했습니다", true);
+      return;
+    }
+    const oldKey = oldName.toLowerCase();
+    const nextKey = nextName.toLowerCase();
+    const duplicate = song?.tracks.some(x => x.name.toLowerCase() === nextKey && x.name.toLowerCase() !== oldKey);
+    if (duplicate) {
+      toast(`'${nextName}' 트랙이 이미 있습니다 — 기존 이름을 유지했습니다`, true);
+      return;
+    }
+    rpc("set_track", { track: oldName, new_name: nextName }).catch(() => {});
+  };
+  input.onkeydown = ev => {
+    if (ev.key === "Enter") { ev.preventDefault(); finish(true); }
+    else if (ev.key === "Escape") { ev.preventDefault(); finish(false); }
+  };
+  input.onblur = () => finish(true);
+  input.focus();
+  input.select();
+}
+
+function renderStrips() {
+  const box = $("laneHeads");
+  // 사용자가 스트립 컨트롤(슬라이더 드래그 등)을 조작하는 중엔 재구성하지 않는다 —
+  // AI가 연속 편집으로 state를 쏟아낼 때 조작 중인 DOM이 파괴되는 사고 방지 (컨트롤은 조작 후 blur됨)
+  if (box.contains(document.activeElement)) return;
+  box.innerHTML = "";
+  if (!song) return;
+  if (selected >= song.tracks.length) selected = Math.max(0, song.tracks.length - 1);
+  const soloOn = anySolo();
+  song.tracks.forEach((t, i) => {
+    const div = document.createElement("div");
+    // 솔로가 켜져 있으면 솔로 아닌 트랙은 실제로 안 들리므로 흐리게 표시한다
+    const silent = soloOn ? !t.solo : !!t.mute;
+    div.className = "strip" + (i === selected ? " sel" : "") + (silent ? " muted" : "");
+    div.innerHTML = `
+      <div class="name"><span class="swatch" style="background:${COLORS[i % COLORS.length]}"></span>
+        <span class="track-copy"><span class="nm" title="트랙 이름 — 두 번 클릭해서 수정">${escapeHtml(t.name)}</span><span class="instrument" title="${escapeHtml(instrumentName(t))}">${escapeHtml(instrumentName(t))}</span></span>
+        <span class="track-actions">
+          <button class="solo${t.solo ? " on" : ""}" title="${t.solo ? "모든 악기 함께 듣기" : "이 악기만 듣기"}" aria-label="${t.solo ? "모든 악기 함께 듣기" : "이 악기만 듣기"}" aria-pressed="${!!t.solo}">${uiIcon("headphones")}</button>
+          <button class="mute${t.mute ? " on" : ""}" title="${t.mute ? "이 악기 다시 듣기" : "이 악기 끄기"}" aria-label="${t.mute ? "이 악기 다시 듣기" : "이 악기 끄기"}" aria-pressed="${!!t.mute}">${uiIcon(t.mute ? "volume-x" : "volume")}</button>
+        </span></div>
+      <label class="track-volume" title="${t.gains ? `이 악기에 구간별 음량 조절 ${t.gains.length}개가 더 있습니다 · ` : ""}두 번 클릭하면 원래 음량으로 돌아갑니다">
+        <span class="volume-word">${volumeWord(t.volume)}</span>
+        <input type="range" min="${VOL_MIN_DB}" max="${VOL_MAX_DB}" step="0.5" value="${volToDb(t.volume)}" aria-label="${escapeHtml(t.name)} 음량">
+        <output>${dbLabel(t.volume)}</output>
+      </label>`;
+    div.onclick = () => { if (selected !== i) { selected = i; pasteGhost = null; renderAll(); } };
+    div.querySelector(".nm").ondblclick = ev => {
+      ev.preventDefault(); ev.stopPropagation();
+      beginTrackRename(ev.currentTarget, t);
+    };
+    div.querySelector("button.solo").onclick = ev => {
+      ev.stopPropagation(); ev.currentTarget.blur();
+      // 솔로는 다른 트랙까지 들림 여부를 바꾸므로 낙관 반영도 전 트랙에 걸어야 한다
+      const willSolo = !t.solo;
+      const anyOther = song.tracks.some(x => x !== t && x.solo);
+      const nextSolo = willSolo || anyOther;
+      for (const x of song.tracks) {
+        const n = live.playing?.nodes.get(x.name);
+        if (!n) continue;
+        const on = nextSolo ? (x === t ? willSolo : !!x.solo) : !x.mute;
+        n.g.gain.value = on ? x.volume : 0;
+      }
+      rpc("set_track", { track: t.name, solo: willSolo });
+    };
+    div.querySelector("button.mute").onclick = ev => {
+      ev.stopPropagation(); ev.currentTarget.blur();
+      const n = live.playing?.nodes.get(t.name);
+      // 솔로가 켜진 동안에는 음소거를 눌러도 들림 여부가 바뀌지 않는다
+      if (n && !soloOn) n.g.gain.value = t.mute ? t.volume : 0; // 서버 왕복 전에 낙관 반영 — 즉시 들린다
+      rpc("set_track", { track: t.name, mute: !t.mute });
+    };
+    const vol = div.querySelector("input[type=range]");
+    vol.onpointerdown = ev => ev.stopPropagation();
+    vol.onclick = ev => ev.stopPropagation();
+    vol.oninput = ev => { // 드래그하는 동안 실시간 반영 (저장은 놓을 때 change에서)
+      const v = dbToVol(+ev.target.value);
+      ev.target.title = `음량 ${dbLabel(v)} — 0dB가 원래 크기, +6dB까지 올릴 수 있습니다. 두 번 클릭하면 0dB로`;
+      const word = div.querySelector(".volume-word"), out = div.querySelector("output");
+      if (word) word.textContent = volumeWord(v);
+      if (out) out.textContent = dbLabel(v);
+      const n = live.playing?.nodes.get(t.name);
+      if (n && (soloOn ? t.solo : !t.mute)) n.g.gain.value = v;
+    };
+    vol.onchange = ev => { ev.stopPropagation(); ev.target.blur(); rpc("set_track", { track: t.name, volume: dbToVol(+ev.target.value) }); };
+    // 두 번 클릭으로 0dB(원래 크기) 복귀 — 믹싱 콘솔의 관습이다
+    vol.ondblclick = ev => { ev.stopPropagation(); ev.target.blur(); rpc("set_track", { track: t.name, volume: 1 }); };
+    box.appendChild(div);
+  });
+  const add = document.createElement("button");
+  add.className = "addtrack";
+  add.innerHTML = `${uiIcon("plus")}<span>악기 더하기</span>`;
+  add.title = "새 악기 트랙을 추가합니다";
+  add.onclick = e => { e.currentTarget.blur(); showAddTrackPop(e.clientX, e.clientY); };
+  box.appendChild(add);
+}
+
+// ＋ 트랙: 이름·프리셋을 골라 추가 — 추가되면 새 트랙이 바로 선택된다
+let pendingSelectLast = false;
+function showAddTrackPop(cx, cy) {
+  if (!song || !meta) return;
+  resetFbPop();
+  const p = $("fbPop");
+  const opt = ([id, pr]) => `<option value="${escapeHtml(id)}">${escapeHtml(cleanInstrumentName(pr.name))}</option>`;
+  p.innerHTML = `<div class="fbhead">새 트랙</div>
+    <div class="fbrow2"><input id="atName" type="text" style="flex:1;min-width:100px"></div>
+    <select id="atPreset">
+      <optgroup label="멜로디">${Object.entries(meta.presets).map(opt).join("")}</optgroup>
+      <optgroup label="드럼 킷">${Object.entries(meta.drumKits).map(opt).join("")}</optgroup>
+    </select>
+    <div class="fbrow"><button id="atAdd" class="primary">추가</button><button id="atCancel">취소</button></div>`;
+  placeFbPop(cx, cy);
+  $("atName").value = `트랙 ${song.tracks.length + 1}`;
+  $("atName").focus(); $("atName").select();
+  $("atCancel").onclick = hideFbPop;
+  $("atName").onkeydown = ev => { if (ev.key === "Enter") $("atAdd").click(); };
+  $("atAdd").onclick = async () => {
+    const name = $("atName").value.trim();
+    if (!name) { $("atName").focus(); return; }
+    try {
+      pendingSelectLast = true;
+      await rpc("add_track", { name, preset: $("atPreset").value });
+      hideFbPop();
+    } catch { pendingSelectLast = false; }
+  };
+}
+
+// ---------- 상세롤 헤더 (선택 트랙 정보 + 프리셋) ----------
+// 조성 표시 — 확신이 있을 때만 온다. 벗어난 음은 "틀렸다"가 아니라 "확인해 보라"는 뜻으로 적는다
+function keyNote(t) {
+  if (!songKey || songKey.tonic === null) return "";
+  const n = offKey.get(t.name)?.size ?? 0;
+  return ` · ${escapeHtml(songKey.ko)}${n ? ` · 확인할 음 ${n}개` : ""}`;
+}
+
+let detToolsOpen = false;
+function renderDetHead() {
+  const box = $("detHead");
+  if (box.contains(document.activeElement)) return; // 프리셋 셀렉트가 열려 있는 동안 파괴 금지
+  const t = song?.tracks[selected];
+  if (!t) { box.innerHTML = `<span class="meta">트랙이 없습니다 — AI에게 작곡을 부탁하면 여기에 채워집니다</span>`; return; }
+  const drum = isDrumTrack(t);
+  const opts = !meta ? "" : Object.entries(drum ? meta.drumKits : meta.presets)
+    .map(([id, p]) => `<option value="${id}" ${id === t.preset ? "selected" : ""}>${escapeHtml(cleanInstrumentName(p.name))}</option>`).join("");
+  const gains = t.gains ? ` · 구간 음량 ${t.gains.length}곳` : "";
+  // 기본값에서 벗어난 음색이 하나라도 있으면 버튼에 점을 찍어 알린다
+  const toneOn = TONE_ROWS.some(r => toneChanged(t, r));
+  box.innerHTML = `
+    <div class="det-identity"><span class="swatch" style="background:${COLORS[selected % COLORS.length]}"></span><span class="nm" title="트랙 이름 — 두 번 클릭해서 수정">${escapeHtml(t.name)}</span>
+      <button class="rename-track" title="트랙 이름 수정" aria-label="'${escapeHtml(t.name)}' 트랙 이름 수정">${uiIcon("pencil")}</button>
+      <select class="instrument-select" title="악기 소리 바꾸기">${opts}</select></div>
+    <div class="det-vibe">
+      <button class="pen tone${toneOn ? " on" : ""}" title="소리 느낌 — 밝기·거리·여운을 귀로 맞춥니다">${uiIcon("sliders")}<span class="label" data-short="소리">소리 느낌${toneOn ? " •" : ""}</span></button>
+      <button class="pen feel" title="연주 느낌 — 기계적인 박자를 풀거나 어긋난 박자를 정리합니다">${uiIcon("sparkles")}<span class="label" data-short="연주">연주 느낌</span></button>
+    </div>
+    <span class="det-meta">노트 ${t.notes.length}개${gains}${t.mute ? " · 꺼짐" : ""}${keyNote(t)}</span>
+    <details class="precision-tools"${detToolsOpen ? " open" : ""}>
+      <summary title="음표를 직접 고치는 도구">${uiIcon("pencil")}<span class="label" data-short="직접">직접 고치기</span></summary>
+      <div class="precision-panel">
+        <button class="pen draw${penMode ? " on" : ""}" title="빈 곳을 클릭·드래그해 음을 그리고, 음을 클릭하면 지웁니다">${uiIcon("pencil")}<span class="label">음 그리기</span></button>
+        <button class="pen cutm${splitMode ? " on" : ""}" title="음을 클릭하면 격자 위치에서 둘로 가릅니다">${uiIcon("scissors")}<span class="label">음 자르기</span></button>
+        <button class="pen full${detFull ? " on" : ""}" title="${detFull ? "쓰인 음역만 간단히 봅니다" : "전체 음역을 펼쳐 더 높거나 낮은 음을 그립니다"}">${uiIcon(detFull ? "shrink" : "expand")}<span class="label">${detFull ? "쓰는 음역만" : "전체 음역 보기"}</span></button>
+        <button class="tdel" title="악기 '${escapeHtml(t.name)}' 삭제 (되돌리기 가능)">${uiIcon("trash")}<span class="label">이 악기 삭제</span></button>
+      </div>
+    </details>`;
+  box.querySelector("select.instrument-select").onchange = ev => { ev.target.blur(); rpc("set_track", { track: t.name, preset: ev.target.value }); };
+  box.querySelector(".det-identity .nm").ondblclick = ev => {
+    ev.preventDefault();
+    beginTrackRename(ev.currentTarget, t);
+  };
+  box.querySelector(".rename-track").onclick = ev => {
+    ev.currentTarget.blur();
+    beginTrackRename(box.querySelector(".det-identity .nm"), t);
+  };
+  box.querySelector(".precision-tools").ontoggle = ev => { detToolsOpen = ev.currentTarget.open; };
+  box.querySelector(".tone").onclick = ev => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    ev.currentTarget.blur();
+    showTonePop(r.left, r.bottom);
+  };
+  box.querySelector(".feel").onclick = ev => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    ev.currentTarget.blur();
+    showFeelPop(r.left, r.bottom);
+  };
+  const setCursor = () => { detC.style.cursor = penMode ? "crosshair" : "default"; };
+  box.querySelector(".draw").onclick = ev => {
+    ev.currentTarget.blur();
+    penMode = !penMode; if (penMode) splitMode = false;
+    splitHover = null; setCursor(); renderDetHead(); draw();
+  };
+  box.querySelector(".cutm").onclick = ev => {
+    ev.currentTarget.blur();
+    splitMode = !splitMode; if (splitMode) penMode = false;
+    splitHover = null; setCursor(); renderDetHead(); draw();
+  };
+  box.querySelector(".full").onclick = ev => {
+    ev.currentTarget.blur();
+    detFull = !detFull;
+    renderDetHead(); draw(); scrollDetToRange(); // 스크롤 키에 모드가 들어 있어 펼칠 때 쓰인 음역으로 이동
+  };
+  // 트랙 삭제 — 두 번 클릭 확인 (실수 방지), remove_track은 undo_edit으로 복구된다
+  let tdelTimer = null;
+  box.querySelector(".tdel").onclick = ev => {
+    const btn = ev.currentTarget;
+    if (!btn.classList.contains("danger-arm")) {
+      btn.classList.add("danger-arm"); setUiButton(btn, "trash", "정말 삭제할까요?");
+      tdelTimer = setTimeout(() => { btn.classList.remove("danger-arm"); setUiButton(btn, "trash", "이 악기 삭제"); }, 2500);
+      return;
+    }
+    clearTimeout(tdelTimer); btn.blur();
+    rpc("remove_track", { track: t.name }).catch(() => {});
+  };
+}
+
+// ---------- 어레인지 뷰 (룰러 + 트랙 레인) ----------
+const rulerC = $("ruler"), rulerCtx = rulerC.getContext("2d");
+const lanesC = $("lanes"), lanesCtx = lanesC.getContext("2d");
+const RULER_H = 26, LANE_H = 52;
+let HEAD_W = 200;
+let barW = 60, totalB = 8;
+
+// ---------- 확대율 ----------
+// 가로(시간)는 어레인지와 상세롤이 barW 하나를 함께 쓰므로 두 화면이 같이 늘어난다.
+// 세로(음높이)는 상세롤에만 있다. 둘 다 1 = 지금까지의 기본 배치(가로는 화면 맞춤).
+let zoomX = 1, zoomY = 1;
+const ZX_MIN = 0.25, ZX_MAX = 16, ZY_MIN = 0.6, ZY_MAX = 3.6;
+let zoomXCap = ZX_MAX;
+const clampZ = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+function computeBarW() {
+  HEAD_W = parseFloat(getComputedStyle(document.body).getPropertyValue("--track-head")) || 200;
+  totalB = totalBars();
+  const avail = Math.max(1, $("arrWrap").clientWidth - HEAD_W - 12);
+  // 맞춤 폭(zoomX=1) — 긴 곡도 실제로 끝 마디까지 한 화면에 들어와야 한다.
+  // 최소 마디 폭을 두면 100%·맞춤이라고 표시하면서도 가로 스크롤이 남으므로,
+  // 짧은 곡이 과도하게 벌어지는 상한만 두고 긴 곡은 필요한 만큼 축소한다.
+  const fit = Math.min(120, avail / Math.max(1, totalB));
+  // 브라우저 캔버스 한 변 최대치(≈65k device px)를 넘으면 조용히 빈 화면이 된다.
+  // 폭만 깎으면 "1600%"라 써 놓고 실제로는 그보다 좁은 상태가 되므로 확대율 자체를 여기서 묶는다.
+  // 수천 마디짜리 곡은 최소 배율조차 못 담을 수 있어, 그때는 이 한계가 최소 배율보다도 우선한다
+  const dpr = window.devicePixelRatio || 1;
+  const zCap = Math.max(1e-4, (32000 / dpr - 64) / totalB / fit); // 64 = 상세롤 왼쪽 건반 거터 + 여백
+  zoomXCap = Math.min(ZX_MAX, zCap);
+  zoomX = Math.min(clampZ(zoomX, ZX_MIN, ZX_MAX), zoomXCap);
+  barW = fit * zoomX;
+}
+function rulerLabelStep() {
+  // 좁은 화면에서 긴 곡을 전체 보기로 두면 마디 번호가 서로 덮인다.
+  // 숫자 사이가 약 24px 이상 되도록 1·2·4·8… 단위 중 하나를 고른다.
+  const needed = 24 / Math.max(.01, barW);
+  let step = 1;
+  while (step < needed) step *= 2;
+  return step;
+}
+let activityCacheSong = null, activityCacheBars = 0, activityCacheBpb = 0, activityCache = [];
+function arrangeActivity(bpb) {
+  if (activityCacheSong === song && activityCacheBars === totalB && activityCacheBpb === bpb) return activityCache;
+  activityCacheSong = song; activityCacheBars = totalB; activityCacheBpb = bpb;
+  activityCache = song.tracks.map(t => {
+    const values = Array(totalB).fill(0);
+    for (const n of t.notes) {
+      const a0 = (n.bar - 1) * bpb + n.beat, a1 = a0 + Math.max(0.02, n.dur);
+      const first = Math.max(0, Math.floor(a0 / bpb)), last = Math.min(totalB - 1, Math.floor((a1 - 1e-6) / bpb));
+      for (let b = first; b <= last; b++) {
+        const overlap = Math.max(0, Math.min(a1, (b + 1) * bpb) - Math.max(a0, b * bpb));
+        values[b] += ((n.vel ?? 96) / 127) * (overlap / bpb);
+      }
+    }
+    const phrases = [];
+    let start = -1;
+    for (let b = 0; b <= totalB; b++) {
+      const active = b < totalB && values[b] > 0.001;
+      if (active && start < 0) start = b;
+      if (!active && start >= 0) { phrases.push([start, b]); start = -1; }
+    }
+    return { values, max: values.reduce((m, v) => Math.max(m, v), 0), phrases };
+  });
+  return activityCache;
+}
+const setupCanvas = (c, ctx, w, h) => {
+  const dpr = window.devicePixelRatio || 1;
+  const pw = Math.max(1, Math.ceil(w * dpr)), ph = Math.max(1, Math.ceil(h * dpr));
+  // 재생 중에는 매 프레임 다시 그린다. 같은 크기를 width/height에 다시 대입하면 브라우저가
+  // 큰 비트맵을 매번 새로 할당하므로, 확대 상태에서 급격히 느려지는 원인이 된다.
+  if (c.width !== pw) c.width = pw;
+  if (c.height !== ph) c.height = ph;
+  c.style.width = w + "px"; c.style.height = h + "px";
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+};
+
+function drawArrange() {
+  if (!song) return;
+  computeBarW();
+  // 곡이 짧아도 레인 줄무늬가 화면 끝까지 이어지게 캔버스는 컨테이너 폭 이상으로 잡는다
+  const W = Math.max(totalB * barW, $("arrWrap").clientWidth - HEAD_W - 12);
+  const H = Math.max(song.tracks.length * LANE_H, $("arrWrap").clientHeight - RULER_H);
+  const bpb = beatsPerBar();
+
+  // ----- 룰러 -----
+  setupCanvas(rulerC, rulerCtx, W, RULER_H);
+  rulerCtx.fillStyle = "#1a1d23"; rulerCtx.fillRect(0, 0, W, RULER_H);
+  rulerCtx.font = "10px sans-serif";
+  const step = rulerLabelStep();
+  for (let b = 0; b < totalB; b++) {
+    const x = b * barW;
+    rulerCtx.strokeStyle = "#2a2f38"; rulerCtx.beginPath(); rulerCtx.moveTo(x + .5, RULER_H - 8); rulerCtx.lineTo(x + .5, RULER_H); rulerCtx.stroke();
+    if (b % step === 0) { rulerCtx.fillStyle = "#8a93a3"; rulerCtx.fillText(b + 1, x + 3, 12); }
+  }
+  rulerCtx.strokeStyle = "#2a2f38"; rulerCtx.beginPath(); rulerCtx.moveTo(0, RULER_H - .5); rulerCtx.lineTo(W, RULER_H - .5); rulerCtx.stroke();
+
+  // ----- 레인 -----
+  setupCanvas(lanesC, lanesCtx, W, H);
+  song.tracks.forEach((t, i) => {
+    const y0 = i * LANE_H;
+    lanesCtx.fillStyle = i % 2 ? "#14171c" : "#15191f";
+    lanesCtx.fillRect(0, y0, W, LANE_H);
+    lanesCtx.strokeStyle = "#20242c";
+    lanesCtx.beginPath(); lanesCtx.moveTo(0, y0 + LANE_H - .5); lanesCtx.lineTo(W, y0 + LANE_H - .5); lanesCtx.stroke();
+  });
+  // 마디 선
+  for (let b = 1; b < totalB; b++) {
+    const x = b * barW;
+    lanesCtx.strokeStyle = "#22262e";
+    lanesCtx.beginPath(); lanesCtx.moveTo(x + .5, 0); lanesCtx.lineTo(x + .5, H); lanesCtx.stroke();
+  }
+  // 선택 트랙 레인 하이라이트
+  if (song.tracks.length) {
+    lanesCtx.fillStyle = "rgba(122,162,255,0.05)";
+    lanesCtx.fillRect(0, selected * LANE_H, W, LANE_H);
+  }
+  // 노트 블록 — 트랙마다 자기 음역 기준의 미니 등고선
+  const PAD = 5;
+  const soloOn = anySolo();
+  const trackActivity = arrangeActivity(bpb);
+  song.tracks.forEach((t, i) => {
+    const y0 = i * LANE_H;
+    const drum = isDrumTrack(t);
+    lanesCtx.fillStyle = COLORS[i % COLORS.length];
+    let lo = 128, hi = -1, rows = null;
+    if (drum) {
+      rows = drumRows(t);
+    } else {
+      for (const n of t.notes) { const m = pitchToMidi(n.pitch); if (m !== null) { lo = Math.min(lo, m); hi = Math.max(hi, m); } }
+      if (hi < 0) { lo = 48; hi = 72; }
+      while (hi - lo < 10) { lo--; hi++; }
+    }
+    // 실제 파형이라고 가장하지 않고, 악보에 적힌 세기·동시 연주량만으로 "연주가 몰린 곳"을 보여 준다.
+    // 음량 문제를 찾을 첫 단서이며, 최종 판단은 악기를 혼자 듣고 볼륨으로 맞추게 한다.
+    const { values: activity, max: activityMax, phrases } = trackActivity[i];
+    const quiet = soloOn ? !t.solo : !!t.mute;
+    for (const [phraseStart, phraseEnd] of phrases) {
+      const x1 = phraseStart * barW + 2, x2 = phraseEnd * barW - 2;
+      lanesCtx.globalAlpha = quiet ? 0.025 : (i === selected ? 0.105 : 0.065);
+      lanesCtx.beginPath(); lanesCtx.roundRect(x1, y0 + 5, Math.max(3, x2 - x1), LANE_H - 10, 5); lanesCtx.fill();
+    }
+    if (activityMax > 0) {
+      for (let b = 0; b < totalB; b++) if (activity[b] > 0) {
+        const strength = Math.min(1, activity[b] / activityMax);
+        const h = 2 + strength * 6;
+        lanesCtx.globalAlpha = (quiet ? 0.03 : 0.08) + strength * (quiet ? 0.03 : 0.12);
+        lanesCtx.fillRect(b * barW + 1, y0 + LANE_H - h - 2, Math.max(1, barW - 2), h);
+      }
+    }
+    for (const n of t.notes) {
+      const x = ((n.bar - 1) * bpb + n.beat) / bpb * barW;
+      const w = Math.max(2, n.dur / bpb * barW - 1);
+      const strength = Math.min(1, Math.max(0.08, (n.vel ?? 96) / 127));
+      let fy; // 레인 안 세로 위치(0=위)
+      if (drum) {
+        const pi = rows.indexOf(n.pitch);
+        if (pi < 0) continue;
+        fy = rows.length < 2 ? 0.5 : pi / (rows.length - 1);
+      } else {
+        const m = pitchToMidi(n.pitch);
+        if (m === null) continue;
+        fy = 1 - (m - lo) / (hi - lo);
+      }
+      const y = y0 + PAD + fy * (LANE_H - PAD * 2 - 3);
+      const nh = 1.8 + strength * 2.4;
+      lanesCtx.globalAlpha = (quiet ? 0.11 : 0.38) + strength * (quiet ? 0.08 : 0.58);
+      lanesCtx.fillRect(x, y - nh / 2, drum ? Math.min(w, barW / bpb * 0.4) : w, nh);
+    }
+    lanesCtx.globalAlpha = 1;
+    // 구간 게인 — 해당 트랙 레인에만 표시 (파랑=감쇠, 빨강=증폭)
+    if (t.gains) {
+      lanesCtx.font = "9px sans-serif";
+      for (const g of t.gains) {
+        const gx1 = (g.from - 1) * barW, gx2 = Math.min(g.to, totalB) * barW;
+        lanesCtx.fillStyle = g.db < 0 ? "rgba(107,213,242,0.10)" : "rgba(255,143,143,0.10)";
+        lanesCtx.fillRect(gx1, y0, Math.max(gx2 - gx1, 3), LANE_H);
+        lanesCtx.fillStyle = g.db < 0 ? "#6bd5f2" : "#ff8f8f";
+        lanesCtx.fillText(`${g.db > 0 ? "+" : ""}${g.db}dB`, gx1 + 2, y0 + 10);
+      }
+    }
+  });
+
+  // ----- 구간 피드백 (열린 것): 전체 레인에 노랑 틴트 + 룰러 칩 -----
+  fbChips = [];
+  const fbOpen = (song.feedback ?? []).filter(f => !f.done);
+  for (const f of fbOpen) {
+    const x1 = (f.from_bar - 1) * barW, x2 = Math.min(f.to_bar, totalB) * barW;
+    lanesCtx.fillStyle = "rgba(255,205,80,0.06)";
+    lanesCtx.fillRect(x1, 0, Math.max(x2 - x1, 4), H);
+  }
+  const fbByBar = new Map();
+  for (const f of fbOpen) { if (!fbByBar.has(f.from_bar)) fbByBar.set(f.from_bar, []); fbByBar.get(f.from_bar).push(f); }
+  rulerCtx.font = "11px sans-serif";
+  for (const [bar, items] of fbByBar) {
+    const x = (bar - 1) * barW + 2;
+    const w = items.length > 1 ? 29 : 21;
+    rulerCtx.fillStyle = "#3a3320";
+    rulerCtx.beginPath(); rulerCtx.roundRect(x, 3, w, RULER_H - 8, 4); rulerCtx.fill();
+    rulerCtx.strokeStyle = "#c9a94e"; rulerCtx.stroke();
+    // 이모지 대신 작은 말풍선 선형 아이콘 — 다른 컨트롤의 SVG 아이콘과 같은 시각 언어다.
+    rulerCtx.beginPath(); rulerCtx.roundRect(x + 5, 7, 9, 7, 2); rulerCtx.stroke();
+    rulerCtx.beginPath(); rulerCtx.moveTo(x + 8, 14); rulerCtx.lineTo(x + 7, 17); rulerCtx.lineTo(x + 11, 14); rulerCtx.stroke();
+    if (items.length > 1) {
+      rulerCtx.fillStyle = "#ffd766"; rulerCtx.font = "9px SFMono-Regular, monospace";
+      rulerCtx.fillText(String(items.length), x + 17, 14);
+      rulerCtx.font = "11px sans-serif";
+    }
+    fbChips.push({ x, y:3, w, h:RULER_H - 8, items });
+  }
+  // 구간 이름표 — 곡의 뼈대가 한눈에 보이도록 편곡 화면 전체에 세로선을 긋고 이름을 단다
+  for (const s of song.sections ?? []) {
+    if (s.bar > totalB) continue;
+    const x = (s.bar - 1) * barW;
+    lanesCtx.strokeStyle = "rgba(201,169,78,0.35)";
+    lanesCtx.beginPath(); lanesCtx.moveTo(x + .5, 0); lanesCtx.lineTo(x + .5, H); lanesCtx.stroke();
+    rulerCtx.font = "10px sans-serif";
+    const w = rulerCtx.measureText(s.label).width + 8;
+    rulerCtx.fillStyle = "#2b2416";
+    rulerCtx.beginPath(); rulerCtx.roundRect(x + 1, RULER_H - 14, w, 12, 3); rulerCtx.fill();
+    rulerCtx.strokeStyle = "#7a6835"; rulerCtx.stroke();
+    rulerCtx.fillStyle = "#e5c76b";
+    rulerCtx.fillText(s.label, x + 5, RULER_H - 4.5);
+  }
+  // 빠르기 변화 표시 — 눈금자 위쪽에 작게. 서서히 변하는 구간은 화살표로 어디부터인지 보인다
+  const tm = (song.tempoMap ?? []).slice().sort((a, b) => a.bar - b.bar);
+  rulerCtx.font = "10px sans-serif";
+  for (let i = 0; i < tm.length; i++) {
+    const tp = tm[i];
+    if (tp.bar > totalB) continue;
+    const x = (tp.bar - 1) * barW;
+    const prevBpm = i > 0 ? tm[i - 1].bpm : song.bpm;
+    if (tp.ramp) {
+      const from = ((i > 0 ? tm[i - 1].bar : 1) - 1) * barW;
+      rulerCtx.strokeStyle = "#7fd6a0";
+      rulerCtx.beginPath(); rulerCtx.moveTo(from, 3.5); rulerCtx.lineTo(x, 3.5); rulerCtx.stroke();
+    }
+    rulerCtx.strokeStyle = "#7fd6a0";
+    rulerCtx.beginPath(); rulerCtx.moveTo(x + .5, 0); rulerCtx.lineTo(x + .5, RULER_H); rulerCtx.stroke();
+    // 칩 배경 없이 그리면 뒤에 깔린 마디 번호와 겹쳐 "1776"처럼 읽힌다
+    const label = `${tp.ramp ? (tp.bpm < prevBpm ? "↘" : "↗") : "♩"}${tp.bpm}`;
+    const w = rulerCtx.measureText(label).width + 7;
+    rulerCtx.fillStyle = "#1c2a22";
+    rulerCtx.beginPath(); rulerCtx.roundRect(x + 1, 2, w, 12, 3); rulerCtx.fill();
+    rulerCtx.strokeStyle = "#3f6a52"; rulerCtx.stroke();
+    rulerCtx.fillStyle = "#7fd6a0";
+    rulerCtx.fillText(label, x + 4.5, 11.5);
+  }
+  // 드래그 중/고정된 선택 구간
+  if (fbSel) {
+    const a = Math.min(fbSel.a, fbSel.b), b = Math.max(fbSel.a, fbSel.b);
+    const x1 = (a - 1) * barW, x2 = b * barW;
+    rulerCtx.fillStyle = "rgba(122,162,255,0.25)";
+    rulerCtx.fillRect(x1, 0, x2 - x1, RULER_H);
+    lanesCtx.fillStyle = "rgba(122,162,255,0.10)";
+    lanesCtx.fillRect(x1, 0, x2 - x1, H);
+    lanesCtx.strokeStyle = "#7aa2ff";
+    lanesCtx.strokeRect(x1 + .5, .5, x2 - x1 - 1, H - 1);
+  }
+  // 다음 ▶ 재생이 시작될 고정 위치. 움직이는 빨간 재생 헤드와 구분되도록 파란 점선으로 둔다.
+  const startBar = playbackStartBar();
+  if (startBar !== null) {
+    const x = (startBar - 1) * barW;
+    lanesCtx.save();
+    lanesCtx.strokeStyle = "#7aa2ff"; lanesCtx.setLineDash([4, 3]);
+    lanesCtx.beginPath(); lanesCtx.moveTo(x + .5, 0); lanesCtx.lineTo(x + .5, H); lanesCtx.stroke();
+    lanesCtx.restore();
+    const tx = Math.max(5, Math.min(W - 5, x));
+    rulerCtx.fillStyle = "#7aa2ff";
+    rulerCtx.beginPath(); rulerCtx.moveTo(tx - 5, RULER_H); rulerCtx.lineTo(tx + 5, RULER_H); rulerCtx.lineTo(tx, RULER_H - 9); rulerCtx.fill();
+  }
+  // 재생 헤드
+  const beat = playheadBeat();
+  if (beat !== null) {
+    const x = beat / bpb * barW;
+    lanesCtx.strokeStyle = "#ff6b6b"; lanesCtx.lineWidth = 2;
+    lanesCtx.beginPath(); lanesCtx.moveTo(x, 0); lanesCtx.lineTo(x, H); lanesCtx.stroke();
+    lanesCtx.lineWidth = 1;
+    rulerCtx.fillStyle = "#ff6b6b";
+    rulerCtx.beginPath(); rulerCtx.moveTo(x - 5, 0); rulerCtx.lineTo(x + 5, 0); rulerCtx.lineTo(x, 9); rulerCtx.fill();
+  }
+}
+
+// 드럼 트랙의 상세 행: 실제 쓰인 피스만 (기본 순서 우선, 킷 고유 피스는 뒤에)
+function drumRows(t) {
+  const used = new Set(t.notes.map(n => n.pitch));
+  const rows = drumPieceOrder.filter(p => used.has(p));
+  for (const p of used) if (!rows.includes(p)) rows.push(p);
+  return rows.length ? rows : drumPieceOrder;
+}
+
+// ---------- 상세 피아노롤 (선택 트랙) ----------
+const detC = $("detRoll"), detCtx = detC.getContext("2d");
+const DET_GUTTER = 48, DET_RULER = 18, DRUM_ROW = 16;
+// 노트 단위 편집: 그린 노트의 화면 좌표(히트테스트용), 드래그 상태, 선택 노트,
+// 블록(마퀴) 선택 집합, 진행 중인 마퀴 사각형, 좌표→음높이 역변환용 레이아웃
+let detNoteRects = [], detDrag = null, detSel = null;
+let detSelSet = new Set(), detMarq = null, detLayout = null;
+let penMode = false, detDraw = null;   // ✏️ 연필 모드, 그리는 중인 노트
+let detFull = false;                   // ⤢ 전체 음역(MIDI 128음) 표시 — 기본은 쓰인 음역만
+let splitMode = false, splitHover = null; // ✂ 자르기 모드, 호버 중인 자름 위치(픽셀)
+let clip = null, pasteGhost = null;    // 복사한 노트 뭉치(값 사본), 붙여넣기 고스트 {curAbs}
+let detMouse = null;                   // 상세롤 위 마지막 마우스 위치 — 붙여넣기 시작점
+const midiToPitch = m => NOTE_NAMES[m % 12] + (Math.floor(m / 12) - 1);
+// 반음 한 줄의 높이 — 기본 10px에 세로 확대율. 정수로 맞춰야 건반 경계선이 뭉개지지 않는다
+const detRowH = () => Math.max(5, Math.round(10 * zoomY));
+// 스냅 격자(박 단위) — 칸 너비가 8px 이상인 가장 촘촘한 단위 (16분→8분→4분, 줌에 따라)
+function detGrid() {
+  const bpb = beatsPerBar();
+  for (const g of [0.25, 0.5, 1]) if (g / bpb * barW >= 8) return g;
+  return bpb;
+}
+// y좌표 → 그 행의 음높이(멜로디는 음이름, 드럼은 피스)와 화면 행 좌표
+function detPitchAt(y) {
+  const L = detLayout;
+  if (!L) return null;
+  if (L.drum) {
+    const i = Math.floor((y - DET_RULER) / L.rowH);
+    if (i < 0 || i >= L.rows.length) return null;
+    return { pitch: L.rows[i], y: DET_RULER + i * L.rowH + 2, h: L.rowH - 4 };
+  }
+  const m = L.lo + Math.floor((L.H - y) / L.rowH);
+  if (m < L.lo || m > L.hi) return null;
+  return { pitch: midiToPitch(m), y: L.H - (m - L.lo + 1) * L.rowH + 1, h: Math.max(2, L.rowH - 2) };
+}
+
+function drawDetail() {
+  // 주의: 여기서 DOM(#detHead)을 건드리면 안 된다 — 재생 중 rAF 루프가 매 프레임 이 함수를 부른다
+  if (!song) { setupCanvas(detC, detCtx, 10, 10); return; }
+  const t = song.tracks[selected];
+  if (!t) { setupCanvas(detC, detCtx, 10, 10); return; }
+  const bpb = beatsPerBar();
+  const wrap = $("detWrap");
+  const drum = isDrumTrack(t);
+  // 오른쪽에도 거터 한 칸을 남겨, 맞춤 상태에서 버튼으로 확대할 때 곡 중앙 앵커가
+  // 스크롤 끝에 막혀 미끄러지지 않게 한다.
+  const W = Math.max(wrap.clientWidth, DET_GUTTER + totalB * barW + DET_GUTTER);
+
+  let lo = 128, hi = -1, rows = null, rowH;
+  let H;
+  if (drum) {
+    rows = drumRows(t);
+    // 드럼은 쓰인 피스 수에 맞춰 행 높이를 키우고, 캔버스도 내용 높이만큼만 — 빈 검은 벌판 방지
+    rowH = Math.round(clampZ(Math.min(30, Math.max(16, (wrap.clientHeight - DET_RULER - 6) / rows.length)) * zoomY, 8, 64));
+    H = DET_RULER + rows.length * rowH + 6;
+  } else if (detFull) {
+    // ⤢ 전체 음역: 엔진이 받는 MIDI 128음(C-1~G9) 전부 — 세로 스크롤, 쓰인 음역으로 자동 위치(scrollDetToRange)
+    lo = 0; hi = 127;
+    rowH = detRowH();
+    H = DET_RULER + (hi - lo + 1) * rowH + 6;
+  } else {
+    // 기본(⤡ 축소): 실제 쓰인 음역 ±2칸만 컴팩트하게 — 빈 트랙은 C3~C5
+    let uLo = 128, uHi = -1;
+    for (const n of t.notes) { const m = pitchToMidi(n.pitch); if (m !== null) { uLo = Math.min(uLo, m); uHi = Math.max(uHi, m); } }
+    if (uHi < 0) { lo = 48; hi = 72; }
+    else {
+      lo = Math.max(0, uLo - 2); hi = Math.min(127, uHi + 2);
+      while (hi - lo < 16) { if (lo > 0) lo--; if (hi < 127) hi++; }
+    }
+    rowH = detRowH();
+    H = DET_RULER + (hi - lo + 1) * rowH + 6;
+  }
+  const dpr = window.devicePixelRatio || 1;
+  H = Math.min(H, 32000 / dpr);
+  // 세로 확대 때 낮은 음을 커서 자리에 붙들려면 내용 아래로 조금 스크롤할 여유가 필요하다.
+  // 음악 좌표의 H는 그대로 두고 캔버스에만 꼬리 여백을 붙여 음높이 계산은 바꾸지 않는다.
+  const tailY = zoomY > 1 || H > wrap.clientHeight ? wrap.clientHeight / 2 : 0;
+  const canvasH = Math.min(32000 / dpr, H + tailY);
+  setupCanvas(detC, detCtx, W, canvasH);
+  detLayout = { drum, rows, lo, hi, rowH, H, canvasH, bpb }; // 더블클릭 추가 시 좌표→음높이 역변환용
+  const color = COLORS[selected % COLORS.length];
+
+  // 행 배경 — 거터 밑까지 칠한다. 거터는 스크롤을 따라 떠다니므로 그 자리가 비어 있으면 안 된다
+  if (drum) {
+    rows.forEach((p, i) => {
+      detCtx.fillStyle = i % 2 ? "#161b23" : "#141920";
+      detCtx.fillRect(0, DET_RULER + i * rowH, W, rowH);
+    });
+  } else {
+    for (let m = lo; m <= hi; m++) {
+      const y = H - (m - lo + 1) * rowH;
+      detCtx.fillStyle = BLACK.has(m % 12) ? "#15181d" : "#181c22";
+      detCtx.fillRect(0, y, W, rowH);
+      if (m % 12 === 0) { detCtx.fillStyle = "#2a2f38"; detCtx.fillRect(0, y + rowH - 1, W, 1); } // 옥타브 구분선
+    }
+  }
+  // 마디/격자 선 — 스냅 단위(detGrid)와 화면 격자를 항상 일치시킨다 (마디 번호는 떠다니는 눈금띠가 그린다)
+  detCtx.font = "10px sans-serif";
+  const step = rulerLabelStep();
+  const grid = detGrid();
+  for (let b = 0; b <= totalB; b++) {
+    const x = DET_GUTTER + b * barW;
+    detCtx.strokeStyle = "#2a2f38";
+    detCtx.beginPath(); detCtx.moveTo(x + .5, DET_RULER); detCtx.lineTo(x + .5, H); detCtx.stroke();
+    if (b < totalB) {
+      if (grid < bpb) {
+        for (let q = grid; q < bpb - 1e-9; q += grid) {
+          const isBeat = Math.abs(q - Math.round(q)) < 1e-9;
+          detCtx.strokeStyle = isBeat ? "#232935" : "#1a1e25";
+          const bx = x + (q / bpb) * barW;
+          detCtx.beginPath(); detCtx.moveTo(bx + .5, DET_RULER); detCtx.lineTo(bx + .5, H); detCtx.stroke();
+        }
+      }
+    }
+  }
+  // 구간 게인 틴트 (이 트랙 것만)
+  if (t.gains) {
+    detCtx.font = "10px sans-serif";
+    for (const g of t.gains) {
+      const x1 = DET_GUTTER + (g.from - 1) * barW, x2 = DET_GUTTER + Math.min(g.to, totalB) * barW;
+      detCtx.fillStyle = g.db < 0 ? "rgba(107,213,242,0.07)" : "rgba(255,143,143,0.07)";
+      detCtx.fillRect(x1, DET_RULER, Math.max(x2 - x1, 4), H - DET_RULER);
+      detCtx.fillStyle = g.db < 0 ? "#6bd5f2" : "#ff8f8f";
+      detCtx.fillText(`${g.db > 0 ? "+" : ""}${g.db}dB`, x1 + 3, DET_RULER + 11);
+    }
+  }
+  // 노트
+  detNoteRects = [];
+  const baseAlpha = t.mute ? 0.15 : 1;
+  // 세기를 진하기로 보여준다 — 여린 음은 흐리게, 센 음은 진하게. 숫자를 안 봐도 다이내믹이 보인다
+  const velAlpha = v => baseAlpha * (0.4 + 0.6 * Math.min(127, Math.max(1, v ?? 96)) / 127);
+  detCtx.fillStyle = color;
+  for (const n of t.notes) {
+    detCtx.globalAlpha = velAlpha(n.vel);
+    const x = DET_GUTTER + ((n.bar - 1) * bpb + n.beat) / bpb * barW;
+    const w = Math.max(3, n.dur / bpb * barW - 1);
+    if (drum) {
+      const pi = rows.indexOf(n.pitch);
+      if (pi < 0) continue;
+      const y = DET_RULER + pi * rowH;
+      const w2 = Math.min(w, barW / bpb * 0.5);
+      detCtx.fillRect(x, y + 2, w2, rowH - 4);
+      detNoteRects.push({ x, y: y + 2, w: w2, h: rowH - 4, note: n });
+    } else {
+      const m = pitchToMidi(n.pitch);
+      if (m === null || m < lo || m > hi) continue;
+      const y = H - (m - lo + 1) * rowH;
+      const h2 = Math.max(2, rowH - 2);
+      detCtx.fillRect(x, y + 1, w, h2);
+      detNoteRects.push({ x, y: y + 1, w, h: h2, note: n });
+    }
+  }
+  detCtx.globalAlpha = 1;
+  // 조성에서 벗어난 음 — 점선 테두리로만 표시한다. 틀렸다는 게 아니라 "여기 좀 보라"는 표시라
+  // 색을 바꾸거나 채우지 않는다. 서버가 확신할 때만 목록이 오므로 여기서 다시 거를 필요는 없다
+  const off = offKey.get(t.name);
+  if (off?.size) {
+    detCtx.save();
+    detCtx.strokeStyle = "#ff9c6b"; detCtx.setLineDash([2, 2]); detCtx.lineWidth = 1.5;
+    for (const r of detNoteRects) if (off.has(noteKeyOf(r.note)))
+      detCtx.strokeRect(r.x - 1, r.y - 1, r.w + 2, r.h + 2);
+    detCtx.restore();
+  }
+  // 선택 노트 강조(클릭 단일 + 블록 다중) + 드래그 고스트(이동 미리보기)
+  detCtx.lineWidth = 1.5; detCtx.strokeStyle = "#ffd766";
+  for (const r of detNoteRects)
+    if (r.note === detSel || detSelSet.has(r.note))
+      detCtx.strokeRect(r.x - .5, r.y - .5, r.w + 1, r.h + 1);
+  detCtx.lineWidth = 1;
+  if (detDrag?.moved) {
+    const dx = detDrag.dBeats / bpb * barW;
+    detCtx.strokeStyle = "#ffffff"; detCtx.font = "10px sans-serif";
+    if (detDrag.resize) {
+      // 길이 조절 미리보기 — 오른쪽 가장자리만 늘어난다
+      const r = detNoteRects.find(x => x.note === detDrag.note);
+      if (r) {
+        detCtx.strokeRect(r.x + .5, r.y - .5, Math.max(3, r.w + dx), r.h + 1);
+        const dur = Math.max(detGrid(), Math.round((detDrag.note.dur + detDrag.dBeats) * 100) / 100);
+        detCtx.fillStyle = "#fff";
+        detCtx.fillText(`길이 ${dur}박`, r.x + 2, Math.max(DET_RULER + 10, r.y - 4));
+      }
+    } else {
+      const list = detDrag.group ?? [detDrag.note];
+      for (const gn of list) {
+        const r = detNoteRects.find(x => x.note === gn);
+        if (r) detCtx.strokeRect(r.x + dx + .5, r.y - .5, r.w, r.h + 1);
+      }
+      const r0 = detNoteRects.find(x => x.note === detDrag.note);
+      if (r0) {
+        const n = detDrag.note;
+        const abs = (n.bar - 1) * bpb + n.beat + detDrag.dBeats;
+        const nb = Math.floor(abs / bpb) + 1, nbeat = Math.round((abs - (nb - 1) * bpb) * 100) / 100;
+        detCtx.fillStyle = "#fff";
+        detCtx.fillText(`→ ${nb}마디 ${nbeat}박${detDrag.group ? ` (${list.length}개 함께)` : ""}`, r0.x + dx + 2, Math.max(DET_RULER + 10, r0.y - 4));
+      }
+    }
+  }
+  // 연필로 그리는 중인 노트 미리보기
+  if (detDraw) {
+    const gx = DET_GUTTER + detDraw.startAbs / bpb * barW;
+    const gw = Math.max(2, (detDraw.curAbs - detDraw.startAbs) / bpb * barW - 1);
+    detCtx.globalAlpha = 0.55; detCtx.fillStyle = color;
+    detCtx.fillRect(gx, detDraw.y, gw, detDraw.h);
+    detCtx.globalAlpha = 1;
+    detCtx.strokeStyle = "#fff";
+    detCtx.strokeRect(gx + .5, detDraw.y - .5, gw, detDraw.h + 1);
+    detCtx.fillStyle = "#fff"; detCtx.font = "10px sans-serif";
+    detCtx.fillText(`${String(detDraw.pitch)} · ${Math.round((detDraw.curAbs - detDraw.startAbs) * 100) / 100}박`,
+      gx + 2, Math.max(DET_RULER + 10, detDraw.y - 4));
+  }
+  // ✂ 자르기 호버 — 자를 위치 미리보기 선
+  if (splitMode && splitHover) {
+    detCtx.strokeStyle = "#fff"; detCtx.setLineDash([3, 3]);
+    detCtx.beginPath();
+    detCtx.moveTo(splitHover.x + .5, splitHover.y - 3);
+    detCtx.lineTo(splitHover.x + .5, splitHover.y + splitHover.h + 3);
+    detCtx.stroke();
+    detCtx.setLineDash([]);
+  }
+  // 붙여넣기 고스트 — 마우스를 따라다니는 미리보기, 클릭으로 확정
+  if (pasteGhost && clip) {
+    detCtx.globalAlpha = 0.5; detCtx.fillStyle = color;
+    let gx0 = null, gy0 = null;
+    for (const c of clip.notes) {
+      const cx = DET_GUTTER + (pasteGhost.curAbs + c.relAbs) / bpb * barW;
+      const cw = Math.max(3, c.dur / bpb * barW - 1);
+      let cy;
+      if (drum) {
+        const pi = rows.indexOf(c.pitch);
+        if (pi < 0) continue;
+        cy = DET_RULER + pi * rowH + 2;
+        detCtx.fillRect(cx, cy, Math.min(cw, barW / bpb * 0.5), rowH - 4);
+      } else {
+        const m = pitchToMidi(c.pitch);
+        if (m === null || m < lo || m > hi) continue;
+        cy = H - (m - lo + 1) * rowH + 1;
+        detCtx.fillRect(cx, cy, cw, Math.max(2, rowH - 2));
+      }
+      if (gy0 === null || cy < gy0) { gy0 = cy; gx0 = cx; }
+    }
+    detCtx.globalAlpha = 1;
+    const pb = Math.floor(pasteGhost.curAbs / bpb + 1e-9) + 1;
+    const pbeat = Math.round((pasteGhost.curAbs - (pb - 1) * bpb) * 100) / 100;
+    detCtx.fillStyle = "#fff"; detCtx.font = "10px sans-serif";
+    detCtx.fillText(`붙여넣기 ${clip.notes.length}개 → ${pb}마디 ${pbeat}박 · 클릭 확정, Esc 취소`,
+      (gx0 ?? DET_GUTTER) + 2, Math.max(DET_RULER + 10, (gy0 ?? DET_RULER + 14) - 4));
+  }
+  // 진행 중인 마퀴(블록 선택) 사각형
+  if (detMarq?.moved) {
+    const mx = Math.min(detMarq.x0, detMarq.x1), my = Math.min(detMarq.y0, detMarq.y1);
+    const mw = Math.abs(detMarq.x1 - detMarq.x0), mh = Math.abs(detMarq.y1 - detMarq.y0);
+    detCtx.fillStyle = "rgba(255,215,102,0.08)";
+    detCtx.fillRect(mx, my, mw, mh);
+    detCtx.strokeStyle = "#ffd766";
+    detCtx.setLineDash([4, 3]);
+    detCtx.strokeRect(mx + .5, my + .5, mw, mh);
+    detCtx.setLineDash([]);
+  }
+  // 어레인지에서 고른 다음 재생 시작점도 상세롤의 같은 음악 위치에 표시한다.
+  const startBar = playbackStartBar();
+  if (startBar !== null) {
+    const x = DET_GUTTER + (startBar - 1) * barW;
+    detCtx.save();
+    detCtx.strokeStyle = "#7aa2ff"; detCtx.setLineDash([4, 3]);
+    detCtx.beginPath(); detCtx.moveTo(x + .5, DET_RULER); detCtx.lineTo(x + .5, H); detCtx.stroke();
+    detCtx.restore();
+  }
+  // 재생 헤드
+  const beat = playheadBeat();
+  if (beat !== null) {
+    const x = DET_GUTTER + beat / bpb * barW;
+    detCtx.strokeStyle = "#ff6b6b"; detCtx.lineWidth = 2;
+    detCtx.beginPath(); detCtx.moveTo(x, DET_RULER); detCtx.lineTo(x, H); detCtx.stroke();
+    detCtx.lineWidth = 1;
+  }
+  // 맨 마지막 — 건반 눈금과 마디 번호는 다른 것들 위에 뜬 채 스크롤을 따라다닌다
+  drawDetGutter(W, H, { drum, rows, lo, hi, rowH, step, sx: wrap.scrollLeft, sy: wrap.scrollTop });
+}
+
+// 왼쪽 건반 눈금(음이름)과 위쪽 마디 번호띠.
+// 캔버스에 붙박이로 그리면 확대해서 옆으로 밀었을 때 통째로 화면 밖으로 밀려나,
+// 정작 가까이 봐야 할 때 "이 줄이 무슨 음인지"를 잃는다. 그래서 스크롤 양만큼 되밀어 그린다.
+function drawDetGutter(W, H, { drum, rows, lo, hi, rowH, step, sx, sy }) {
+  const g = DET_GUTTER, keyW = g - 4;
+  detCtx.fillStyle = "#12151a";
+  detCtx.fillRect(sx, 0, g, H);
+  if (drum) {
+    detCtx.fillStyle = "#69707e"; detCtx.font = "9px sans-serif";
+    rows.forEach((p, i) => detCtx.fillText(p, sx + 6, DET_RULER + i * rowH + rowH / 2 + 3));
+  } else {
+    // 한 줄 = 건반 하나(반음) — 어느 줄이 무슨 음인지 바로 보인다
+    for (let m = lo; m <= hi; m++) {
+      const y = H - (m - lo + 1) * rowH;
+      const black = BLACK.has(m % 12), isC = m % 12 === 0;
+      detCtx.fillStyle = "#e8ebf0"; detCtx.fillRect(sx, y, keyW, rowH);
+      if (black) { detCtx.fillStyle = "#232830"; detCtx.fillRect(sx, y, keyW * 0.62, rowH); }
+      detCtx.fillStyle = "#0c0e12"; detCtx.fillRect(sx, y + rowH - 1, keyW, 1); // 건반 사이 경계
+      // 음이름: 흰건반은 줄이 충분히 높을 때 전부, C는 항상 (옥타브 기준점)
+      if (!black && (isC || rowH >= 9)) {
+        detCtx.fillStyle = isC ? "#1a1d23" : "#69707e";
+        detCtx.font = (isC ? "bold " : "") + "8px sans-serif";
+        detCtx.fillText(midiToPitch(m), sx + keyW * 0.62 + 4, y + rowH - Math.max(1, (rowH - 7) / 2));
+      }
+    }
+  }
+  // 마디 번호띠 — 세로로 확대해 내려가도 위에 남아 있어야 지금 몇 마디인지 안다
+  detCtx.fillStyle = "#12151a";
+  detCtx.fillRect(0, sy, W, DET_RULER);
+  detCtx.strokeStyle = "#2a2f38";
+  detCtx.beginPath(); detCtx.moveTo(0, sy + DET_RULER - .5); detCtx.lineTo(W, sy + DET_RULER - .5); detCtx.stroke();
+  detCtx.fillStyle = "#8a93a3"; detCtx.font = "10px sans-serif";
+  for (let b = 0; b < totalB; b += step) detCtx.fillText(b + 1, g + b * barW + 3, sy + 12);
+  detCtx.fillStyle = "#12151a"; // 왼쪽 위 모서리 — 번호가 건반 위로 삐져나오지 않게 덮는다
+  detCtx.fillRect(sx, sy, g, DET_RULER);
+}
+
+// ---------- 강약 흐름 ----------
+// 개별 막대를 집는 대신 그래프의 두 지점을 잇는다. 한 제스처는 set_velocity 한 번으로 저장되므로
+// 크레셴도·디미누엔도가 한 번의 되돌리기와 한 번의 스템 재생성으로 끝난다.
+const VEL_H = 78, VEL_TOP = 30, VEL_PAD = 6;
+const velC = $("velLane"), velCtx = velC.getContext("2d");
+let velDrag = null, velHintTimer = null;
+const velNotePos = (n, bpb = beatsPerBar()) => (n.bar - 1) * bpb + n.beat;
+const velYOf = v => VEL_H - VEL_PAD - (VEL_H - VEL_TOP - VEL_PAD) * Math.min(127, Math.max(1, v)) / 127;
+const velFromY = y => Math.round(Math.min(127, Math.max(1,
+  (VEL_H - VEL_PAD - y) / (VEL_H - VEL_TOP - VEL_PAD) * 127)));
+const velFeeling = v => v < 58 ? "아주 여리게" : v < 78 ? "여리게" : v < 103 ? "보통" : v < 119 ? "세게" : "아주 세게";
+
+function setVelHint(text = "선을 그어 점점 세게·여리게 만드세요", resetAfter = 0) {
+  clearTimeout(velHintTimer);
+  const el = $("velHintText");
+  if (el) el.textContent = text;
+  if (resetAfter) velHintTimer = setTimeout(() => setVelHint(), resetAfter);
+}
+
+function restoreVelOriginals(d) {
+  if (!d?.original) return;
+  for (const [n, v] of d.original) {
+    if (v === undefined) delete n.vel; else n.vel = v;
+  }
+}
+
+function cancelVelGesture(restore = true, redraw = true) {
+  if (!velDrag) return;
+  const d = velDrag; velDrag = null;
+  if (restore) restoreVelOriginals(d);
+  setVelHint();
+  if (redraw && song) { drawVelLane(); drawDetail(); }
+}
+
+function drawVelLane() {
+  const wrap = $("detWrap");
+  const W = Math.max(40, wrap.clientWidth);
+  setupCanvas(velC, velCtx, W, VEL_H);
+  velCtx.fillStyle = "#0f141b"; velCtx.fillRect(0, 0, W, VEL_H);
+  const t = song?.tracks[selected];
+  if (!t) return;
+  const bpb = beatsPerBar(), sx = wrap.scrollLeft;
+  const botY = VEL_H - VEL_PAD;
+  const xOf = pos => DET_GUTTER + pos / bpb * barW - sx;
+
+  // 상세 악보와 같은 마디 눈금. 그래프가 어느 구간을 바꾸는지 음표를 읽지 않아도 맞출 수 있다.
+  velCtx.strokeStyle = "#19212b"; velCtx.lineWidth = 1;
+  for (let b = 0; b <= totalB; b++) {
+    const x = xOf(b * bpb);
+    if (x < DET_GUTTER || x > W) continue;
+    velCtx.beginPath(); velCtx.moveTo(x + .5, VEL_TOP); velCtx.lineTo(x + .5, botY); velCtx.stroke();
+  }
+  for (const v of [52, 84, 116]) {
+    const y = velYOf(v);
+    velCtx.strokeStyle = v === 84 ? "#2a3441" : "#202a35";
+    velCtx.beginPath(); velCtx.moveTo(DET_GUTTER, y + .5); velCtx.lineTo(W, y + .5); velCtx.stroke();
+  }
+
+  // 같은 시점의 화음은 평균을 선으로, 음별 차이는 짧은 세로 꼬리로 보여 준다.
+  const grouped = new Map();
+  for (const n of t.notes) {
+    const pos = velNotePos(n, bpb), key = pos.toFixed(6), v = n.vel ?? 96;
+    const g = grouped.get(key) ?? { pos, sum:0, count:0, lo:128, hi:0 };
+    g.sum += v; g.count++; g.lo = Math.min(g.lo, v); g.hi = Math.max(g.hi, v); grouped.set(key, g);
+  }
+  const pts = [...grouped.values()].sort((a, b) => a.pos - b.pos).map(g => ({
+    ...g, x:xOf(g.pos), v:g.sum / g.count, y:velYOf(g.sum / g.count)
+  })).filter(p => p.x >= DET_GUTTER - 2 && p.x <= W + 2);
+  const color = COLORS[selected % COLORS.length];
+
+  if (pts.length) {
+    // 긴 쉼표를 선으로 가로지르면 연주가 없는 곳에도 강약 변화가 있는 것처럼 보인다.
+    // 네 마디보다 긴 빈 구간에서는 끊고, 실제 음이 이어지는 덩어리 안에서만 면과 선을 잇는다.
+    const segments = [];
+    for (const p of pts) {
+      const seg = segments[segments.length - 1];
+      if (!seg || p.pos - seg[seg.length - 1].pos > bpb * 4) segments.push([p]);
+      else seg.push(p);
+    }
+    for (const seg of segments) {
+      // 면은 전체적인 상승·하강을 먼저 읽게 하고, 선과 점은 실제 음의 위치를 남긴다.
+      velCtx.beginPath(); velCtx.moveTo(seg[0].x, botY);
+      for (const p of seg) velCtx.lineTo(p.x, p.y);
+      velCtx.lineTo(seg[seg.length - 1].x, botY); velCtx.closePath();
+      velCtx.fillStyle = color + (t.mute ? "10" : "24"); velCtx.fill();
+      velCtx.beginPath(); velCtx.moveTo(seg[0].x, seg[0].y);
+      for (let i = 1; i < seg.length; i++) velCtx.lineTo(seg[i].x, seg[i].y);
+      velCtx.strokeStyle = color; velCtx.globalAlpha = t.mute ? .3 : .82; velCtx.lineWidth = 2; velCtx.stroke();
+    }
+    for (const p of pts) {
+      if (p.hi !== p.lo) {
+        velCtx.strokeStyle = color; velCtx.globalAlpha = t.mute ? .12 : .28; velCtx.lineWidth = 1;
+        velCtx.beginPath(); velCtx.moveTo(p.x, velYOf(p.hi)); velCtx.lineTo(p.x, velYOf(p.lo)); velCtx.stroke();
+      }
+      velCtx.fillStyle = color; velCtx.globalAlpha = t.mute ? .25 : .9;
+      velCtx.beginPath(); velCtx.arc(p.x, p.y, 2.2, 0, Math.PI * 2); velCtx.fill();
+    }
+    velCtx.globalAlpha = 1;
+  }
+
+  // 드래그 중에는 사용자가 정한 시작·끝을 실제 결과 위에 더 굵게 겹쳐 보여 준다.
+  if (velDrag?.trackName === t.name) {
+    const a = velDrag.start.pos <= velDrag.end.pos ? velDrag.start : velDrag.end;
+    const b = velDrag.start.pos <= velDrag.end.pos ? velDrag.end : velDrag.start;
+    const ax = xOf(a.pos), ay = velYOf(a.vel), bx = xOf(b.pos), by = velYOf(b.vel);
+    velCtx.strokeStyle = "#d7e7ff"; velCtx.lineWidth = 3; velCtx.lineCap = "round";
+    velCtx.beginPath(); velCtx.moveTo(ax, ay); velCtx.lineTo(bx, by); velCtx.stroke();
+    velCtx.fillStyle = "#eef6ff";
+    for (const [x, y] of [[ax, ay], [bx, by]]) { velCtx.beginPath(); velCtx.arc(x, y, 4.5, 0, Math.PI * 2); velCtx.fill(); }
+    velCtx.lineCap = "butt";
+  }
+
+  // 왼쪽 고정 눈금은 스크롤되는 선을 가리고 언제나 같은 자리에 남는다.
+  velCtx.fillStyle = "rgba(15,20,27,.94)"; velCtx.fillRect(0, VEL_TOP - 1, DET_GUTTER, VEL_H - VEL_TOP + 1);
+  velCtx.fillStyle = "#6f7d90"; velCtx.font = "9px sans-serif";
+  velCtx.fillText("세게", 8, velYOf(116) + 3);
+  velCtx.fillText("여리게", 8, velYOf(52) + 3);
+}
+
+function velPointFromEvent(e) {
+  const rect = velC.getBoundingClientRect();
+  const x = Math.max(DET_GUTTER, Math.min(rect.width, e.clientX - rect.left));
+  const y = Math.max(VEL_TOP, Math.min(VEL_H - VEL_PAD, e.clientY - rect.top));
+  const bpb = beatsPerBar(), wrap = $("detWrap");
+  const pos = Math.max(0, Math.min(totalB * bpb - 1e-6,
+    (wrap.scrollLeft + x - DET_GUTTER) / barW * bpb));
+  return { pos, vel:velFromY(y), x, y };
+}
+
+function rampValues(targets, leftVel, rightVel, originals = null) {
+  if (!targets.length) return;
+  const bpb = beatsPerBar();
+  const lo = Math.min(...targets.map(n => velNotePos(n, bpb)));
+  const hi = Math.max(...targets.map(n => velNotePos(n, bpb)));
+  for (const n of targets) {
+    if (originals && !originals.has(n)) originals.set(n, n.vel);
+    const p = velNotePos(n, bpb);
+    n.vel = Math.max(1, Math.min(127, Math.round(hi - lo < 1e-9
+      ? rightVel : leftVel + (rightVel - leftVel) * (p - lo) / (hi - lo))));
+  }
+}
+
+function previewVelGesture() {
+  const d = velDrag;
+  const t = song?.tracks.find(x => x.name === d?.trackName);
+  if (!d || !t || t !== d.trackRef) { cancelVelGesture(false); return; }
+  restoreVelOriginals(d);
+  const a = d.start.pos <= d.end.pos ? d.start : d.end;
+  const b = d.start.pos <= d.end.pos ? d.end : d.start;
+  const bpb = beatsPerBar();
+  d.targets = t.notes.filter(n => {
+    const p = velNotePos(n, bpb);
+    return p >= a.pos - 1e-7 && p <= b.pos + 1e-7;
+  });
+  d.leftVel = a.vel; d.rightVel = b.vel;
+  rampValues(d.targets, d.leftVel, d.rightVel);
+  const direction = d.rightVel > d.leftVel + 3 ? "점점 세게" : d.rightVel < d.leftVel - 3 ? "점점 여리게" : "고르게";
+  setVelHint(d.targets.length ? `${direction} · 음 ${d.targets.length}개` : "이 구간에는 연주할 음이 없습니다");
+  drawVelLane(); drawDetail();
+}
+
+function velNoteIds(targets) {
+  return targets.map(n => ({ bar:n.bar, beat:n.beat, pitch:String(n.pitch), dur:n.dur }));
+}
+
+function commitVelocityRamp(t, targets, leftVel, rightVel, originals, label) {
+  if (!targets.length) {
+    restoreVelOriginals({ original:originals }); drawVelLane(); drawDetail();
+    setVelHint("이 구간에는 연주할 음이 없습니다", 1800); return;
+  }
+  if (targets.length > 500) {
+    restoreVelOriginals({ original:originals }); drawVelLane(); drawDetail();
+    toast("한 번에 바꿀 음이 너무 많습니다 — 화면을 확대해 더 짧게 그려 주세요", true);
+    setVelHint("화면을 확대해 더 짧게 그려 주세요", 2200); return;
+  }
+  const bpb = beatsPerBar();
+  const uniquePos = new Set(targets.map(n => velNotePos(n, bpb).toFixed(6))).size;
+  const args = { track:t.name, notes:velNoteIds(targets), vel:leftVel };
+  if (uniquePos > 1 && leftVel !== rightVel) args.to_vel = rightVel;
+  else args.vel = rightVel;
+  activityCacheSong = null; drawArrange(); drawVelLane(); drawDetail();
+  setVelHint(label, 1800);
+  rpc("set_velocity", args).catch(() => {
+    restoreVelOriginals({ original:originals });
+    activityCacheSong = null; renderAll();
+  });
+}
+
+velC.addEventListener("pointerdown", e => {
+  const t = song?.tracks[selected];
+  if (!t) return;
+  const rect = velC.getBoundingClientRect();
+  const rawX = e.clientX - rect.left, rawY = e.clientY - rect.top;
+  // 위쪽 설명·빠른 설정과 왼쪽 '세게/여리게' 눈금은 그래프 입력 영역이 아니다.
+  if (rawX < DET_GUTTER || rawY < VEL_TOP) return;
+  const p = velPointFromEvent(e);
+  e.preventDefault();
+  try { velC.setPointerCapture(e.pointerId); } catch { /* 합성 이벤트 등 */ }
+  velDrag = {
+    pointerId:e.pointerId, trackName:t.name, trackRef:t, start:p, end:p, targets:[],
+    original:new Map(t.notes.map(n => [n, n.vel])), leftVel:p.vel, rightVel:p.vel
+  };
+  setVelHint("끝 지점까지 끌어 강약의 흐름을 그리세요");
+  drawVelLane();
+});
+
+velC.addEventListener("pointermove", e => {
+  if (!velDrag || e.pointerId !== velDrag.pointerId) return;
+  e.preventDefault();
+  velDrag.end = velPointFromEvent(e);
+  previewVelGesture();
+});
+
+function endVelGesture(e) {
+  if (!velDrag || (e && e.pointerId !== velDrag.pointerId)) return;
+  const d = velDrag; velDrag = null;
+  const t = song?.tracks.find(x => x.name === d.trackName);
+  if (!t || t !== d.trackRef) { setVelHint(); drawVelLane(); return; }
+  const dx = Math.abs(d.end.x - d.start.x);
+  if (dx < 5) {
+    restoreVelOriginals(d); drawVelLane(); drawDetail();
+    setVelHint("옆으로 끌어서 강약의 흐름을 그려 주세요", 1800); return;
+  }
+  const direction = d.rightVel > d.leftVel + 3 ? "점점 세게" : d.rightVel < d.leftVel - 3 ? "점점 여리게" : "고르게";
+  commitVelocityRamp(t, d.targets, d.leftVel, d.rightVel, d.original, `${direction} 적용됨`);
+}
+velC.addEventListener("pointerup", endVelGesture);
+velC.addEventListener("pointercancel", () => cancelVelGesture(true));
+
+function visibleVelocityTargets(t) {
+  const wrap = $("detWrap"), bpb = beatsPerBar();
+  const lo = Math.max(0, (wrap.scrollLeft - DET_GUTTER) / barW * bpb);
+  const hi = Math.min(totalB * bpb, (wrap.scrollLeft + wrap.clientWidth - DET_GUTTER) / barW * bpb);
+  return t.notes.filter(n => { const p = velNotePos(n, bpb); return p >= lo && p <= hi; });
+}
+
+function applyVelPreset(kind) {
+  const t = song?.tracks[selected];
+  if (!t) return;
+  const targets = visibleVelocityTargets(t);
+  if (!targets.length) { toast("현재 화면에 강약을 바꿀 음이 없습니다", true); return; }
+  const originals = new Map(targets.map(n => [n, n.vel]));
+  const avg = Math.round(targets.reduce((s, n) => s + (n.vel ?? 96), 0) / targets.length);
+  const low = Math.max(36, avg - 22), high = Math.min(127, avg + 22);
+  const left = kind === "rise" ? low : kind === "fall" ? high : avg;
+  const right = kind === "rise" ? high : kind === "fall" ? low : avg;
+  rampValues(targets, left, right);
+  const label = kind === "rise" ? "보이는 구간을 점점 세게" : kind === "fall" ? "보이는 구간을 점점 여리게" : "보이는 구간을 고르게";
+  commitVelocityRamp(t, targets, left, right, originals, label);
+}
+$("velRise").onclick = () => applyVelPreset("rise");
+$("velEven").onclick = () => applyVelPreset("even");
+$("velFall").onclick = () => applyVelPreset("fall");
+// 스크롤할 때마다 다시 그린다 — 떠다니는 건반 눈금·마디 번호가 따라와야 하기 때문.
+// 확대하면 캔버스가 아주 넓어지므로 프레임당 한 번으로 묶는다 (스크롤 이벤트는 그보다 훨씬 자주 온다)
+let detScrollRaf = 0;
+$("detWrap").addEventListener("scroll", () => {
+  if (!song || detScrollRaf) return;
+  detScrollRaf = requestAnimationFrame(() => { detScrollRaf = 0; drawDetail(); drawVelLane(); });
+});
+
+// 마지막으로 그렸을 때의 viewport 크기. resize 이벤트가 올 때는 DOM 크기가 이미 바뀌어 있으므로
+// 이 값을 보관해야 바뀌기 전 화면 중앙의 마디·음높이를 정확히 잡을 수 있다.
+let drawnViewSize = null;
+function draw() {
+  if (!song) return;
+  drawArrange(); drawDetail(); drawVelLane();
+  drawnViewSize = {
+    arrW: $("arrWrap").clientWidth,
+    detW: $("detWrap").clientWidth,
+    detH: $("detWrap").clientHeight
+  };
+}
+
+// ---------- 확대·축소 ----------
+// 커서 밑에 있던 마디·음이 그 자리에 그대로 남는 게 핵심이다. 확대율만 바꾸고 스크롤을
+// 그대로 두면 보고 있던 곳이 화면 밖으로 밀려나 어디를 보고 있었는지 잃어버린다.
+// 다시 그린 뒤에 스크롤을 맞추는 이유: 행 높이·캔버스 높이는 drawDetail이 정하므로 그리기 전엔 모른다.
+function detAnchorY(wrap, py) {
+  const L = detLayout;
+  if (!L) return null;
+  const cy = wrap.scrollTop + py;
+  return L.drum ? { drum: true, i: (cy - DET_RULER) / L.rowH }
+                : { drum: false, m: L.lo + (L.H - cy) / L.rowH };
+}
+function detRestoreY(wrap, py, a) {
+  const L = detLayout;
+  if (!L || !a || L.drum !== a.drum) return; // 트랙 종류가 바뀌었으면 기준점이 무의미하다
+  const cy = a.drum ? DET_RULER + a.i * L.rowH : L.H - (a.m - L.lo) * L.rowH;
+  wrap.scrollTop = Math.max(0, cy - py);
+}
+
+// 확대뿐 아니라 AI/GUI 편집으로 전체 마디 수나 사용 음역이 달라질 때도 같은 음악적 위치를 유지한다.
+// 새 곡·다른 트랙에는 호출하지 않고, 같은 곡의 같은 트랙 상태 갱신에만 사용한다.
+function captureMusicView() {
+  if (!song || !detLayout) return null;
+  const arr = $("arrWrap"), det = $("detWrap");
+  // 곡이 viewport보다 좁을 때 빈 오른쪽 공간을 '음악의 중앙'으로 착각하지 않는다.
+  // 어레인지와 상세롤 모두 실제 곡이 차지하는 폭의 중앙을 같은 기준으로 쓴다.
+  const ax = HEAD_W + Math.min(totalB * barW, Math.max(0, arr.clientWidth - HEAD_W)) / 2;
+  const dx = DET_GUTTER + Math.min(totalB * barW, Math.max(0, det.clientWidth - DET_GUTTER)) / 2;
+  const dy = det.clientHeight / 2;
+  return {
+    songTitle: song.title,
+    trackName: song.tracks[selected]?.name,
+    arrBeat: (arr.scrollLeft + ax - HEAD_W) / barW,
+    detBeat: (det.scrollLeft + dx - DET_GUTTER) / barW,
+    yAnchor: detAnchorY(det, dy),
+    mouseView: detMouse ? { x: detMouse.x - det.scrollLeft, y: detMouse.y - det.scrollTop } : null
+  };
+}
+function restoreMusicView(v) {
+  if (!song || !v) return;
+  const arr = $("arrWrap"), det = $("detWrap");
+  const ax = HEAD_W + Math.min(totalB * barW, Math.max(0, arr.clientWidth - HEAD_W)) / 2;
+  const dx = DET_GUTTER + Math.min(totalB * barW, Math.max(0, det.clientWidth - DET_GUTTER)) / 2;
+  const dy = det.clientHeight / 2;
+  arr.scrollLeft = Math.max(0, v.arrBeat * barW + HEAD_W - ax);
+  det.scrollLeft = Math.max(0, v.detBeat * barW + DET_GUTTER - dx);
+  detRestoreY(det, dy, v.yAnchor);
+  if (v.mouseView) detMouse = { x: det.scrollLeft + v.mouseView.x, y: det.scrollTop + v.mouseView.y };
+  splitHover = null;
+  drawDetail(); drawVelLane();
+}
+
+// anchor: {ax} 어레인지 화면 x, {dx,dy} 상세롤 화면 x·y — 없는 값은 그 화면의 한가운데를 기준으로 잡는다
+function applyZoom(nx, ny, anchor) {
+  nx = clampZ(nx, ZX_MIN, ZX_MAX);
+  ny = clampZ(ny, ZY_MIN, ZY_MAX);
+  if (nx === zoomX && ny === zoomY) return false;
+  // 드래그 도중 배율이 바뀌면 시작점만 옛 픽셀 좌표로 남아 노트가 튄다.
+  // 포인터를 놓은 뒤에는 정상적으로 확대할 수 있으므로 진행 중인 편집에서는 휠 줌만 양보한다.
+  if (detDrag || detMarq || detDraw || velDrag) return false;
+  if (!song) { zoomX = nx; zoomY = ny; renderZoom(); return true; }
+  const arr = $("arrWrap"), det = $("detWrap"), a = anchor ?? {};
+  // 왼쪽 고정 영역(트랙 머리·건반 거터) 안쪽을 기준으로 잡으면 가려진 자리를 기준 삼게 된다
+  // 전체 곡이 화면보다 작을 때는 남은 빈 공간이 아니라 실제 곡의 가운데를 버튼 줌 기준으로 삼는다.
+  const arrMid = HEAD_W + Math.min(totalB * barW, Math.max(0, arr.clientWidth - HEAD_W)) / 2;
+  const detMid = DET_GUTTER + Math.min(totalB * barW, Math.max(0, det.clientWidth - DET_GUTTER)) / 2;
+  const ax = Math.max(HEAD_W, a.ax ?? arrMid);
+  const dx = Math.max(DET_GUTTER, a.dx ?? detMid);
+  const dy = a.dy ?? det.clientHeight / 2;
+  const arrBeat = (arr.scrollLeft + ax - HEAD_W) / barW;
+  const detBeat = (det.scrollLeft + dx - DET_GUTTER) / barW;
+  const yAnchor = detAnchorY(det, dy);
+  // 붙여넣기 시작점은 마지막 포인터의 캔버스 좌표를 쓰므로, 배율 뒤에도 같은 화면 위치로 환산한다.
+  const mouseView = detMouse ? { x: detMouse.x - det.scrollLeft, y: detMouse.y - det.scrollTop } : null;
+  splitHover = null; // 자르기 미리보기는 픽셀 좌표라 새 배율에서 다음 호버 때 다시 계산한다
+  zoomX = nx; zoomY = ny;
+  draw();
+  arr.scrollLeft = Math.max(0, arrBeat * barW + HEAD_W - ax);
+  det.scrollLeft = Math.max(0, detBeat * barW + DET_GUTTER - dx);
+  detRestoreY(det, dy, yAnchor);
+  if (mouseView) detMouse = { x: det.scrollLeft + mouseView.x, y: det.scrollTop + mouseView.y };
+  drawVelLane(); // 세기 레인은 스크롤 대신 그릴 때 밀어 주므로 스크롤을 옮긴 뒤 한 번 더
+  renderZoom();
+  return true;
+}
+
+function renderZoom() {
+  const pct = v => Math.round(v * 100) + "%";
+  const eps = 1e-6;
+  $("zoomVal").textContent = zoomY === 1 ? pct(zoomX) : `${pct(zoomX)} ↕${pct(zoomY)}`;
+  $("zoomOut").disabled = zoomX <= ZX_MIN + eps || zoomXCap <= ZX_MIN + eps;
+  $("zoomIn").disabled = zoomX >= zoomXCap - eps;
+  $("zoomFit").disabled = Math.abs(zoomX - 1) < eps && Math.abs(zoomY - 1) < eps;
+}
+
+// 휠 한 눈금과 트랙패드 오므리기를 같은 감각으로 — 지수라서 확대와 축소가 대칭이 된다
+function wheelFactor(e) {
+  const d = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * 400 : e.deltaY;
+  return Math.exp(-clampZ(d, -60, 60) * 0.004);
+}
+
+// where: "arr" 어레인지 · "det" 상세롤 · "vel" 세기 레인(가로만 의미가 있다)
+function onWheelZoom(e, where) {
+  if (!song) return;
+  const mod = e.ctrlKey || e.metaKey; // 트랙패드 오므리기도 ctrlKey가 붙은 휠로 들어온다
+  // 세로 확대는 상세롤에만 있다 — 어레인지 레인은 높이가 고정이라 여기서 가로채면 아무 일도 안 일어난 듯 보인다
+  const vert = (e.altKey || (mod && e.shiftKey)) && where === "det";
+  if (!vert && !mod) return;          // 수식키 없는 휠은 지금까지처럼 스크롤
+  e.preventDefault();
+  const f = wheelFactor(e), anchor = {};
+  if (where === "arr") anchor.ax = e.clientX - $("arrWrap").getBoundingClientRect().left;
+  else if (where === "det") {
+    const r = $("detWrap").getBoundingClientRect();
+    anchor.dx = e.clientX - r.left; anchor.dy = e.clientY - r.top;
+  } else anchor.dx = e.clientX - $("velWrap").getBoundingClientRect().left;
+  applyZoom(vert ? zoomX : zoomX * f, vert ? zoomY * f : zoomY, anchor);
+}
+$("arrWrap").addEventListener("wheel", e => onWheelZoom(e, "arr"), { passive: false });
+$("detWrap").addEventListener("wheel", e => onWheelZoom(e, "det"), { passive: false });
+$("velWrap").addEventListener("wheel", e => onWheelZoom(e, "vel"), { passive: false });
+$("zoomIn").onclick = () => applyZoom(zoomX * 1.3, zoomY, null);
+$("zoomOut").onclick = () => applyZoom(zoomX / 1.3, zoomY, null);
+$("zoomFit").onclick = () => applyZoom(1, 1, null);
+renderZoom();
+
+// 트랙(또는 곡)이 바뀔 때 한 번만, 쓰인 음역의 가운데가 보이도록 상세롤을 세로 스크롤한다.
+// SSE마다 다시 맞추면 사용자가 스크롤해 둔 위치를 계속 빼앗으므로 키가 바뀔 때만 움직인다
+let lastDetScrollKey = null;
+function scrollDetToRange() {
+  if (!song || !detLayout || detLayout.drum) return;
+  const t = song.tracks[selected];
+  if (!t) return;
+  const key = song.title + "|" + selected + "|" + detFull;
+  if (key === lastDetScrollKey) return;
+  lastDetScrollKey = key;
+  let mLo = null, mHi = null;
+  for (const n of t.notes) {
+    const m = pitchToMidi(n.pitch);
+    if (m !== null) { mLo = mLo === null ? m : Math.min(mLo, m); mHi = mHi === null ? m : Math.max(mHi, m); }
+  }
+  const center = mLo === null ? 60 : (mLo + mHi) / 2; // 빈 트랙은 C4(가온다) 근처
+  const wrap = $("detWrap");
+  const y = detLayout.H - (center - detLayout.lo + 1) * detLayout.rowH;
+  wrap.scrollTop = Math.max(0, y - wrap.clientHeight / 2);
+}
+
+// ---------- 노트 단위 편집 ----------
+// 클릭=정보/삭제 팝업 · 좌우 드래그=타이밍 이동(16분음표 스냅) · 빈 곳 드래그=블록 선택 ·
+// 선택 블록 드래그=통째 이동 · 빈 칸 더블클릭=노트 추가
+const detHit = (x, y) => [...detNoteRects].reverse().find(r =>
+  x >= r.x - 1 && x <= r.x + Math.max(r.w, 4) + 1 && y >= r.y - 2 && y <= r.y + r.h + 2);
+// 노트 오른쪽 가장자리(길이 조절 핸들) — 좁은 노트는 이동이 우선
+const detEdgeHit = (x, y) => [...detNoteRects].reverse().find(r =>
+  r.w >= 10 && Math.abs(x - (r.x + r.w)) <= 4 && y >= r.y - 2 && y <= r.y + r.h + 2);
+// 건반 거터와 마디 번호띠는 스크롤 위치에 다시 그려 화면에 고정해 둔다.
+// 캔버스 좌표만 보면 스크롤 뒤에는 이 영역도 본문처럼 보여, 뒤에 가려진 노트가 클릭될 수 있다.
+function detFloatingChromeAt(e) {
+  const r = $("detWrap").getBoundingClientRect();
+  return e.clientX - r.left < DET_GUTTER || e.clientY - r.top < DET_RULER;
+}
+
+detC.addEventListener("pointerdown", e => {
+  if (!song || !song.tracks[selected]) return;
+  if (detFloatingChromeAt(e)) return;
+  const rect = detC.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  hideFbPop();
+  const g = detGrid(), bpb = beatsPerBar();
+  if (pasteGhost && clip) { commitPaste(); pasteGhost = null; draw(); return; } // 붙여넣기 확정 — 클릭한 위치에
+  if (splitMode) {
+    // ✂ 자르기: 노트를 클릭하면 격자에 스냅된 위치에서 둘로 — 여백 클릭은 무시
+    const hit = detHit(x, y);
+    if (!hit) return;
+    const n = hit.note;
+    const at = Math.round((x - DET_GUTTER) / barW * bpb / g) * g;
+    const start = (n.bar - 1) * bpb + n.beat;
+    if (at <= start + 1e-6 || at >= start + n.dur - 1e-6) {
+      toast("격자에 맞춘 자를 위치가 노트 안쪽이 아닙니다 — 노트 가운데쪽을 클릭하세요", true);
+      return;
+    }
+    const ab = Math.floor(at / bpb + 1e-9) + 1;
+    const abeat = Math.round((at - (ab - 1) * bpb) * 1000) / 1000;
+    rpc("split_note", { track: song.tracks[selected].name, bar: n.bar, beat: n.beat,
+      pitch: String(n.pitch), dur: n.dur, at_bar: ab, at_beat: abeat }).catch(() => {});
+    return;
+  }
+  if (penMode) {
+    // ✏️ 연필: 노트 클릭=지우개, 빈 곳 클릭·드래그=격자에 맞춰 노트 그리기
+    const hit = detHit(x, y);
+    if (hit) {
+      const n = hit.note;
+      rpc("delete_note", { track: song.tracks[selected].name, bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur }).catch(() => {});
+      return;
+    }
+    const row = detPitchAt(y);
+    if (!row || x < DET_GUTTER) return;
+    const startAbs = Math.max(0, Math.floor((x - DET_GUTTER) / barW * bpb / g) * g);
+    detDraw = { ...row, startAbs, curAbs: startAbs + g };
+    try { detC.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    draw();
+    return;
+  }
+  const edge = detEdgeHit(x, y);
+  const hit = edge ?? detHit(x, y);
+  if (edge) {
+    detSelSet = new Set(); detSel = edge.note;
+    detDrag = { resize: true, note: edge.note, startX: x, moved: false, dBeats: 0 };
+  } else if (hit) {
+    if (detSelSet.size > 1 && detSelSet.has(hit.note)) {
+      detDrag = { group: [...detSelSet], note: hit.note, startX: x, moved: false, dBeats: 0 }; // 블록 통째 이동
+    } else {
+      detSelSet = new Set();
+      detSel = hit.note;
+      detDrag = { note: hit.note, startX: x, moved: false, dBeats: 0 };
+    }
+  } else {
+    detSel = null; detSelSet = new Set();
+    if (x >= DET_GUTTER && y >= DET_RULER) detMarq = { x0: x, y0: y, x1: x, y1: y, moved: false };
+  }
+  try { detC.setPointerCapture(e.pointerId); } catch { /* 합성 이벤트 등 */ }
+  draw();
+});
+detC.addEventListener("pointermove", e => {
+  const rect = detC.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  const g = detGrid(), bpb = beatsPerBar();
+  // 진행 중인 드래그는 거터 밖으로 나가도 이어 가되, 유휴 상태에서는 떠 있는 UI 뒤를 호버하지 않는다.
+  if (detFloatingChromeAt(e) && !detDrag && !detMarq && !detDraw) {
+    if (splitHover) { splitHover = null; draw(); }
+    detC.style.cursor = "default";
+    return;
+  }
+  detMouse = { x, y };
+  if (pasteGhost && clip) {
+    const cur = Math.max(0, Math.round((x - DET_GUTTER) / barW * bpb / g) * g);
+    if (cur !== pasteGhost.curAbs) { pasteGhost.curAbs = cur; draw(); }
+    return;
+  }
+  if (splitMode) {
+    // 자를 위치 미리보기 선 + 커서
+    const hit = detHit(x, y);
+    if (hit) {
+      const at = Math.round((x - DET_GUTTER) / barW * bpb / g) * g;
+      const start = (hit.note.bar - 1) * bpb + hit.note.beat;
+      const inside = at > start + 1e-6 && at < start + hit.note.dur - 1e-6;
+      const nh = inside ? { x: DET_GUTTER + at / bpb * barW, y: hit.y, h: hit.h } : null;
+      if (JSON.stringify(nh) !== JSON.stringify(splitHover)) { splitHover = nh; draw(); }
+    } else if (splitHover) { splitHover = null; draw(); }
+    detC.style.cursor = hit ? "col-resize" : "default";
+    return;
+  }
+  if (detDraw) {
+    const raw = (x - DET_GUTTER) / barW * bpb;
+    const cur = detDraw.startAbs + Math.max(g, Math.round((raw - detDraw.startAbs) / g) * g);
+    if (cur !== detDraw.curAbs) { detDraw.curAbs = cur; draw(); }
+    return;
+  }
+  if (detMarq) {
+    detMarq.x1 = x; detMarq.y1 = y;
+    if (!detMarq.moved && (Math.abs(x - detMarq.x0) > 4 || Math.abs(y - detMarq.y0) > 4)) detMarq.moved = true;
+    if (detMarq.moved) {
+      const mx1 = Math.min(detMarq.x0, x), mx2 = Math.max(detMarq.x0, x);
+      const my1 = Math.min(detMarq.y0, y), my2 = Math.max(detMarq.y0, y);
+      detSelSet = new Set(detNoteRects
+        .filter(r => r.x < mx2 && r.x + Math.max(r.w, 4) > mx1 && r.y < my2 && r.y + r.h > my1)
+        .map(r => r.note));
+      draw();
+    }
+    return;
+  }
+  if (detDrag) {
+    if (!detDrag.moved && Math.abs(x - detDrag.startX) > 4) detDrag.moved = true;
+    if (!detDrag.moved) return;
+    const dBeats = Math.round(((x - detDrag.startX) / barW * bpb) / g) * g; // 화면 격자와 같은 단위로 스냅
+    if (dBeats !== detDrag.dBeats) { detDrag.dBeats = dBeats; draw(); }
+    return;
+  }
+  // 유휴 — 커서 힌트: 연필/길이 조절/이동
+  if (song && song.tracks[selected])
+    detC.style.cursor = penMode ? "crosshair" : detEdgeHit(x, y) ? "ew-resize" : detHit(x, y) ? "grab" : "default";
+});
+detC.addEventListener("pointerup", e => {
+  if (detDraw) {
+    const d = detDraw; detDraw = null;
+    const bpb = beatsPerBar();
+    const bar = Math.floor(d.startAbs / bpb) + 1;
+    const beat = Math.round((d.startAbs - (bar - 1) * bpb) * 1000) / 1000;
+    const dur = Math.round((d.curAbs - d.startAbs) * 1000) / 1000;
+    rpc("add_notes", { track: song.tracks[selected].name,
+      notes: [{ bar, beat, pitch: String(d.pitch), dur, vel: 96 }] }).catch(() => {});
+    draw();
+    return;
+  }
+  if (detMarq) {
+    const m = detMarq; detMarq = null;
+    if (m.moved && detSelSet.size) showBlockPop(e.clientX, e.clientY);
+    else detSelSet = new Set();
+    draw();
+    return;
+  }
+  if (!detDrag) return;
+  const d = detDrag; detDrag = null;
+  if (d.moved) {
+    if (d.dBeats !== 0) {
+      const g = detGrid(), bpb = beatsPerBar();
+      const track = song.tracks[selected].name;
+      if (d.resize) {
+        const n = d.note;
+        const dur = Math.min(64, Math.max(g, Math.round((n.dur + d.dBeats) * 1000) / 1000));
+        rpc("resize_note", { track, bar: n.bar, beat: n.beat, pitch: String(n.pitch), from_dur: n.dur, dur }).catch(() => {});
+      } else {
+        const minAbs = Math.min(...(d.group ?? [d.note]).map(n => (n.bar - 1) * bpb + n.beat)) + d.dBeats;
+        if (minAbs < 0) { toast("곡 시작 앞으로는 옮길 수 없습니다", true); draw(); return; }
+        if (d.group) {
+          rpc("move_notes", { track, by_beats: d.dBeats,
+            notes: d.group.map(n => ({ bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur })) }).catch(() => {});
+        } else {
+          const n = d.note;
+          const abs = (n.bar - 1) * bpb + n.beat + d.dBeats;
+          const nb = Math.floor(abs / bpb) + 1;
+          const nbeat = Math.round((abs - (nb - 1) * bpb) * 1000) / 1000;
+          rpc("move_note", { track, bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur, to_bar: nb, to_beat: nbeat }).catch(() => {});
+        }
+      }
+      detSel = null;
+    }
+    draw();
+  } else {
+    showNotePop(d.note, e.clientX, e.clientY);
+  }
+});
+detC.addEventListener("pointercancel", () => {
+  if (detDrag || detMarq || detDraw) { detDrag = null; detMarq = null; detDraw = null; draw(); }
+});
+
+// 빈 칸 더블클릭 → 격자에 맞춰 노트 추가 (선택 모드에서도 빠른 입력용 — 멜로디 1박, 드럼 반 박)
+detC.addEventListener("dblclick", e => {
+  if (!song || !song.tracks[selected] || !detLayout || penMode) return;
+  if (detFloatingChromeAt(e)) return;
+  const rect = detC.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  if (x < DET_GUTTER || y < DET_RULER || detHit(x, y)) return;
+  const row = detPitchAt(y);
+  if (!row) return;
+  const g = detGrid(), bpb = detLayout.bpb;
+  const absBeat = Math.max(0, Math.floor((x - DET_GUTTER) / barW * bpb / g) * g);
+  const bar = Math.floor(absBeat / bpb) + 1;
+  const beat = Math.round((absBeat - (bar - 1) * bpb) * 1000) / 1000;
+  rpc("add_notes", { track: song.tracks[selected].name,
+    notes: [{ bar, beat, pitch: String(row.pitch), dur: detLayout.drum ? 0.5 : 1, vel: 96 }] }).catch(() => {});
+});
+
+// ---------- 복사 / 잘라내기 / 붙여넣기 (Ctrl+C·X·V) ----------
+// 클립보드는 값 사본이라 SSE로 곡 객체가 교체돼도 살아남는다. 첫 노트 기준 상대 위치로 저장.
+function copySelection(cut = false) {
+  const t = song?.tracks[selected];
+  if (!t) return;
+  const list = detSelSet.size ? [...detSelSet] : detSel ? [detSel] : [];
+  if (!list.length) { toast("복사할 노트가 없습니다 — 드래그로 블록을 선택하거나 노트를 클릭하세요", true); return; }
+  const bpb = beatsPerBar();
+  const anchor = Math.min(...list.map(n => (n.bar - 1) * bpb + n.beat));
+  clip = { drum: isDrumTrack(t),
+    notes: list.map(n => ({ relAbs: (n.bar - 1) * bpb + n.beat - anchor, pitch: n.pitch, dur: n.dur, vel: n.vel })) };
+  toast(`노트 ${list.length}개 ${cut ? "잘라내기" : "복사"} — Ctrl+V(⌘V) 후 원하는 곳을 클릭하면 붙습니다`);
+  if (cut) rpc("delete_notes", { track: t.name,
+    notes: list.map(n => ({ bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur })) }).catch(() => {});
+}
+function startPaste() {
+  const t = song?.tracks[selected];
+  if (!t) return;
+  if (!clip) { toast("붙여넣을 노트가 없습니다 — 먼저 복사(Ctrl+C)하세요", true); return; }
+  if (clip.drum !== isDrumTrack(t)) { toast("드럼 ↔ 멜로디 트랙 간에는 붙여넣을 수 없습니다", true); return; }
+  detSel = null; detSelSet = new Set(); detMarq = null; hideFbPop();
+  const g = detGrid(), bpb = beatsPerBar();
+  const cur = detMouse ? Math.max(0, Math.round((detMouse.x - DET_GUTTER) / barW * bpb / g) * g) : 0;
+  pasteGhost = { curAbs: cur };
+  draw();
+}
+function commitPaste() {
+  const t = song.tracks[selected];
+  // 고스트가 떠 있는 사이 트랙이 바뀌었을 수 있다 — 확정 시점에 다시 검사
+  if (!t || clip.drum !== isDrumTrack(t)) { toast("드럼 ↔ 멜로디 트랙 간에는 붙여넣을 수 없습니다", true); return; }
+  const bpb = beatsPerBar();
+  const exists = new Set(t.notes.map(n => `${n.bar}|${n.beat}|${n.pitch}|${n.dur}`));
+  const notes = clip.notes.map(c => {
+    const abs = pasteGhost.curAbs + c.relAbs;
+    const bar = Math.floor(abs / bpb + 1e-9) + 1;
+    const beat = Math.round((abs - (bar - 1) * bpb) * 1000) / 1000;
+    return { bar, beat, pitch: String(c.pitch), dur: c.dur, vel: c.vel };
+  }).filter(c => !exists.has(`${c.bar}|${c.beat}|${c.pitch}|${c.dur}`)); // 완전 동일 중복은 만들지 않는다 (같은 자리에 두 번 붙는 사고 방지)
+  if (!notes.length) { toast("같은 자리에 같은 노트가 이미 있어 붙여넣지 않았습니다", true); return; }
+  rpc("add_notes", { track: t.name, notes }).catch(() => {});
+}
+
+// DAW 표준 단축키 — 입력 컨트롤에 포커스가 있을 땐 건드리지 않는다
+window.addEventListener("keydown", e => {
+  const el = document.activeElement;
+  if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT")) {
+    if (e.key === "Escape") { el.blur(); hideFbPop(); } // 입력 중에도 Esc는 팝오버를 닫는다
+    return;
+  }
+  if (!song) return;
+  const mod = e.metaKey || e.ctrlKey;
+  // 페이지 텍스트(JSON 푸터·로그 등)를 선택해 복사하는 중이면 브라우저 기본 복사에 양보한다
+  if (mod && (e.code === "KeyC" || e.code === "KeyX") && String(window.getSelection() ?? "")) return;
+  // e.code 기준 — 한글 입력 상태(e.key가 "ㅊ" 등)에서도 단축키가 동작한다
+  if (mod && e.code === "KeyC") { e.preventDefault(); copySelection(false); }
+  else if (mod && e.code === "KeyX") { e.preventDefault(); copySelection(true); }
+  else if (mod && e.code === "KeyV") { e.preventDefault(); startPaste(); }
+  else if (mod && e.code === "KeyZ" && e.shiftKey) { e.preventDefault(); rpc("redo_edit", {}).catch(() => {}); }
+  else if (mod && e.code === "KeyZ") { e.preventDefault(); rpc("undo_edit", {}).catch(() => {}); } // 최대 30단계
+  else if (e.key === "Delete" || e.key === "Backspace") {
+    const t = song.tracks[selected];
+    if (!t) return;
+    e.preventDefault();
+    if (detSelSet.size) rpc("delete_notes", { track: t.name,
+      notes: [...detSelSet].map(n => ({ bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur })) }).catch(() => {});
+    else if (detSel) { const n = detSel;
+      rpc("delete_note", { track: t.name, bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur }).catch(() => {}); }
+    hideFbPop();
+  } else if (e.code === "Equal" || e.code === "NumpadAdd") { e.preventDefault(); applyZoom(zoomX * 1.3, zoomY, null); }
+  else if (e.code === "Minus" || e.code === "NumpadSubtract") { e.preventDefault(); applyZoom(zoomX / 1.3, zoomY, null); }
+  else if (e.code === "Digit0" || e.code === "Numpad0") { e.preventDefault(); applyZoom(1, 1, null); }
+  else if (e.key === "Escape") {
+    if (pasteGhost) { pasteGhost = null; draw(); }
+    else if (detSel || detSelSet.size) { detSel = null; detSelSet = new Set(); draw(); }
+    hideFbPop();
+  }
+});
+
+// ---------- 트랙 음색 판 ----------
+// 귀로 바로 판단할 수 있는 값만 모아, 숫자 대신 반대말 라벨 사이의 손잡이로 연다.
+// 손잡이 위치→값 변환은 귀에 선형이 되도록 잡았다: 시간(어택·여운)은 배수로 늘어나야
+// 고르게 들려 지수, 자리·잔향·기복은 그대로 선형.
+const rd = (v, n) => +v.toFixed(n);
+// 소수 4자리 — 3자리로 자르면 왼쪽 끝(2ms 부근)에서 여러 눈금이 같은 값으로 뭉개져
+// 손잡이를 놓는 순간 왼쪽 끝으로 튀어 돌아간다
+const expMap = (lo, mult) => ({
+  to: p => rd(lo * Math.pow(mult, p), 4),
+  from: v => Math.min(1, Math.max(0, Math.log(Math.max(v, lo) / lo) / Math.log(mult)))
+});
+// own  — 트랙이 늘 들고 있는 고유 필드(비울 수 없다). 되돌리기는 기본값을 다시 써 넣는다.
+//        나머지는 선택적 오버라이드라 null로 지우면 프리셋 값으로 돌아간다.
+// dflt — 프리셋 정보에 없는 기본값. 없으면 /api/meta의 프리셋 기본값을 쓴다.
+const TONE_ROWS = [
+  { key: "pan", left: "왼쪽", right: "오른쪽", own: true, dflt: 0,
+    tip: "이 악기가 스테레오에서 놓이는 자리 — 여러 악기를 좌우로 벌리면 서로 덜 겹칩니다",
+    to: p => rd(p * 2 - 1, 2), from: v => (v + 1) / 2 },
+  { key: "reverb", left: "가까이", right: "멀리",
+    tip: "잔향 — 오른쪽일수록 넓은 공간의 뒤편에서 들립니다",
+    to: p => rd(p, 2), from: v => v },
+  { key: "attack", left: "또렷하게", right: "부드럽게", needs: "shape",
+    tip: "음이 시작하는 순간 — 왼쪽은 딱 치고 들어오고, 오른쪽은 서서히 차오릅니다",
+    ...expMap(0.002, 750) },
+  { key: "release", left: "짧게", right: "길게", needs: "shape",
+    tip: "음을 뗀 뒤 남는 여운의 길이",
+    ...expMap(0.05, 120) },
+  { key: "velRange", left: "고르게", right: "기복 있게",
+    tip: "세게 친 음과 여리게 친 음의 음량 차가 얼마나 벌어지는지",
+    to: p => rd(p, 2), from: v => v },
+  { key: "eqLow", left: "가볍게", right: "묵직하게", dflt: 0, min: -12, max: 12, step: 0.5,
+    tip: "낮은 음역 — 웅웅거리고 답답하면 왼쪽으로, 힘이 없으면 오른쪽으로",
+    to: p => rd(p, 1), from: v => v },
+  { key: "eqMid", left: "물러나게", right: "앞으로", dflt: 0, min: -12, max: 12, step: 0.5,
+    tip: "가운데 음역 — 이 악기를 뒤로 물리거나 앞으로 끌어냅니다. 여러 악기가 뭉칠 때 하나만 물리면 정리됩니다",
+    to: p => rd(p, 1), from: v => v },
+  { key: "eqHigh", left: "어둡게", right: "밝게", dflt: 0, min: -12, max: 12, step: 0.5,
+    tip: "높은 음역 — 쨍하고 따가우면 왼쪽으로, 답답하고 먹먹하면 오른쪽으로",
+    to: p => rd(p, 1), from: v => v },
+  { key: "vibrato", left: "곧게", right: "떨리게", dflt: 0,
+    tip: "떨림(비브라토) — 음을 조금 뒤부터 서서히 흔듭니다. 현·관·목소리에 어울리고 피아노·기타에는 안 씁니다",
+    to: p => rd(p, 2), from: v => v },
+  { key: "ensemble", left: "혼자", right: "여럿", needs: "ensemble", max: 3, step: 1, dflt: 1,
+    tip: "독주 샘플을 미세하게 어긋난 여러 명이 함께 켜는 것처럼 겹칩니다",
+    to: p => 1 + p, from: v => v - 1 }
+];
+// 이 슬라이더에 되돌릴 것이 있는가 — 고유 필드는 기본값에서 벗어났는지로,
+// 오버라이드는 값이 얹혀 있는지로 판단한다(pan은 늘 존재해서 "있음"으로는 못 가린다)
+const toneChanged = (t, r) => r.own ? (t[r.key] ?? r.dflt) !== r.dflt : t[r.key] !== undefined;
+
+function showTonePop(cx, cy) {
+  let t = song?.tracks[selected];
+  const name = t?.name;
+  const def = meta?.tone?.[t?.preset];
+  if (!t || !def) { toast("이 악기의 음색 정보를 아직 못 읽었습니다", true); return; }
+  resetFbPop();
+  const rows = TONE_ROWS.filter(r => !r.needs || def[r.needs]);
+  const valOf = r => t[r.key] ?? r.dflt ?? def[r.key];
+  const changed = r => toneChanged(t, r);
+  const p = $("fbPop");
+  p.classList.add("wide");
+  p.innerHTML = `<div class="fbhead">${uiIcon("sliders")}<span>${escapeHtml(t.name)} — 소리 느낌</span></div>
+    ${rows.map((r, i) => `<div class="tone${changed(r) ? " changed" : ""}" id="tn${i}" title="${escapeHtml(r.tip)}">
+      <span class="tl">${r.left}</span>
+      <input type="range" min="${r.min ?? 0}" max="${r.max ?? 1}" step="${r.step ?? 0.01}" value="${r.from(valOf(r))}">
+      <span class="tr">${r.right}</span>
+      <button class="rst" title="기본값으로 되돌리기" aria-label="기본값으로 되돌리기">${uiIcon("undo")}</button></div>`).join("")}
+    <div class="tonenote">손잡이를 놓으면 그 악기만 다시 만들어집니다 — 바로 듣기로 재생 중이면 듣던 자리에서 이어집니다${def.approx ? "<br>시작·여운의 기본 위치는 샘플에 따라 조금씩 다릅니다" : ""}</div>
+    <div class="fbrow"><button id="tnAll">전부 기본값으로</button><button id="tnClose">닫기</button></div>`;
+  placeFbPop(cx, cy);
+  $("tnClose").onclick = hideFbPop;
+
+  // 값은 렌더에 구워지므로 드래그 중(input)이 아니라 손을 뗄 때(change)만 보낸다
+  const send = args => rpc("set_track", { track: name, ...args }).catch(() => {});
+  rows.forEach((r, i) => {
+    const row = $("tn" + i);
+    const sl = row.querySelector("input");
+    sl.onchange = ev => { ev.target.blur(); send({ [r.key]: r.to(+ev.target.value) }); };
+    // 되돌리기: 오버라이드는 null로 지우고, 팬은 고유 필드라 가운데 값으로 되돌린다
+    row.querySelector(".rst").onclick = ev => {
+      ev.currentTarget.blur();
+      send({ [r.key]: r.own ? r.dflt : null });
+    };
+  });
+  $("tnAll").onclick = ev => {
+    ev.currentTarget.blur();
+    send(Object.fromEntries(rows.map(r => [r.key, r.own ? r.dflt : null])));
+  };
+  // SSE로 곡이 갱신되면 손잡이 위치와 ↺ 표시만 고쳐 쓴다 — DOM을 다시 만들면 드래그가 끊긴다
+  fbRefresh = () => {
+    // 되돌리기는 키를 지우므로 병합이 아니라 참조를 갈아 끼워야 한다 (병합하면 ↺가 영영 켜져 있다)
+    const cur = song?.tracks.find(x => x.name === name);
+    // 악기가 바뀌면 기본값도 슬라이더 구성도 달라진다 — 낡은 판을 붙들고 있느니 닫는다
+    if (!cur || cur.preset !== t.preset) { hideFbPop(); return; }
+    t = cur;
+    rows.forEach((r, i) => {
+      const row = $("tn" + i);
+      if (!row) return;
+      const sl = row.querySelector("input");
+      if (sl !== document.activeElement) sl.value = r.from(valOf(r));
+      row.classList.toggle("changed", changed(r));
+    });
+  };
+}
+
+// ---------- 연주 느낌 판 ----------
+// 세 가지 다 "지금 어떤 상태인가"를 물을 수 없는 편집이라(흔든 뒤엔 원래가 얼마였는지 없다)
+// 슬라이더가 아니라 단계 버튼으로 둔다. 마음에 안 들면 ⌘Z 한 번.
+// A/B 비교 — 두 안을 담아 두고 번갈아 듣는다.
+// 재생 중에 바꿔도 듣던 자리에서 이어지므로(스템 재굽기) 같은 대목을 곧바로 견줄 수 있다.
+function showAbPop(cx, cy) {
+  resetFbPop(); // 공유 팝오버의 refresh와 wide 상태를 먼저 정리한다
+  const p = $("fbPop");
+  const has = s => librarySongs.includes(`${s}안 (비교용)`);
+  const draw2 = () => {
+    p.innerHTML = `<div class="fbhead">${uiIcon("compare")}<span>두 안 비교</span></div>
+      <div class="tonenote" style="margin-top:0">지금 곡을 A와 B에 하나씩 담아 두고 번갈아 들어 보세요. <b>바로 듣기</b>를 켜면 듣던 자리에서 이어집니다</div>
+      ${["A", "B"].map(s => `<div class="fbrow2">
+        <span style="width:18px;color:var(--dim);font-size:12px;align-self:center">${s}</span>
+        <button id="abPut${s}" title="지금 곡을 ${s}안에 담습니다(덮어씁니다)">지금 것 담기</button>
+        <button id="abGet${s}" ${has(s) ? "" : "disabled"} title="${has(s) ? `${s}안을 불러옵니다` : `${s}안이 비어 있습니다`}">${s}안 듣기</button>
+        <span class="fbcur">${has(s) ? "담겨 있음" : "비어 있음"}</span>
+      </div>`).join("")}
+      <div class="fbrow"><button id="abClose">닫기</button></div>`;
+    for (const s of ["A", "B"]) {
+      $("abPut" + s).onclick = () => rpc("ab_save", { slot: s }).then(m => { toast(m.split(" —")[0]); draw2(); }).catch(() => {});
+      const g = $("abGet" + s);
+      if (!g.disabled) g.onclick = () => rpc("ab_load", { slot: s }).then(() => toast(`${s}안을 듣는 중`)).catch(() => {});
+    }
+    $("abClose").onclick = hideFbPop;
+  };
+  draw2();
+  placeFbPop(cx, cy);
+}
+
+function showFeelPop(cx, cy) {
+  const t = song?.tracks[selected];
+  if (!t) return;
+  resetFbPop();
+  const p = $("fbPop");
+  p.classList.add("wide");
+  const seg = (id, items, tip) => `<div class="fbrow2">${items.map(([label, , hint], i) =>
+    `<button id="${id}${i}" title="${escapeHtml(hint ?? tip)}">${label}</button>`).join("")}</div>`;
+  const HUMAN = [["살짝", { timing: 0.015, velocity: 5 }], ["보통", { timing: 0.035, velocity: 10 }], ["많이", { timing: 0.07, velocity: 18 }]];
+  const SWING = [["없음", { amount: 0 }], ["살짝", { amount: 0.35 }], ["보통", { amount: 0.6 }], ["강하게", { amount: 1 }]];
+  const GRID = [["4분음표", { grid: 1 }], ["8분음표", { grid: 0.5 }], ["16분음표", { grid: 0.25 }]];
+  p.innerHTML = `<div class="fbhead">${uiIcon("sparkles")}<span>${escapeHtml(t.name)} — 연주 느낌</span></div>
+    <div class="tonenote" style="margin-top:0">각 음의 타이밍과 세기에 무작위 편차를 더합니다. 사람다움이 보장되지는 않으며 누를 때마다 누적됩니다. 원본과 비교하며 작게 쓰세요</div>
+    ${seg("fhH", HUMAN, "이 악기 전체의 타이밍과 세기에 독립적인 무작위 편차를 더합니다")}
+    <div class="tonenote">뒷박을 뒤로 밀어 늘어지는 그루브를 만듭니다. 단계를 바꿔 다시 눌러도 겹쳐 쌓이지 않습니다</div>
+    <div class="fbrow2"><span style="color:var(--dim);font-size:11px;align-self:center">8분</span>${SWING.map(([l], i) => `<button id="fhS${i}" title="8분음표 스윙 ${l}">${l}</button>`).join("")}</div>
+    <div class="fbrow2"><span style="color:var(--dim);font-size:11px;align-self:center">16분</span>${SWING.map(([l], i) => `<button id="fhT${i}" title="16분음표 스윙 ${l} — 힙합·네오소울 쪽 느낌">${l}</button>`).join("")}</div>
+    <div class="tonenote">어긋난 음을 격자 쪽으로 옮깁니다. 원래 관계를 일부 남겨 비교하려면 아래 '반만 당기기'</div>
+    ${seg("fhQ", GRID, "이 격자에 딱 맞춥니다")}
+    <div class="fbrow2"><label style="color:var(--dim);font-size:11px"><input type="checkbox" id="fhHalf" style="vertical-align:-1px"> 반만 당기기</label>
+      <span class="fbcur">이 악기 전체에 적용</span></div>
+    <div class="fbrow"><button id="fhUndo" title="방금 적용한 것을 되돌립니다 (⌘Z)">${uiIcon("undo")}되돌리기</button><button id="fhClose">닫기</button></div>`;
+  placeFbPop(cx, cy);
+  $("fhClose").onclick = hideFbPop;
+  $("fhUndo").onclick = () => rpc("undo_edit", {}).catch(() => {});
+  const run = (op, args) => rpc(op, { track: t.name, ...args }).then(m => toast(m.split("\n")[0])).catch(() => {});
+  HUMAN.forEach(([, a], i) => { $("fhH" + i).onclick = () => run("humanize", a); });
+  SWING.forEach(([, a], i) => {
+    $("fhS" + i).onclick = () => run("swing", { ...a, unit: 0.5 });
+    $("fhT" + i).onclick = () => run("swing", { ...a, unit: 0.25 });
+  });
+  GRID.forEach(([, a], i) => {
+    $("fhQ" + i).onclick = () => run("quantize", { ...a, strength: $("fhHalf").checked ? 0.5 : 1 });
+  });
+}
+
+// 세기(벨로시티) 3단 조절 — 숫자를 몰라도 되도록 이름 붙은 세 칸으로 이산화한다.
+// 조사한 대중용 앱들의 공통 결론: 초보에게는 연속 슬라이더보다 라벨 달린 몇 칸이 낫다
+const VEL_STEPS = [["약", 60], ["보통", 96], ["강", 120]];
+const velBand = v => v <= 78 ? 0 : v <= 108 ? 1 : 2;
+function velRowHtml(cur, idPrefix) {
+  return `<div class="fbrow2" style="margin-top:6px">
+    <span style="color:var(--dim);font-size:11px;align-self:center">세기</span>
+    ${VEL_STEPS.map(([label, v], i) =>
+      `<button id="${idPrefix}${i}" class="velbtn${cur !== null && velBand(cur) === i ? " on" : ""}" title="세기를 ${v}로">${label}</button>`).join("")}
+    <button id="${idPrefix}up" title="지금보다 조금 세게">＋</button>
+    <button id="${idPrefix}down" title="지금보다 조금 여리게">－</button>
+  </div>`;
+}
+// 음 휘기 — 세기와 같은 방식으로 이름 붙은 몇 칸. 드럼 트랙에는 아예 안 그린다
+const BEND_STEPS = [["↗ 올리기", 2], ["↘ 떨구기", -2], ["↘↘ 크게 떨구기", -12]];
+function bendRowHtml(cur, idPrefix, drum) {
+  if (drum) return "";
+  return `<div class="fbrow2" style="margin-top:6px">
+    <span style="color:var(--dim);font-size:11px;align-self:center">휨</span>
+    ${BEND_STEPS.map(([label, v], i) =>
+      `<button id="${idPrefix}b${i}" class="velbtn${cur === v ? " on" : ""}" title="음이 울리는 동안 ${Math.abs(v)}반음 ${v > 0 ? "올라갑니다" : "떨어집니다"}">${label}</button>`).join("")}
+    <button id="${idPrefix}bz" title="곧게 폅니다">곧게</button>
+  </div>`;
+}
+function wireBendRow(idPrefix, track, notes) {
+  const send = bend => rpc("set_bend", { track, notes, bend }).catch(() => {});
+  BEND_STEPS.forEach(([, v], i) => { const b = $(idPrefix + "b" + i); if (b) b.onclick = () => send(v); });
+  const z = $(idPrefix + "bz");
+  if (z) z.onclick = () => send(0);
+}
+
+function wireVelRow(idPrefix, track, notes) {
+  const send = args => rpc("set_velocity", { track, notes, ...args }).catch(() => {});
+  VEL_STEPS.forEach(([, v], i) => { const b = $(idPrefix + i); if (b) b.onclick = () => send({ vel: v }); });
+  const up = $(idPrefix + "up"), dn = $(idPrefix + "down");
+  if (up) up.onclick = () => send({ by: 12 });
+  if (dn) dn.onclick = () => send({ by: -12 });
+}
+
+function showBlockPop(cx, cy) {
+  const t = song.tracks[selected];
+  const ids = [...detSelSet].map(n => ({ bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur }));
+  resetFbPop();
+  const p = $("fbPop");
+  p.innerHTML = `<div class="fbhead">노트 ${ids.length}개 선택</div>
+    <div class="fbrow" style="justify-content:flex-start;flex-wrap:wrap">
+      <button id="bpCopy" title="복사한 뒤 Ctrl+V(⌘V)와 클릭으로 원하는 곳에 붙입니다">📋 복사</button>
+      <button id="bpCut" title="복사하고 원본은 지웁니다">${uiIcon("scissors")}잘라내기</button>
+      <button id="bpDel">🗑 삭제</button>
+      <button id="bpUndo" title="편집 되돌리기 (⌘Z / Ctrl+Z, 최대 30단계) · 다시 적용은 ⇧⌘Z">${uiIcon("undo")}되돌리기</button>
+      <button id="bpClose">닫기</button></div>
+    ${velRowHtml(null, "bpVel")}
+    ${bendRowHtml(null, "bpVel", isDrumTrack(t))}
+    <div style="color:var(--dim);font-size:11px;margin-top:6px">드래그=통째 이동 · Ctrl+C/X/V=복사·잘라내기·붙여넣기 · Delete=삭제 · Ctrl+Z=되돌리기</div>`;
+  placeFbPop(cx, cy);
+  $("bpClose").onclick = hideFbPop;
+  wireVelRow("bpVel", t.name, ids);
+  wireBendRow("bpVel", t.name, ids);
+  $("bpCopy").onclick = () => { copySelection(false); hideFbPop(); };
+  $("bpCut").onclick = () => { copySelection(true); hideFbPop(); };
+  $("bpDel").onclick = () => { rpc("delete_notes", { track: t.name, notes: ids }).catch(() => {}); hideFbPop(); };
+  $("bpUndo").onclick = () => rpc("undo_edit", {}).catch(() => {});
+}
+
+function showNotePop(n, cx, cy) {
+  resetFbPop();
+  const p = $("fbPop");
+  const t = song.tracks[selected];
+  p.innerHTML = `<div class="fbhead">${escapeHtml(String(n.pitch))} — ${n.bar}마디 ${n.beat}박 · 길이 ${n.dur}박 · 세기 ${n.vel}${n.bend ? ` · 휨 ${n.bend > 0 ? "+" : ""}${n.bend}반음` : ""}</div>
+    <div class="fbrow" style="justify-content:flex-start;flex-wrap:wrap">
+      <button id="npCopy" title="복사한 뒤 Ctrl+V(⌘V)와 클릭으로 원하는 곳에 붙입니다">📋 복사</button>
+      <button id="npDel">🗑 삭제</button>
+      <button id="npUndo" title="편집 되돌리기 (⌘Z / Ctrl+Z, 최대 30단계) · 다시 적용은 ⇧⌘Z">${uiIcon("undo")}되돌리기</button>
+      <button id="npClose">닫기</button></div>
+    ${velRowHtml(n.vel, "npVel")}
+    ${bendRowHtml(n.bend ?? 0, "npVel", isDrumTrack(t))}
+    <div style="color:var(--dim);font-size:11px;margin-top:6px">드래그=이동 · 오른쪽 가장자리=길이 · 자르기 모드=둘로 나누기</div>`;
+  placeFbPop(cx, cy);
+  wireVelRow("npVel", t.name, [{ bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur }]);
+  wireBendRow("npVel", t.name, [{ bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur }]);
+  $("npClose").onclick = hideFbPop;
+  $("npCopy").onclick = () => { detSel = n; copySelection(false); hideFbPop(); };
+  $("npDel").onclick = () => { rpc("delete_note", { track: t.name, bar: n.bar, beat: n.beat, pitch: String(n.pitch), dur: n.dur }).catch(() => {}); hideFbPop(); };
+  $("npUndo").onclick = () => rpc("undo_edit", {}).catch(() => {});
+}
+
+let rafId = null;
+function tick() {
+  cancelAnimationFrame(rafId);
+  const step = () => {
+    if (!playing) return;
+    draw();
+    rafId = requestAnimationFrame(step);
+  };
+  rafId = requestAnimationFrame(step);
+}
+
+// 레인 클릭 → 트랙 선택
+lanesC.addEventListener("pointerdown", e => {
+  if (!song || !song.tracks.length) return;
+  const rect = lanesC.getBoundingClientRect();
+  const i = Math.floor((e.clientY - rect.top) / LANE_H);
+  if (i >= 0 && i < song.tracks.length && i !== selected) { selected = i; pasteGhost = null; renderAll(); }
+});
+
+// ---------- 전체 렌더 ----------
+function renderAll() {
+  if (!song) {
+    $("empty").hidden = false;
+    $("songTitle").textContent = "—";
+    $("songJson").textContent = "";
+    renderStrips(); renderDetHead();
+    setupCanvas(rulerC, rulerCtx, 10, RULER_H);
+    setupCanvas(lanesC, lanesCtx, 10, 10);
+    setupCanvas(detC, detCtx, 10, 10);
+    return;
+  }
+  $("empty").hidden = song.tracks.some(t => t.notes.length) || song.tracks.length > 0;
+  $("songTitle").textContent = song.title;
+  document.title = "aria — " + song.title;
+  if (document.activeElement !== $("bpm")) $("bpm").value = song.bpm;
+  const bars = totalBars();
+  $("fromBar").max = String(bars); $("toBar").max = String(bars);
+  // 편집으로 곡이 짧아졌을 때 화면 밖의 옛 시작점이 남아 다음 재생이 실패하지 않게 정리한다.
+  const from = Number($("fromBar").value), to = Number($("toBar").value);
+  if ($("fromBar").value && Number.isInteger(from) && from > bars) $("fromBar").value = String(bars);
+  if ($("toBar").value && Number.isInteger(to) && to > bars) $("toBar").value = String(bars);
+  if ($("fromBar").value && $("toBar").value && +$("toBar").value < +$("fromBar").value) $("toBar").value = "";
+  $("songJson").textContent = JSON.stringify(song, null, 2);
+  renderStrips();
+  renderDetHead();
+  draw();
+  renderZoom(); // 곡 길이/DPR 때문에 실제 확대 상한이 바뀐 경우 표시와 버튼도 함께 갱신
+  scrollDetToRange();
+}
+
+// ---------- 구간 피드백: 룰러 드래그로 구간을 잡고 코멘트를 남기거나 직접 편집한다 ----------
+let fbSel = null, fbChips = [], fbRefresh = null, fbDelTimer = null, fbCutTimer = null, rulerPress = null;
+function evBar(e) {
+  const rect = rulerC.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  return Math.max(1, Math.min(totalB, Math.floor(x / barW) + 1));
+}
+rulerC.addEventListener("pointerdown", e => {
+  if (!song || (e.pointerType === "mouse" && e.button !== 0)) return;
+  const rect = rulerC.getBoundingClientRect();
+  const x = e.clientX - rect.left, y = e.clientY - rect.top;
+  hideFbPop();
+  const chip = fbChips.find(c => x >= c.x && x <= c.x + c.w && y >= c.y && y <= c.y + c.h);
+  if (chip) { showFbList(chip.items, e.clientX, e.clientY); return; }
+  // 짧은 클릭과 구간 드래그를 분리한다. 마디 변화가 아닌 픽셀 임계값이라 한 마디 안의 피드백도 가능하다.
+  rulerPress = { pointerId:e.pointerId, bar:evBar(e), x0:e.clientX, dragging:false };
+  try { rulerC.setPointerCapture(e.pointerId); } catch { /* 캡처 불가(합성 이벤트 등)여도 동작엔 지장 없음 */ }
+});
+rulerC.addEventListener("pointermove", e => {
+  if (!rulerPress || e.pointerId !== rulerPress.pointerId) return;
+  if (!rulerPress.dragging && Math.abs(e.clientX - rulerPress.x0) >= 4) {
+    rulerPress.dragging = true;
+    fbSel = { a:rulerPress.bar, b:evBar(e), drag:true };
+    draw();
+  }
+  if (!rulerPress.dragging || !fbSel?.drag) return;
+  const nb = evBar(e);
+  if (nb !== fbSel.b) { fbSel.b = nb; draw(); }
+});
+rulerC.addEventListener("pointerup", e => {
+  if (!rulerPress || e.pointerId !== rulerPress.pointerId) return;
+  const press = rulerPress;
+  rulerPress = null;
+  if (press.dragging && fbSel?.drag) {
+    fbSel.drag = false;
+    showFbForm(Math.min(fbSel.a, fbSel.b), Math.max(fbSel.a, fbSel.b), e.clientX, e.clientY);
+  } else {
+    fbSel = null;
+    setPlaybackStart(press.bar);
+  }
+});
+rulerC.addEventListener("pointercancel", e => {
+  if (!rulerPress || e.pointerId !== rulerPress.pointerId) return;
+  rulerPress = null;
+  if (fbSel?.drag) fbSel = null;
+  draw();
+});
+
+function resetFbPop() {
+  clearTimeout(fbDelTimer); fbDelTimer = null; // 삭제 무장 타이머가 닫힌 팝오버 밖에서 살아남지 않게
+  clearTimeout(fbCutTimer); fbCutTimer = null;
+  $("fbPop").hidden = true; $("fbPop").innerHTML = ""; $("fbPop").classList.remove("wide");
+  fbRefresh = null;
+}
+function hideFbPop() {
+  resetFbPop();
+  fbSel = null; rulerPress = null; detSel = null;
+  if (song) draw();
+}
+function placeFbPop(cx, cy) {
+  const p = $("fbPop");
+  p.hidden = false;
+  // 실제 크기로 물린다 — 음색 판은 폭도 높이도 다르다 (예전엔 300px·260px로 박혀 있었다)
+  const w = p.offsetWidth || 300, h = p.offsetHeight || 260;
+  p.style.left = Math.max(4, Math.min(cx, window.innerWidth - w - 8)) + "px";
+  p.style.top = Math.max(4, Math.min(cy + 10, window.innerHeight - h - 8)) + "px";
+}
+function showFbForm(a, b, cx, cy) {
+  resetFbPop();
+  const p = $("fbPop");
+  const trackOpts = song.tracks.map((t, i) =>
+    `<option value="${escapeHtml(t.name)}"${i === selected ? " selected" : ""}>${escapeHtml(t.name)}</option>`).join("");
+  p.innerHTML = `<div class="fbhead">${uiIcon("message")}<span>${a}${b !== a ? "~" + b : ""}마디에서 무엇이 거슬리나요?</span></div>
+    <div class="quick-feedback">
+      <button data-feedback="갑자기 소리가 커져요">갑자기 커짐</button>
+      <button data-feedback="박자가 어색하게 들려요">박자가 어색함</button>
+      <button data-feedback="소리가 답답하게 들려요">답답하게 들림</button>
+      <button data-feedback="이상한 소리가 들려요">이상한 소리</button>
+    </div>
+    <textarea id="fbText" rows="2" placeholder="느낌 그대로 적어도 됩니다. 예: 여기만 너무 급하거나, 악기 하나가 튀는 것 같음"></textarea>
+    <div class="fbrow"><button id="fbSave" class="primary">AI에게 남기기</button><button id="fbCancel">취소</button></div>
+    <details class="fbedit">
+      <summary>직접 다듬기 — 음량·빠르기·마디 편집</summary>
+      <div class="fbhead">이 구간의 악기 하나</div>
+      <select id="feTrack" title="대상 악기">${trackOpts}</select>
+      <div class="fbrow2">
+        <button id="feDown" title="이 구간만 조용하게">${uiIcon("volume-x")}−3dB</button>
+        <button id="feUp" title="이 구간만 크게">${uiIcon("volume")}+3dB</button>
+        <button id="feReset" title="이 구간의 게인 제거">${uiIcon("undo")}기본</button>
+        <span class="fbcur" id="feCur"></span>
+      </div>
+      <div class="fbrow2">
+        <button id="feFadeOut" title="${a}${b !== a ? "~" + b : ""}마디에 걸쳐 서서히 사라집니다 — 길게 끄는 화음 안에서도 소리가 줄어듭니다">↘ 서서히 사라지게</button>
+        <button id="feFadeIn" title="${a}${b !== a ? "~" + b : ""}마디에 걸쳐 서서히 나타납니다">↗ 서서히 나타나게</button>
+      </div>
+      <div class="fbrow2">
+        <button id="feDel">${uiIcon("trash")}노트 삭제</button>
+        <button id="feUndo" title="편집 되돌리기 (⌘Z / Ctrl+Z, 최대 30단계) · 다시 적용은 ⇧⌘Z">${uiIcon("undo")}되돌리기</button>
+      </div>
+      <div class="fbhead" style="margin-top:8px">구간 이름 — ${a}마디</div>
+      <div class="fbrow2">
+        <input id="feSec" type="text" maxlength="24" placeholder="예: 후렴" style="flex:1;min-width:80px" title="이 마디부터의 구간 이름 — AI에게 '후렴을 더 크게' 처럼 말할 수 있게 됩니다">
+        <button id="feSecSet">붙이기</button>
+        <button id="feSecDel" title="${a}마디의 이름표를 지웁니다">지우기</button>
+      </div>
+      <div class="fbhead" style="margin-top:8px">빠르기 — ${a}마디부터</div>
+      <div class="fbrow2">
+        <input id="feBpm" type="number" min="20" max="300" step="1" style="width:64px" title="이 마디부터의 빠르기(BPM)">
+        <button id="feTpNow" title="${a}마디에서 곧바로 이 빠르기가 됩니다">바로 바뀜</button>
+        <button id="feTpRamp" title="앞의 빠르기에서 ${a}마디까지 서서히 변합니다 — 점점 빨라지거나 느려지는 효과">서서히</button>
+        <button id="feTpDel" title="${a}마디의 빠르기 변화를 없앱니다">지우기</button>
+        <span class="fbcur" id="feTpCur"></span>
+      </div>
+      <div class="fbhead" style="margin-top:8px">마디 편집 — 전체 트랙</div>
+      <div class="fbrow2">
+        <button id="feIns" title="${b - a + 1}마디만큼 빈 마디를 ${a}마디 앞에 끼워 넣습니다 — 모든 트랙이 함께 뒤로 밀립니다">${uiIcon("plus")}빈 마디 삽입</button>
+        <button id="feCutBars" title="${a}${b !== a ? "~" + b : ""}마디를 모든 트랙에서 들어내고 뒤를 당겨 붙입니다">${uiIcon("scissors")}마디 잘라내기</button>
+        <button id="feDup" title="${a}${b !== a ? "~" + b : ""}마디(${b - a + 1}마디)를 그 바로 뒤에 한 벌 더 복제합니다 — 뒤쪽은 밀립니다">${uiIcon("file")}바로 뒤에 복제</button>
+      </div>
+    </details>`;
+  placeFbPop(cx, cy);
+  p.querySelectorAll("button[data-feedback]").forEach(btn => btn.onclick = () => {
+    const text = btn.dataset.feedback;
+    if (!$("fbText").value.includes(text)) $("fbText").value = $("fbText").value.trim() ? `${$("fbText").value.trim()} · ${text}` : text;
+    $("fbText").focus();
+  });
+  $("fbText").focus();
+  $("fbCancel").onclick = hideFbPop;
+  $("fbText").onkeydown = ev => { if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) $("fbSave").click(); };
+  $("fbSave").onclick = async () => {
+    const text = $("fbText").value.trim();
+    if (!text) { $("fbText").focus(); return; }
+    try { await rpc("add_feedback", { from_bar: a, to_bar: b, text }); hideFbPop(); } catch { /* 토스트가 에러 표시 */ }
+  };
+  // ----- 직접 편집: 구간 게인·노트 삭제·되돌리기 -----
+  const curDb = () => {
+    const t = song.tracks.find(x => x.name === $("feTrack").value);
+    const g = (t?.gains ?? []).find(g => g.from === a && g.to === b);
+    return g && g.to_db === undefined ? g.db : 0;
+  };
+  const curRamp = () => {
+    const t = song.tracks.find(x => x.name === $("feTrack").value);
+    return (t?.gains ?? []).find(g => g.from === a && g.to === b && g.to_db !== undefined);
+  };
+  // 연타 대비: 서버 왕복(SSE)을 기다리지 않고 팝오버 로컬 값으로 누적 계산한다 — SSE가 오면 서버 값으로 재동기화
+  let pendingDb = curDb();
+  const showCur = d => {
+    const r = curRamp();
+    $("feCur").textContent = r
+      ? (r.to_db < r.db ? "서서히 사라짐" : "서서히 나타남")
+      : `현재 ${d > 0 ? "+" : ""}${d}dB`;
+  };
+  const refreshCur = () => { pendingDb = curDb(); showCur(pendingDb); };
+  showCur(pendingDb);
+
+  // ----- 구간 이름표 -----
+  const showSec = () => {
+    const cur = (song.sections ?? []).find(s => s.bar === a);
+    const inp = $("feSec"); if (!inp) return;
+    if (inp !== document.activeElement) inp.value = cur ? cur.label : "";
+    const del = $("feSecDel"); if (del) del.disabled = !cur;
+  };
+  showSec();
+  $("feSecSet").onclick = () => {
+    const label = $("feSec").value.trim();
+    if (!label) { toast("구간 이름을 적어 주세요 (예: 후렴)", true); $("feSec").focus(); return; }
+    rpc("set_section", { bar: a, label }).catch(() => {});
+  };
+  $("feSecDel").onclick = () => rpc("remove_section", { bar: a }).catch(() => {});
+  $("feSec").onkeydown = ev => { if (ev.key === "Enter") { ev.stopPropagation(); $("feSecSet").click(); } };
+
+  // ----- 빠르기: 이 마디부터의 템포 변화 -----
+  // 비음악인이 헷갈리는 지점은 "서서히"가 어디서부터인지다 — 앞 변화점을 그대로 문장으로 보여 준다
+  const tempoAt = () => (song.tempoMap ?? []).find(t => t.bar === a);
+  const bpmBefore = () => {
+    const prev = (song.tempoMap ?? []).filter(t => t.bar < a).sort((x, y) => y.bar - x.bar)[0];
+    return { bar: prev?.bar ?? 1, bpm: prev?.bpm ?? song.bpm };
+  };
+  const showTempo = () => {
+    const cur = tempoAt(), prev = bpmBefore();
+    const el = $("feTpCur"); if (!el) return;
+    el.textContent = cur
+      ? (cur.ramp ? `${prev.bar}마디 ${prev.bpm} → ${cur.bpm}` : `여기서 ${cur.bpm}`)
+      : `지금 ${prev.bpm}`;
+    const del = $("feTpDel"); if (del) del.disabled = !cur || a === 1;
+    const inp = $("feBpm");
+    if (inp && inp !== document.activeElement) inp.value = cur ? cur.bpm : prev.bpm;
+  };
+  showTempo();
+  const setTempo = ramp => {
+    const bpm = Math.round(+$("feBpm").value);
+    if (!Number.isFinite(bpm) || bpm < 20 || bpm > 300) { toast("빠르기는 20~300 사이여야 합니다", true); return; }
+    if (a === 1 && ramp) { toast("1마디는 곡의 기준 빠르기라 '서서히'가 걸릴 앞 구간이 없습니다", true); return; }
+    rpc("set_tempo", { bpm, from_bar: a, ramp }).catch(() => {});
+  };
+  $("feTpNow").onclick = () => setTempo(false);
+  $("feTpRamp").onclick = () => setTempo(true);
+  $("feTpDel").onclick = () => rpc("clear_tempo", { from_bar: a }).catch(() => {});
+  $("feBpm").onkeydown = ev => { if (ev.key === "Enter") $("feTpNow").click(); };
+
+  fbRefresh = () => { refreshCur(); showTempo(); showSec(); }; // SSE로 곡이 갱신되면 dB·빠르기·이름표를 다시 읽는다
+  $("feTrack").onchange = () => {
+    // 레인 하이라이트·상세롤이 선택 트랙 기준이므로 트랙 선택도 함께 이동
+    const i = song.tracks.findIndex(x => x.name === $("feTrack").value);
+    if (i >= 0 && i !== selected) { selected = i; pasteGhost = null; renderAll(); }
+    refreshCur();
+  };
+  const gain = db => {
+    pendingDb = db; showCur(db);
+    rpc("set_region_gain", { track: $("feTrack").value, from_bar: a, to_bar: b, db }).catch(() => {});
+  };
+  // 페이드는 "구간 뒤로도 그 값이 계속 걸린다" — 곡 끝 페이드아웃이 마지막 잔향까지 잦아든다
+  $("feFadeOut").onclick = () => {
+    rpc("set_region_gain", { track: $("feTrack").value, from_bar: a, to_bar: b, db: 0, to_db: -60 }).catch(() => {});
+  };
+  $("feFadeIn").onclick = () => {
+    rpc("set_region_gain", { track: $("feTrack").value, from_bar: a, to_bar: b, db: -60, to_db: 0 }).catch(() => {});
+  };
+  $("feDown").onclick = () => gain(Math.max(-60, pendingDb - 3));
+  $("feUp").onclick = () => gain(Math.min(12, pendingDb + 3));
+  $("feReset").onclick = () => gain(0);
+  let delArmed = false;
+  const disarmDel = () => {
+    delArmed = false; clearTimeout(fbDelTimer); fbDelTimer = null;
+    const el = $("feDel");
+    if (el) { setUiButton(el, "trash", "노트 삭제"); el.classList.remove("danger-arm"); }
+  };
+  $("feDel").onclick = () => {
+    if (!delArmed) {
+      delArmed = true; setUiButton($("feDel"), "trash", "정말 삭제할까요?"); $("feDel").classList.add("danger-arm");
+      fbDelTimer = setTimeout(disarmDel, 2500); return;
+    }
+    disarmDel();
+    rpc("clear_notes", { track: $("feTrack").value, from_bar: a, to_bar: b }).catch(() => {});
+  };
+  $("feDup").onclick = () => {
+    rpc("copy_bars", { from_bar: a, to_bar: b, at_bar: b + 1 }).catch(() => {});
+    hideFbPop();
+  };
+  $("feUndo").onclick = () => rpc("undo_edit", {}).catch(() => {});
+  // 마디 삽입·잘라내기 — 전체 트랙 대상. 잘라내기는 파괴적이라 두 번 클릭 확인
+  $("feIns").onclick = () => { rpc("insert_bars", { at_bar: a, count: b - a + 1 }).catch(() => {}); hideFbPop(); };
+  $("feCutBars").onclick = () => {
+    const btn = $("feCutBars");
+    if (!btn.classList.contains("danger-arm")) {
+      btn.classList.add("danger-arm"); setUiButton(btn, "scissors", "정말 잘라낼까요?");
+      fbCutTimer = setTimeout(() => {
+        const el = $("feCutBars");
+        if (el) { el.classList.remove("danger-arm"); setUiButton(el, "scissors", "마디 잘라내기"); }
+      }, 2500);
+      return;
+    }
+    clearTimeout(fbCutTimer); fbCutTimer = null;
+    rpc("delete_bars", { from_bar: a, to_bar: b }).catch(() => {});
+    hideFbPop();
+  };
+}
+function showFbList(items, cx, cy) {
+  resetFbPop();
+  const p = $("fbPop");
+  p.innerHTML = `<div class="fbhead">구간 피드백 — AI가 반영 후 해결 처리합니다</div>` + items.map(f =>
+    `<div class="fbitem"><span>#${f.id} [${f.from_bar}${f.to_bar !== f.from_bar ? "~" + f.to_bar : ""}마디] ${escapeHtml(f.text)}</span>
+     <button data-id="${f.id}">해결</button></div>`).join("") +
+    `<div class="fbrow"><button id="fbClose">닫기</button></div>`;
+  placeFbPop(cx, cy);
+  $("fbClose").onclick = hideFbPop;
+  p.querySelectorAll("button[data-id]").forEach(btn => btn.onclick = async () => {
+    try { await rpc("resolve_feedback", { id: +btn.dataset.id }); hideFbPop(); } catch { /* noop */ }
+  });
+}
+
+// 창 크기가 바뀌면 맞춤 폭과 barW가 함께 달라진다. 픽셀 scrollLeft를 그대로 두면
+// 보고 있던 마디가 점프하므로, 바뀌기 전 화면 중앙의 음악 좌표를 새 중앙에 복원한다.
+let resizeZoomRaf = 0;
+window.addEventListener("resize", () => {
+  if (!song || resizeZoomRaf) return;
+  const arr = $("arrWrap"), det = $("detWrap");
+  const old = drawnViewSize ?? { arrW: arr.clientWidth, detW: det.clientWidth, detH: det.clientHeight };
+  const oldAx = HEAD_W + Math.min(totalB * barW, Math.max(0, old.arrW - HEAD_W)) / 2;
+  const oldDx = DET_GUTTER + Math.min(totalB * barW, Math.max(0, old.detW - DET_GUTTER)) / 2;
+  const oldDy = old.detH / 2;
+  const arrBeat = (arr.scrollLeft + oldAx - HEAD_W) / barW;
+  const detBeat = (det.scrollLeft + oldDx - DET_GUTTER) / barW;
+  const yAnchor = detAnchorY(det, oldDy);
+  resizeZoomRaf = requestAnimationFrame(() => {
+    resizeZoomRaf = 0;
+    draw();
+    const ax = HEAD_W + Math.min(totalB * barW, Math.max(0, arr.clientWidth - HEAD_W)) / 2;
+    const dx = DET_GUTTER + Math.min(totalB * barW, Math.max(0, det.clientWidth - DET_GUTTER)) / 2;
+    const dy = det.clientHeight / 2;
+    arr.scrollLeft = Math.max(0, arrBeat * barW + HEAD_W - ax);
+    det.scrollLeft = Math.max(0, detBeat * barW + DET_GUTTER - dx);
+    detRestoreY(det, dy, yAnchor);
+    drawDetail(); drawVelLane();
+    renderZoom();
+  });
+});
+</script>
+</body>
+</html>

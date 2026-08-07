@@ -1,0 +1,17 @@
+{
+  "name": "aria",
+  "version": "0.1.0",
+  "description": "LLM이 MCP로 제어하는 상주 작곡 앱 — 피아노롤 GUI + 내장 신스 + MIDI/WAV 내보내기",
+  "type": "module",
+  "bin": { "aria": "src/index.js", "aria-mcp": "src/mcp-bridge.js" },
+  "scripts": {
+    "start": "node src/index.js",
+    "mcp": "node src/mcp-bridge.js",
+    "test": "node test/smoke.js && node test/mcp-bridge.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.0"
+  }
+}

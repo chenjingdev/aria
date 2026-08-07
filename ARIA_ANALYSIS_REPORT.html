@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Aria 구조·문제점 분석 — Visual Audit</title>
+<style>
+:root {
+  --paper:#f3f6f7; --surface:#ffffff; --surface-2:#e9eef1; --ink:#182126; --muted:#5e6b72;
+  --line:#cbd4d9; --line-strong:#8998a0; --accent:#254d73; --accent-soft:#dbe8f1;
+  --critical:#b63d32; --critical-soft:#f5dedb; --warning:#9a650f; --warning-soft:#f5e8c9;
+  --good:#25705f; --good-soft:#d9ece7; --shadow:0 12px 32px rgba(24,33,38,.08);
+  --sidebar:268px; --measure:72ch;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper:#111719; --surface:#182124; --surface-2:#202b2f; --ink:#ecf2f3; --muted:#a8b5ba;
+    --line:#35454b; --line-strong:#73858c; --accent:#8bb7db; --accent-soft:#20394c;
+    --critical:#ef8176; --critical-soft:#462823; --warning:#e7b75e; --warning-soft:#44361e;
+    --good:#70c8b3; --good-soft:#1d3c35; --shadow:0 14px 34px rgba(0,0,0,.25);
+  }
+}
+:root[data-theme="light"] {
+  --paper:#f3f6f7; --surface:#ffffff; --surface-2:#e9eef1; --ink:#182126; --muted:#5e6b72;
+  --line:#cbd4d9; --line-strong:#8998a0; --accent:#254d73; --accent-soft:#dbe8f1;
+  --critical:#b63d32; --critical-soft:#f5dedb; --warning:#9a650f; --warning-soft:#f5e8c9;
+  --good:#25705f; --good-soft:#d9ece7; --shadow:0 12px 32px rgba(24,33,38,.08);
+}
+:root[data-theme="dark"] {
+  --paper:#111719; --surface:#182124; --surface-2:#202b2f; --ink:#ecf2f3; --muted:#a8b5ba;
+  --line:#35454b; --line-strong:#73858c; --accent:#8bb7db; --accent-soft:#20394c;
+  --critical:#ef8176; --critical-soft:#462823; --warning:#e7b75e; --warning-soft:#44361e;
+  --good:#70c8b3; --good-soft:#1d3c35; --shadow:0 14px 34px rgba(0,0,0,.25);
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { margin:0; color:var(--ink); background:var(--paper); font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif; line-height:1.62; }
+button, a, summary { -webkit-tap-highlight-color:transparent; }
+a { color:inherit; }
+button { font:inherit; }
+:focus-visible { outline:3px solid var(--accent); outline-offset:3px; }
+.skip { position:fixed; left:12px; top:-100px; z-index:100; background:var(--ink); color:var(--paper); padding:8px 12px; }
+.skip:focus { top:12px; }
+.shell { display:grid; grid-template-columns:var(--sidebar) minmax(0,1fr); min-height:100vh; }
+.sidebar { position:sticky; top:0; height:100vh; padding:28px 22px; border-right:1px solid var(--line); background:var(--surface); display:flex; flex-direction:column; gap:26px; z-index:10; }
+.brand { display:grid; grid-template-columns:40px 1fr; gap:10px; align-items:center; }
+.brand-mark { width:40px; height:40px; border:1px solid var(--line-strong); display:grid; place-items:center; font:700 20px/1 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--accent); background:repeating-linear-gradient(90deg,transparent 0 5px,var(--accent-soft) 5px 6px); }
+.brand strong { display:block; font-family:"Arial Narrow","Apple SD Gothic Neo",sans-serif; letter-spacing:.03em; }
+.brand small { color:var(--muted); }
+.nav { display:grid; gap:3px; }
+.nav a { text-decoration:none; padding:8px 10px; border-left:2px solid transparent; color:var(--muted); font-size:14px; }
+.nav a:hover, .nav a:focus-visible { color:var(--ink); background:var(--surface-2); border-left-color:var(--accent); }
+.side-note { padding:12px; border:1px solid var(--line); background:var(--paper); font-size:12px; color:var(--muted); }
+.side-note strong { color:var(--ink); display:block; margin-bottom:4px; }
+.legend { display:grid; gap:8px; font-size:12px; color:var(--muted); }
+.legend-row { display:flex; align-items:center; gap:8px; }
+.dot { width:9px; height:9px; border-radius:50%; background:var(--line-strong); }
+.dot.p1 { background:var(--critical); } .dot.p2 { background:var(--warning); } .dot.ok { background:var(--good); }
+.theme { margin-top:auto; border:1px solid var(--line); background:transparent; color:var(--ink); padding:9px 11px; cursor:pointer; text-align:left; }
+.main { min-width:0; }
+.container { width:min(1180px,calc(100% - 64px)); margin:0 auto; }
+.hero { padding:52px 0 34px; border-bottom:1px solid var(--line); background-color:var(--surface); background-image:linear-gradient(to right,var(--line) 1px,transparent 1px); background-size:calc(100% / 16) 100%; }
+.eyebrow { margin:0 0 12px; color:var(--accent); font:700 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; text-transform:uppercase; }
+h1,h2,h3 { font-family:"Arial Narrow","Apple SD Gothic Neo",sans-serif; text-wrap:balance; line-height:1.13; }
+h1 { max-width:920px; margin:0; font-size:clamp(36px,6vw,72px); letter-spacing:-.045em; }
+.lede { max-width:var(--measure); margin:20px 0 0; color:var(--muted); font-size:clamp(16px,2vw,20px); }
+.verdict { margin-top:28px; display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start; padding:16px 18px; border:1px solid var(--line-strong); background:color-mix(in srgb,var(--surface) 92%,var(--accent)); box-shadow:var(--shadow); }
+.verdict b { color:var(--critical); font:800 13px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; }
+.verdict p { margin:0; max-width:var(--measure); }
+.metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); margin-top:28px; border:1px solid var(--line); background:var(--surface); }
+.metric { padding:18px; border-right:1px solid var(--line); }
+.metric:last-child { border-right:0; }
+.metric strong { display:block; font:700 clamp(26px,4vw,42px)/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:-.05em; }
+.metric span { display:block; margin-top:8px; color:var(--muted); font-size:12px; }
+section { padding:68px 0; border-bottom:1px solid var(--line); scroll-margin-top:20px; }
+.section-head { display:grid; grid-template-columns:minmax(220px,.65fr) minmax(0,1.35fr); gap:34px; align-items:end; margin-bottom:30px; }
+.kicker { color:var(--accent); font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.12em; }
+h2 { margin:8px 0 0; font-size:clamp(28px,4vw,44px); letter-spacing:-.025em; }
+.section-head p { max-width:var(--measure); margin:0; color:var(--muted); }
+.summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.summary-block { border-top:4px solid var(--accent); padding:22px; background:var(--surface); }
+.summary-block.risk { border-top-color:var(--critical); }
+.summary-block h3 { margin:0 0 12px; font-size:21px; }
+.clean-list { margin:0; padding-left:20px; display:grid; gap:8px; }
+.clean-list li::marker { color:var(--accent); }
+.signal-strip { margin-top:18px; display:grid; grid-template-columns:repeat(8,1fr); gap:3px; height:72px; align-items:end; padding:8px; border:1px solid var(--line); background:var(--surface-2); }
+.signal-strip span { display:block; background:var(--accent); min-height:8px; opacity:.78; }
+.signal-strip span:nth-child(1){height:30%}.signal-strip span:nth-child(2){height:65%}.signal-strip span:nth-child(3){height:42%}.signal-strip span:nth-child(4){height:88%}.signal-strip span:nth-child(5){height:58%}.signal-strip span:nth-child(6){height:72%}.signal-strip span:nth-child(7){height:35%}.signal-strip span:nth-child(8){height:92%;background:var(--critical)}
+.tabs, .filters { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:18px; }
+.tab, .filter { border:1px solid var(--line-strong); background:var(--surface); color:var(--ink); padding:8px 12px; cursor:pointer; }
+.tab[aria-selected="true"], .filter[aria-pressed="true"] { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+.tab-panel[hidden] { display:none; }
+.diagram-shell { border:1px solid var(--line); background:var(--surface); padding:22px; overflow-x:auto; }
+.topology { min-width:850px; display:grid; grid-template-columns:180px 70px 220px 70px minmax(250px,1fr); grid-template-rows:repeat(3,auto); gap:12px 0; align-items:center; }
+.actor, .system, .engine, .store { padding:14px; border:1px solid var(--line-strong); background:var(--paper); position:relative; }
+.actor { border-left:5px solid var(--accent); }
+.system { border:2px solid var(--ink); background:var(--surface); }
+.engine { border-style:dashed; }
+.store { border-radius:50% / 12%; text-align:center; }
+.node-title { display:block; font-weight:750; }
+.node-sub { display:block; color:var(--muted); font-size:12px; margin-top:4px; }
+.arrow { text-align:center; color:var(--accent); font:700 24px/1 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.core-stack { grid-row:1 / span 3; display:grid; gap:10px; align-self:stretch; padding:14px; border:2px solid var(--accent); background:var(--accent-soft); }
+.core-stack .system { background:var(--surface); }
+.risk-flag { margin-top:8px; color:var(--critical); font-size:11px; font-weight:700; }
+.sequence { min-width:760px; display:grid; grid-template-columns:repeat(6,minmax(120px,1fr)); border-top:1px solid var(--line-strong); }
+.seq-step { position:relative; padding:28px 12px 14px; border-right:1px solid var(--line); }
+.seq-step::before { content:""; position:absolute; top:-5px; left:12px; width:9px; height:9px; background:var(--accent); border-radius:50%; }
+.seq-step strong { display:block; font-size:13px; }
+.seq-step span { display:block; margin-top:5px; color:var(--muted); font-size:12px; }
+.schema { min-width:720px; display:grid; grid-template-columns:1fr 1.2fr 1.2fr; gap:12px; align-items:start; }
+.schema-box { border:1px solid var(--line-strong); padding:16px; background:var(--paper); }
+.schema-box h3 { margin:0 0 10px; }
+.schema-box code { color:var(--accent); }
+.schema-box ul { margin:8px 0 0; padding-left:18px; color:var(--muted); font-size:13px; }
+.schema-risk { grid-column:1 / -1; border-left:5px solid var(--critical); padding:12px 16px; background:var(--critical-soft); }
+.finding-grid { display:grid; gap:12px; }
+.finding { display:grid; grid-template-columns:86px minmax(0,1fr); border:1px solid var(--line); background:var(--surface); }
+.finding[hidden] { display:none; }
+.severity { padding:18px 12px; border-right:1px solid var(--line); font:800 13px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; text-align:center; }
+.finding[data-severity="p1"] .severity { color:var(--critical); background:var(--critical-soft); }
+.finding[data-severity="p2"] .severity { color:var(--warning); background:var(--warning-soft); }
+.finding[data-severity="p3"] .severity { color:var(--muted); background:var(--surface-2); }
+.finding-body { padding:18px 20px; min-width:0; }
+.finding h3 { margin:0; font-size:20px; }
+.finding .impact { margin:7px 0 0; color:var(--muted); max-width:var(--measure); }
+details { margin-top:12px; border-top:1px solid var(--line); padding-top:10px; }
+summary { cursor:pointer; color:var(--accent); font-weight:700; }
+.evidence { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+.evidence > div { padding:12px; background:var(--paper); border-left:3px solid var(--line-strong); }
+.evidence b { display:block; font-size:12px; margin-bottom:5px; }
+.evidence p { margin:0; font-size:13px; color:var(--muted); }
+code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.91em; overflow-wrap:anywhere; }
+.flow-compare { display:grid; grid-template-columns:1fr 64px 1fr; align-items:stretch; gap:10px; }
+.flow { border:1px solid var(--line); background:var(--surface); }
+.flow h3 { margin:0; padding:15px 18px; border-bottom:1px solid var(--line); }
+.flow ol { list-style:none; margin:0; padding:0; counter-reset:flow; }
+.flow li { counter-increment:flow; display:grid; grid-template-columns:34px 1fr; gap:10px; padding:12px 18px; border-bottom:1px solid var(--line); }
+.flow li:last-child { border-bottom:0; }
+.flow li::before { content:counter(flow,decimal-leading-zero); color:var(--accent); font:700 12px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace; }
+.flow-arrow { display:grid; place-items:center; color:var(--accent); font-size:30px; }
+.wireframe-wrap { border:1px solid var(--line-strong); background:#ececec; color:#1d1d1d; padding:16px; overflow:auto; }
+.wf-note { display:flex; justify-content:space-between; gap:12px; color:#555; font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; margin-bottom:12px; min-width:880px; }
+.wf-stage { min-width:880px; height:570px; border:2px solid #333; background:#fafafa; display:grid; gap:8px; padding:8px; }
+.wf-stage[hidden] { display:none; }
+.wf-box { border:1px solid #555; background:#fff; padding:8px; overflow:hidden; }
+.wf-label { font:700 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace; color:#444; text-transform:uppercase; letter-spacing:.06em; }
+.wf-control { display:inline-block; border:1px solid #555; padding:4px 7px; margin:3px 3px 0 0; background:#f1f1f1; font-size:11px; }
+.wf-lanes { display:grid; gap:5px; margin-top:8px; }
+.wf-lane { height:34px; border:1px solid #777; background:repeating-linear-gradient(90deg,#fff 0 54px,#ddd 55px,#fff 56px); position:relative; }
+.wf-lane::after { content:""; position:absolute; left:16%; top:8px; width:48%; height:16px; background:#bbb; border:1px solid #666; }
+.wf-a { grid-template-columns:150px 1fr 250px; grid-template-rows:58px 1fr 180px; }
+.wf-a .top { grid-column:1 / -1; }
+.wf-a .tracks { grid-row:2 / 4; }
+.wf-a .arrange { grid-column:2; }
+.wf-a .ai { grid-column:3; grid-row:2 / 4; }
+.wf-a .piano { grid-column:2; }
+.wf-chat { display:grid; gap:7px; margin-top:8px; }
+.wf-bubble { border:1px solid #777; padding:7px; max-width:90%; font-size:11px; }
+.wf-bubble.user { margin-left:auto; background:#e4e4e4; }
+.wf-b { grid-template-columns:260px 1fr 260px; grid-template-rows:58px 1fr 140px; }
+.wf-b .top { grid-column:1 / -1; }
+.wf-b .queue { grid-row:2 / 4; }
+.wf-b .arrange { grid-column:2; }
+.wf-b .compare { grid-column:3; grid-row:2 / 4; }
+.wf-b .actions { grid-column:2; }
+.wf-item { border:1px solid #777; padding:8px; margin-top:7px; font-size:11px; }
+.wf-c { grid-template-columns:300px 1fr 220px; grid-template-rows:58px 1fr 180px; }
+.wf-c .top { grid-column:1 / -1; }
+.wf-c .conversation { grid-row:2 / 4; }
+.wf-c .steps { grid-column:2; }
+.wf-c .inspector { grid-column:3; grid-row:2 / 4; }
+.wf-c .preview { grid-column:2; }
+.wf-step { display:grid; grid-template-columns:26px 1fr auto; gap:8px; padding:8px 0; border-bottom:1px solid #aaa; font-size:11px; }
+.tradeoffs { margin-top:14px; padding:14px 16px; border-left:4px solid var(--accent); background:var(--surface); }
+.tradeoffs strong { display:block; }
+.tradeoffs p { margin:5px 0 0; color:var(--muted); }
+.roadmap { display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--line); background:var(--surface); }
+.phase { padding:22px; border-right:1px solid var(--line); }
+.phase:last-child { border-right:0; }
+.phase-time { color:var(--accent); font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; }
+.phase h3 { margin:10px 0; font-size:21px; }
+.phase ul { margin:0; padding-left:18px; color:var(--muted); font-size:14px; }
+.validation { width:100%; border-collapse:collapse; background:var(--surface); font-size:14px; }
+.validation th, .validation td { padding:12px 14px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+.validation th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+.status { display:inline-flex; align-items:center; gap:6px; font-weight:700; }
+.status::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--line-strong); }
+.status.pass::before { background:var(--good); } .status.fail::before { background:var(--critical); } .status.warn::before { background:var(--warning); }
+.artifact-warning { margin-top:18px; padding:16px 18px; border:1px solid var(--critical); background:var(--critical-soft); }
+.artifact-warning strong { display:block; color:var(--critical); }
+.artifact-warning p { margin:6px 0 0; }
+.footer { padding:34px 0 50px; color:var(--muted); font-size:13px; }
+.footer code { color:var(--ink); }
+@media (max-width:900px) {
+  .shell { display:block; }
+  .sidebar { position:static; height:auto; padding:16px; border-right:0; border-bottom:1px solid var(--line); gap:14px; }
+  .brand { max-width:360px; }
+  .nav { display:flex; overflow-x:auto; padding-bottom:4px; }
+  .nav a { white-space:nowrap; border-left:0; border-bottom:2px solid transparent; }
+  .side-note,.legend { display:none; }
+  .theme { position:absolute; top:16px; right:16px; width:auto; margin:0; }
+  .container { width:min(100% - 32px,1180px); }
+  .hero { padding-top:34px; }
+  .metrics { grid-template-columns:1fr 1fr; }
+  .metric:nth-child(2) { border-right:0; }
+  .metric:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+  .section-head { grid-template-columns:1fr; gap:12px; }
+  .summary-grid { grid-template-columns:1fr; }
+  .evidence { grid-template-columns:1fr; }
+  .flow-compare { grid-template-columns:1fr; }
+  .flow-arrow { transform:rotate(90deg); min-height:48px; }
+  .roadmap { grid-template-columns:1fr; }
+  .phase { border-right:0; border-bottom:1px solid var(--line); }
+  .phase:last-child { border-bottom:0; }
+}
+@media (max-width:560px) {
+  h1 { font-size:38px; }
+  section { padding:48px 0; }
+  .metrics { grid-template-columns:1fr; }
+  .metric { border-right:0; border-bottom:1px solid var(--line); }
+  .metric:last-child { border-bottom:0; }
+  .verdict { grid-template-columns:1fr; }
+  .finding { grid-template-columns:60px minmax(0,1fr); }
+  .finding-body { padding:15px; }
+}
+@media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { animation:none!important; transition:none!important; } }
+@media print {
+  :root { --paper:#fff; --surface:#fff; --surface-2:#f1f1f1; --ink:#111; --muted:#444; --line:#aaa; }
+  .shell { display:block; } .sidebar,.tabs,.filters,.theme { display:none!important; }
+  .container { width:100%; } .hero,section { padding:24px 0; }
+  .tab-panel[hidden],.wf-stage[hidden],.finding[hidden] { display:block!important; }
+  .diagram-shell,.wireframe-wrap { break-inside:avoid; overflow:visible; }
+  .wireframe-wrap,.wf-stage { min-width:0; transform:scale(.78); transform-origin:top left; width:128%; }
+  details { break-inside:avoid; } details > * { display:block!important; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#content">본문으로 건너뛰기</a>
+<div class="shell">
+  <aside class="sidebar" aria-label="보고서 탐색">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">◆</div><div><strong>ARIA / VISUAL AUDIT</strong><small>구조 · 결함 · 다음 설계</small></div></div>
+    <nav class="nav">
+      <a href="#overview">한 장 요약</a><a href="#architecture">아키텍처</a><a href="#findings">문제점</a><a href="#journey">제품 흐름</a><a href="#wireframes">와이어프레임</a><a href="#roadmap">개선 순서</a><a href="#validation">검증 결과</a>
+    </nav>
+    <div class="side-note"><strong>읽는 순서</strong>P1을 먼저 확인하고, 아키텍처의 붉은 지점과 개선 로드맵을 이어서 보면 된다.</div>
+    <div class="legend" aria-label="심각도 범례"><div class="legend-row"><span class="dot p1"></span>P1 · 출시 전 수정</div><div class="legend-row"><span class="dot p2"></span>P2 · 다음 마일스톤</div><div class="legend-row"><span class="dot ok"></span>검증 통과</div></div>
+    <button class="theme" id="themeToggle" type="button" aria-label="색상 테마 전환">◐ 테마 전환</button>
+  </aside>
+
+  <main class="main" id="content">
+    <header class="hero">
+      <div class="container">
+        <p class="eyebrow">CODEBASE AUDIT · v0.1.0 · 2026.08.06</p>
+        <h1>좋은 작곡 엔진이<br>한 제품 경로로 모이지 못했다.</h1>
+        <p class="lede">Aria의 MCP, 피아노롤, 순수 JS 신스와 SF2는 이미 강하다. 지금 필요한 것은 새 기능이 아니라 MIDI·렌더·저장·브라우저 모니터링을 하나의 신뢰 가능한 세션으로 묶는 일이다.</p>
+        <div class="verdict"><b>VERDICT</b><p><strong>AI 작곡 스케치 앱으로는 설득력 있는 프로토타입.</strong> 일반 사용자용 제품으로 가려면 출력 정확성, 장시간 렌더 분리, 데이터 충돌 방지, 핵심 피아노롤 UX를 먼저 해결해야 한다.</p></div>
+        <div class="metrics" aria-label="핵심 수치">
+          <div class="metric"><strong>5</strong><span>P1 출시 전 결함</span></div>
+          <div class="metric"><strong>26.5%</strong><span>src 중 미통합 모듈 비율</span></div>
+          <div class="metric"><strong>44</strong><span>SF2 격리 시 통과 테스트</span></div>
+          <div class="metric"><strong>0</strong><span>npm audit 알려진 취약점</span></div>
+        </div>
+      </div>
+    </header>
+
+    <section id="overview">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">01 / SUMMARY</span><h2>한 장 요약</h2></div><p>Aria의 강점과 가장 위험한 지점을 악보처럼 나란히 놓았다. 왼쪽은 유지할 구조, 오른쪽은 출시를 막는 결함이다.</p></div>
+        <div class="summary-grid">
+          <article class="summary-block"><h3>유지해야 할 강점</h3><ul class="clean-list"><li>MCP와 GUI가 같은 <code>runOp</code> 명령 계층을 사용</li><li>강한 JSON validation과 30단계 undo/redo</li><li>play와 export가 공유하는 결정적 offline renderer</li><li>템포 ramp의 오디오·MIDI 경과 시간 정합성</li><li>sections·feedback·level report를 이용한 AI 협업 모델</li></ul><div class="signal-strip" aria-label="강점 신호를 표현한 장식적 막대"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></article>
+          <article class="summary-block risk"><h3>먼저 고칠 다섯 가지</h3><ol class="clean-list"><li>MIDI 7-bit 위반과 mute/solo 누락</li><li>동기 렌더의 이벤트 루프 정지·700MB급 메모리</li><li>구간 시작 이전 지속음 누락</li><li>테스트의 실제 Music 폴더 쓰기와 75MB 임시 파일 누적</li><li>제목 기반 저장 충돌과 다중 인스턴스 race</li></ol><div class="signal-strip" aria-label="위험 신호를 표현한 장식적 막대"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">02 / SYSTEM MAP</span><h2>아키텍처를 세 겹으로 보기</h2></div><p>구성요소 지도, 실행 순서, 데이터 모델을 분리했다. 한 그림에 모든 화살표를 넣지 않아도 병목과 책임 경계가 드러난다.</p></div>
+        <div class="tabs" role="tablist" aria-label="아키텍처 보기">
+          <button class="tab" role="tab" aria-selected="true" aria-controls="topologyPanel" id="topologyTab">구성요소 지도</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="sequencePanel" id="sequenceTab">재생 요청 순서</button>
+          <button class="tab" role="tab" aria-selected="false" aria-controls="schemaPanel" id="schemaTab">곡 데이터 모델</button>
+        </div>
+        <div class="diagram-shell tab-panel" role="tabpanel" id="topologyPanel" aria-labelledby="topologyTab">
+          <div class="topology">
+            <div class="actor"><span class="node-title">Claude Code</span><span class="node-sub">MCP stdio · 39 tools</span></div><div class="arrow" aria-hidden="true">→</div><div class="system"><span class="node-title">mcp.js</span><span class="node-sub">Zod schema · instructions</span><div class="risk-flag">ensemble schema 누락</div></div><div class="arrow" aria-hidden="true">→</div>
+            <div class="core-stack"><div class="system"><span class="node-title">core.js / runOp</span><span class="node-sub">canonical state · ops · log</span></div><div class="system"><span class="node-title">song.js</span><span class="node-sub">validation · tempo · note model</span></div><div class="system"><span class="node-title">undo + autosave</span><span class="node-sub">whole JSON snapshots</span><div class="risk-flag">revision·stable ID 없음</div></div></div>
+            <div class="actor"><span class="node-title">Browser GUI</span><span class="node-sub">Canvas · Web Audio</span></div><div class="arrow" aria-hidden="true">→</div><div class="system"><span class="node-title">web.js</span><span class="node-sub">HTTP RPC · SSE · stems</span><div class="risk-flag">동기 render가 서버 정지</div></div><div class="arrow" aria-hidden="true">→</div>
+            <div class="actor"><span class="node-title">Local files</span><span class="node-sub">song.json · songs · exports</span></div><div class="arrow" aria-hidden="true">←</div><div class="store"><span class="node-title">Persistence</span><span class="node-sub">temp + rename</span><div class="risk-flag">이름 충돌·multi-instance race</div></div><div class="arrow" aria-hidden="true">←</div>
+          </div>
+          <div style="height:18px"></div>
+          <div class="topology" style="grid-template-columns:180px 70px 220px 70px minmax(250px,1fr);grid-template-rows:auto">
+            <div class="actor"><span class="node-title">play / export</span><span class="node-sub">공통 명령</span></div><div class="arrow">→</div><div class="engine"><span class="node-title">synth.js + sf2.js</span><span class="node-sub">full-buffer offline DSP</span><div class="risk-flag">최대 약 740MB + SF2</div></div><div class="arrow">→</div><div class="engine"><span class="node-title">WAV → afplay / MIDI</span><span class="node-sub">server output path</span><div class="risk-flag">MIDI CC7·mute/solo 결함</div></div>
+          </div>
+        </div>
+        <div class="diagram-shell tab-panel" role="tabpanel" id="sequencePanel" aria-labelledby="sequenceTab" hidden>
+          <div class="sequence"><div class="seq-step"><strong>사용자 요청</strong><span>Claude 또는 GUI가 play 호출</span></div><div class="seq-step"><strong>runOp</strong><span>state 확인·range clamp</span></div><div class="seq-step"><strong>renderRange</strong><span>전체 PCM을 동기 생성</span></div><div class="seq-step"><strong>master</strong><span>reverb·compress·soft clip</span></div><div class="seq-step"><strong>WAV write</strong><span>메모리 buffer를 파일화</span></div><div class="seq-step"><strong>afplay</strong><span>spawn 후 SSE play event</span></div></div>
+          <div class="artifact-warning"><strong>병목</strong><p>3~5단계가 같은 Node 이벤트 루프에서 동기 실행된다. 이 동안 Stop, SSE, 다음 MCP 호출도 기다린다.</p></div>
+        </div>
+        <div class="diagram-shell tab-panel" role="tabpanel" id="schemaPanel" aria-labelledby="schemaTab" hidden>
+          <div class="schema"><div class="schema-box"><h3>Song</h3><code>title · bpm · timeSig</code><ul><li>tempoMap</li><li>sections</li><li>feedback</li><li>tracks[]</li></ul></div><div class="schema-box"><h3>Track</h3><code>name · seed · preset</code><ul><li>volume · pan · mute · solo</li><li>tone overrides</li><li>region gains</li><li>notes[]</li></ul></div><div class="schema-box"><h3>Note</h3><code>{bar, beat, pitch, dur, vel}</code><ul><li>LLM에게 단순하고 읽기 쉬움</li><li>드럼은 pitch 대신 piece name</li><li>최대 10,000 notes/track</li></ul></div><div class="schema-risk"><strong>빠진 식별 계층:</strong> schema version · project ID · track ID · note ID · revision · clip/pattern · key/chord. 현재 노트 선택은 <code>bar+pitch(+beat+dur)</code> 튜플에 의존한다.</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="findings">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">03 / FINDINGS</span><h2>문제점과 수정 방향</h2></div><p>심각도로 필터링할 수 있다. 각 항목을 펼치면 근거 파일과 다음 구현 단위가 보인다.</p></div>
+        <div class="filters" aria-label="심각도 필터"><button class="filter" data-filter="all" aria-pressed="true">전체</button><button class="filter" data-filter="p1" aria-pressed="false">P1 · 출시 전</button><button class="filter" data-filter="p2" aria-pressed="false">P2 · 다음 단계</button><button class="filter" data-filter="p3" aria-pressed="false">P3 · 제품 선택</button></div>
+        <div class="finding-grid">
+          <article class="finding" data-severity="p1"><div class="severity">P1–1</div><div class="finding-body"><h3>MIDI가 합법적인 볼륨에서도 깨진다</h3><p class="impact">volume 2에서 CC7 data byte가 <code>0xFE</code>가 되고, mute/solo 트랙도 note-on을 그대로 내보낸다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>song.js:186-193</code>은 0..2 허용. <code>midi.js:108-110</code>은 <code>volume*127</code>을 clamp하지 않음. 재현 byte: <code>B0 07 FE</code>.</p></div><div><b>FIX</b><p>WAV와 같은 audible track 집합을 계산하고 CC7 7-bit 정책을 정의한다. 모든 channel data byte property test를 추가한다.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p1"><div class="severity">P1–2</div><div class="finding-body"><h3>장시간 렌더가 서버와 메모리를 함께 잠근다</h3><p class="impact">10분 render는 핵심 Float32 buffer만 약 740MB이고 HTTP·MCP·SSE와 같은 event loop에서 동기 실행된다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>synth.js:362-375,512</code>의 L/R, send, duck, wet. <code>sf2.js:42-60</code>은 1.3GB font도 전체 read/cache.</p></div><div><b>FIX</b><p>Worker Thread + cancel/progress, chunked WAV, memory-byte budget, stem LRU, SF2 lazy loading 또는 eviction.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p1"><div class="severity">P1–3</div><div class="finding-body"><h3>구간 시작 이전의 지속음이 사라진다</h3><p class="impact">1마디 끝에 시작해 2마디까지 이어지는 음을 2마디만 재생하면 peak가 0이다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>synth.js:420-425</code>가 <code>note.bar &lt; fromBar</code>를 무조건 skip. 1..2 peak 0.141, 2..2 peak 0.</p></div><div><b>FIX</b><p>note time overlap으로 선택하고 range 이전 voice 부분을 crop한다. tempo change와 loop 경계 regression test를 추가한다.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p1"><div class="severity">P1–4</div><div class="finding-body"><h3>테스트가 비결정적이고 사용자 폴더를 건드린다</h3><p class="impact">설치된 SoundFont 음역 때문에 기본 테스트가 실패하며, 실제 <code>~/Music/aria/smoke.*</code>를 쓰고 실행당 70~75MB temp를 남긴다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>test/smoke.js:500-509</code>의 path 없는 export. C4 고정 SF test는 contrabass sample range 밖.</p></div><div><b>FIX</b><p><code>mkdtemp</code> + export dir override + finally cleanup. 작은 SF2 fixture와 preset별 valid audition pitch를 사용한다.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p1"><div class="severity">P1–5</div><div class="finding-body"><h3>곡 저장 충돌과 multi-instance race가 남아 있다</h3><p class="impact">서로 다른 제목이 같은 80자 정제 파일명으로 겹치고, 모든 인스턴스가 동일한 <code>.tmp</code>를 사용한다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>core.js:89-110</code> title→filename. <code>core.js:38-55</code>에는 500ms mtime 창과 fixed temp name.</p></div><div><b>FIX</b><p>UUID project filename, schema version/revision, unique temp, interprocess lock/CAS, conflict UI와 autosave history.</p></div></div></details></div></article>
+
+          <article class="finding" data-severity="p2"><div class="severity">P2–1</div><div class="finding-body"><h3>소스의 26.5%가 제품 경로 밖에 있다</h3><p class="impact"><code>master.js</code>, <code>eq.js</code>, <code>key.js</code>, <code>midi-import.js</code> 1,175줄에 incoming production import가 없다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>INTERPRETATION</b><p>완료된 기능처럼 보이는 branch와 현재 inline master가 공존해 수정 위치가 분산된다.</p></div><div><b>FIX</b><p>각 모듈을 “이번 릴리스 통합 / feature flag / 제거”로 결정한다. 특히 master부터 한 경로로 합친다.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–2</div><div class="finding-body"><h3>서버 재생과 즉시 믹스가 같은 곡을 다르게 들려준다</h3><p class="impact">server는 compressor+soft clip, browser는 다른 compressor 근사다. cache race와 server/browser 동시 재생도 가능하다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>synth.js:513-540</code> vs <code>index.html:339-346</code>. stem decode 중 global song hash가 바뀌면 stale audio를 fresh로 표기할 수 있음.</p></div><div><b>FIX</b><p>공통 master/stem-sum, 단일 playback owner, request revision/hash, AbortController와 stale result discard.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–3</div><div class="finding-body"><h3>SoundFont fallback이 다른 악기 또는 무음이 될 수 있다</h3><p class="impact">전용 font가 없으면 default GM으로 조용히 fallback하고, program/pitch zone이 없으면 zero sample을 반환한다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>sf2.js:179-181,193-214</code>. GUI는 default SF2 존재 여부로 전체 SF preset을 노출.</p></div><div><b>FIX</b><p>preset별 font/program/range availability를 제공하고 semantic fallback과 no-zone silence를 경고/에러 처리.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–4</div><div class="finding-body"><h3>whole-state와 stable ID 부재가 확장 한계다</h3><p class="impact">작은 편집도 전체 JSON stringify·SSE·undo snapshot을 만들고, 노트는 위치 튜플로 식별한다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>core.js:84-87,125-155,211-229,1083-1089</code>. revision/CAS 없음.</p></div><div><b>FIX</b><p>project/track/note ID, operation ID, revision, patch event와 inverse-patch undo를 도입한다.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–5</div><div class="finding-body"><h3>핵심 피아노롤 동작이 빠져 있다</h3><p class="impact">세로 pitch drag가 없고 4/4에서 최대 zoom조차 16분 grid 조건 8px을 만족하지 못한다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>index.html:708-716,913-917,1353-1419</code>. X축 시간만 이동.</p></div><div><b>FIX</b><p>pitch drag·transpose, zoom/grid selector, selected-range play/loop/export, audition과 visible meters.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–6</div><div class="finding-body"><h3>MCP·GUI·렌더의 ensemble 계약이 갈라져 있다</h3><p class="impact">GUI/model에는 ensemble이 있지만 MCP schema에는 없고, 전달한 <code>detuneCents</code>도 실제 SF2 pitch 계산에서 사용되지 않는다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>song.js:121-127</code>, <code>mcp.js:16-25,49-58</code>, <code>synth.js:436-448</code>, <code>sf2.js:239-244</code>.</p></div><div><b>FIX</b><p>하나의 shared schema를 만들고 cents를 semitone 계산에 반영한 frequency test를 추가한다.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–7</div><div class="finding-body"><h3>Canvas 중심 UI에 접근 가능한 대체 경로가 없다</h3><p class="impact">arrange, piano roll, velocity가 pointer coordinate에 묶여 screen reader·keyboard-only 편집이 불가능하다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>index.html:146-171,1304-1494</code>. aria-live toast, dialog focus, media query도 없음.</p></div><div><b>FIX</b><p>semantic note-list editor 또는 DOM command layer, focus management, aria-live, responsive flow.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p2"><div class="severity">P2–8</div><div class="finding-body"><h3>최소 Node 버전 선언이 lockfile과 모순된다</h3><p class="impact">앱은 Node 18+를 주장하지만 잠긴 <code>@hono/node-server@2.0.12</code>는 Node 20+를 요구한다.</p><details><summary>근거와 수정안</summary><div class="evidence"><div><b>OBSERVED</b><p><code>package.json:14-16</code>, <code>package-lock.json:21-27</code>.</p></div><div><b>FIX</b><p>engine을 20으로 올리거나 Node 18 호환 dependency를 pin하고 최소 버전 CI를 실행한다.</p></div></div></details></div></article>
+
+          <article class="finding" data-severity="p3"><div class="severity">P3</div><div class="finding-body"><h3>제품 경계가 아직 “AI 스케치패드 vs DAW” 사이에 있다</h3><p class="impact">macOS afplay, fixed meter, note-start 기반 region gain, no recording/CC/pattern/key/chord는 현재 방향을 스케치 도구 쪽으로 규정한다.</p><details><summary>결정할 질문</summary><div class="evidence"><div><b>OPTION A</b><p>AI sketch-to-MIDI/WAV에 집중: 작곡·검토 loop와 export 신뢰성을 극대화.</p></div><div><b>OPTION B</b><p>DAW 확장: recording, automation, clips, plugins, mixer semantics까지 별도 장기 로드맵 필요.</p></div></div></details></div></article>
+          <article class="finding" data-severity="p3"><div class="severity">P3</div><div class="finding-body"><h3>터널 노출 시 same-origin은 인증이 아니다</h3><p class="impact">local-only에는 합리적이지만 tunnel URL을 아는 사용자는 SSE·stem·destructive RPC에 접근할 수 있다.</p><details><summary>조건부 수정안</summary><div class="evidence"><div><b>LOCAL</b><p><code>127.0.0.1</code> 기본값과 CSRF 방어는 유지할 수 있다.</p></div><div><b>TUNNEL</b><p>명시적 opt-in, process별 capability token, Host/Origin 검증을 추가한다.</p></div></div></details></div></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="journey">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">04 / PRODUCT LOOP</span><h2>현재 흐름과 닫아야 할 루프</h2></div><p>차별점은 “AI가 쓰고 사람이 감독하는 상주 작곡 세션”이다. 지금은 피드백 후 Claude Code로 돌아가야 한다.</p></div>
+        <div class="flow-compare">
+          <article class="flow"><h3>현재</h3><ol><li>Claude Code에서 곡 요청</li><li>MCP가 template과 notes 작성</li><li>브라우저에서 SSE로 관찰</li><li>피아노롤·믹스 수정</li><li>구간 feedback 기록</li><li>Claude Code로 돌아가 재요청</li><li>WAV/MIDI export</li></ol></article>
+          <div class="flow-arrow" aria-hidden="true">→</div>
+          <article class="flow"><h3>권장</h3><ol><li>브라우저에서 자연어 목표 확인</li><li>AI 생성 단계를 visible queue로 표시</li><li>선택 구간 play/loop/A-B</li><li>사람이 track-scoped feedback</li><li>“이 피드백 반영”으로 agent wake-up</li><li>before/after preview 후 accept</li><li>동일 master로 들은 그대로 export</li></ol></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="wireframes">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">05 / WIREFRAMES</span><h2>세 가지 구조 방향</h2></div><p>아래는 의도적으로 저해상도다. 색·브랜드가 아니라 무엇을 항상 보이고, AI와 사람의 작업을 어디에서 연결할지 비교하기 위한 와이어프레임이다.</p></div>
+        <div class="tabs" role="tablist" aria-label="와이어프레임 방향">
+          <button class="tab wf-tab" role="tab" aria-selected="true" aria-controls="wireA" id="wireATab" data-wire="wireA">A · 편집기 + AI Dock</button>
+          <button class="tab wf-tab" role="tab" aria-selected="false" aria-controls="wireB" id="wireBTab" data-wire="wireB">B · 피드백 큐</button>
+          <button class="tab wf-tab" role="tab" aria-selected="false" aria-controls="wireC" id="wireCTab" data-wire="wireC">C · 대화형 단계</button>
+        </div>
+        <div class="wireframe-wrap">
+          <div class="wf-note"><span>LOW-FIDELITY / 구조 검토용</span><span>Desktop 1440 기준 · 좁은 화면은 영역 순서대로 stack</span></div>
+          <div class="wf-stage wf-a" id="wireA" role="tabpanel" aria-labelledby="wireATab">
+            <div class="wf-box top"><span class="wf-label">Transport + Project</span><br><span class="wf-control">▶ 1–8마디</span><span class="wf-control">Loop</span><span class="wf-control">Grid 1/16</span><span class="wf-control">Export selection</span><span class="wf-control">피크 −3.2 dB</span></div>
+            <div class="wf-box tracks"><span class="wf-label">Tracks</span><div class="wf-item">Drums · M · S · −2dB</div><div class="wf-item">Bass · M · S · 0dB</div><div class="wf-item">E.Piano · M · S · −1dB</div><div class="wf-item">Lead · M · S · −3dB</div><span class="wf-control">+ Track</span></div>
+            <div class="wf-box arrange"><span class="wf-label">Arrangement / selected range 5–8</span><div class="wf-lanes"><div class="wf-lane"></div><div class="wf-lane"></div><div class="wf-lane"></div><div class="wf-lane"></div></div></div>
+            <div class="wf-box ai"><span class="wf-label">AI Dock / always available</span><div class="wf-chat"><div class="wf-bubble user">후렴에서 베이스를 더 움직여줘</div><div class="wf-bubble">5–8마디 Bass를 수정할게요. 적용 전 비교를 만들었습니다.</div></div><div class="wf-item">Before / After<br><span class="wf-control">A</span><span class="wf-control">B</span><span class="wf-control">적용</span></div><div class="wf-item">열린 피드백 2건</div></div>
+            <div class="wf-box piano"><span class="wf-label">Piano roll + Velocity / pitch drag / audition</span><div class="wf-lanes"><div class="wf-lane"></div><div class="wf-lane"></div><div class="wf-lane"></div></div></div>
+          </div>
+          <div class="wf-stage wf-b" id="wireB" role="tabpanel" aria-labelledby="wireBTab" hidden>
+            <div class="wf-box top"><span class="wf-label">Review Session</span><br><span class="wf-control">▶ selection</span><span class="wf-control">A/B</span><span class="wf-control">Accept all</span><span class="wf-control">Export approved</span></div>
+            <div class="wf-box queue"><span class="wf-label">Feedback Queue</span><div class="wf-item"><b>#12 5–8마디 · Bass</b><br>조금 더 움직이게<br><span class="wf-control">처리 중</span></div><div class="wf-item"><b>#13 8마디 · 전체</b><br>다음 구간으로 연결 약함<br><span class="wf-control">대기</span></div><div class="wf-item"><b>#11 1–4마디 · Drums</b><br>완료됨</div></div>
+            <div class="wf-box arrange"><span class="wf-label">Song Context / feedback range highlighted</span><div class="wf-lanes"><div class="wf-lane"></div><div class="wf-lane"></div><div class="wf-lane"></div><div class="wf-lane"></div></div></div>
+            <div class="wf-box compare"><span class="wf-label">Change Inspector</span><div class="wf-item">Bass notes<br>12 moved · 4 added</div><div class="wf-item">Level<br>peak −2.8 dB · no clip</div><div class="wf-item">Agent note<br>코드톤은 유지하고 passing tone 추가</div><span class="wf-control">되돌리기</span><span class="wf-control">승인</span></div>
+            <div class="wf-box actions"><span class="wf-label">Selection actions</span><br><span class="wf-control">피드백 남기기</span><span class="wf-control">AI 수정 요청</span><span class="wf-control">구간 WAV</span></div>
+          </div>
+          <div class="wf-stage wf-c" id="wireC" role="tabpanel" aria-labelledby="wireCTab" hidden>
+            <div class="wf-box top"><span class="wf-label">Guided Composition</span><br><span class="wf-control">City Pop</span><span class="wf-control">96 BPM</span><span class="wf-control">4/4</span><span class="wf-control">8 bars</span></div>
+            <div class="wf-box conversation"><span class="wf-label">Conversation</span><div class="wf-chat"><div class="wf-bubble user">여름밤 시티팝 8마디</div><div class="wf-bubble">편성과 코드 진행을 먼저 제안할게요.</div><div class="wf-bubble user">베이스는 조금 더 펑키하게</div></div><div class="wf-item">Prompt input<br>“수정할 내용을 말하세요…”</div></div>
+            <div class="wf-box steps"><span class="wf-label">Generation Steps</span><div class="wf-step"><b>01</b><span>편성·BPM</span><span>완료</span></div><div class="wf-step"><b>02</b><span>Drum groove</span><span>완료</span></div><div class="wf-step"><b>03</b><span>Bass</span><span>검토</span></div><div class="wf-step"><b>04</b><span>Chords</span><span>대기</span></div><div class="wf-step"><b>05</b><span>Melody</span><span>대기</span></div></div>
+            <div class="wf-box inspector"><span class="wf-label">Current Step</span><div class="wf-item">Bass · bars 1–8<br>preset: finger-bass</div><div class="wf-item">Key: F major<br>out-of-key 1 note</div><div class="wf-item">Level safe<br>peak −4.1dB</div><span class="wf-control">이 단계 다시</span><span class="wf-control">다음</span></div>
+            <div class="wf-box preview"><span class="wf-label">Compact arrangement preview</span><div class="wf-lanes"><div class="wf-lane"></div><div class="wf-lane"></div><div class="wf-lane"></div></div></div>
+          </div>
+        </div>
+        <div class="tradeoffs" id="wireTradeoff"><strong>추천: A · 편집기 + AI Dock</strong><p>현재 Aria의 DAW-like 편집기를 버리지 않으면서, 피드백 → agent → A/B → 적용의 닫힌 루프를 가장 적은 구조 변화로 추가한다.</p></div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">06 / ROADMAP</span><h2>수정 순서는 출력 → 엔진 → 루프</h2></div><p>기능 추가보다 신뢰성 기반을 먼저 만든다. 각 단계는 다음 단계의 전제다.</p></div>
+        <div class="roadmap"><article class="phase"><span class="phase-time">1–3 DAYS</span><h3>출력을 믿게 만들기</h3><ul><li>MIDI 7-bit·mute/solo</li><li>range carry-in note</li><li>test sandbox·cleanup</li><li>GUI export path·warning</li><li>MCP ensemble schema</li></ul></article><article class="phase"><span class="phase-time">1–2 WEEKS</span><h3>엔진을 분리하고 통합</h3><ul><li>Worker render·cancel·progress</li><li>chunked WAV·memory budget</li><li>공통 master / stem semantics</li><li>schema version·stable IDs</li><li>UUID library·conflict handling</li></ul></article><article class="phase"><span class="phase-time">2–6 WEEKS</span><h3>사람–AI 루프 닫기</h3><ul><li>pitch drag·transpose·grid</li><li>selection play/loop/export</li><li>audition·meter·LUFS</li><li>feedback agent wake-up</li><li>A/B accept/reject</li><li>semantic accessibility layer</li></ul></article></div>
+      </div>
+    </section>
+
+    <section id="validation">
+      <div class="container">
+        <div class="section-head"><div><span class="kicker">07 / EVIDENCE</span><h2>실행 검증 결과</h2></div><p>정적 추정과 실제 재현을 구분했다. 실패도 숨기지 않고 원인을 기록했다.</p></div>
+        <div style="overflow-x:auto"><table class="validation"><thead><tr><th>검증</th><th>결과</th><th>해석</th></tr></thead><tbody>
+          <tr><td><code>node --check</code> — src/tools/test</td><td><span class="status pass">통과</span></td><td>JavaScript syntax 이상 없음</td></tr>
+          <tr><td><code>npm audit --omit=dev</code></td><td><span class="status pass">0건</span></td><td>현재 lockfile 기준 알려진 취약점 없음</td></tr>
+          <tr><td>기본 <code>npm test</code></td><td><span class="status fail">실패</span></td><td>contrabass-pizz를 C4에서 검사한 환경 의존 SF test</td></tr>
+          <tr><td>SF2 없는 격리 테스트</td><td><span class="status pass">44건</span></td><td>기존 song/synth/core spine은 통과</td></tr>
+          <tr><td>HTTP <code>/api/meta</code> + <code>new_song</code></td><td><span class="status pass">통과</span></td><td>기본 loopback GUI/RPC 경로 동작</td></tr>
+          <tr><td>MIDI volume 2</td><td><span class="status fail">B0 07 FE</span></td><td>7-bit data 규칙 위반 재현</td></tr>
+          <tr><td>muted MIDI</td><td><span class="status fail">note-on 존재</span></td><td>WAV/MIDI arrangement 불일치</td></tr>
+          <tr><td>range carry-in sustain</td><td><span class="status fail">peak 0</span></td><td>이전 마디 시작 note 완전 누락</td></tr>
+        </tbody></table></div>
+        <div class="artifact-warning"><strong>테스트 부작용</strong><p>감사 과정에서 문서화된 <code>npm test</code>를 실행해 <code>~/Music/aria/smoke.mid</code>와 <code>~/Music/aria/smoke-1-2마디.wav</code>의 수정 시각이 갱신됐다. 기존 파일 여부를 알 수 없어 삭제하지 않았다.</p></div>
+      </div>
+    </section>
+
+    <footer class="footer"><div class="container">상세 Markdown 원본: <code>ARIA_ANALYSIS_REPORT.md</code><br>이 시각 보고서는 단일 파일이며 외부 네트워크나 빌드 과정 없이 열린다.</div></footer>
+  </main>
+</div>
+<script>
+(() => {
+  const root = document.documentElement;
+  const stored = localStorage.getItem('aria-audit-theme');
+  if (stored === 'light' || stored === 'dark') root.dataset.theme = stored;
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const current = root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.dataset.theme = current === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('aria-audit-theme', root.dataset.theme);
+  });
+
+  function wireTabs(buttons, panelSelector) {
+    buttons.forEach((btn, idx) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.setAttribute('aria-selected', String(b === btn)));
+        document.querySelectorAll(panelSelector).forEach(p => { p.hidden = p.id !== btn.getAttribute('aria-controls'); });
+      });
+      btn.addEventListener('keydown', e => {
+        if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+        e.preventDefault();
+        let next = idx;
+        if (e.key === 'ArrowLeft') next = (idx - 1 + buttons.length) % buttons.length;
+        if (e.key === 'ArrowRight') next = (idx + 1) % buttons.length;
+        if (e.key === 'Home') next = 0;
+        if (e.key === 'End') next = buttons.length - 1;
+        buttons[next].focus(); buttons[next].click();
+      });
+    });
+  }
+  wireTabs([...document.querySelectorAll('#architecture .tab')], '#architecture .tab-panel');
+
+  const tradeoffs = {
+    wireA:['추천: A · 편집기 + AI Dock','현재 Aria의 DAW-like 편집기를 버리지 않으면서, 피드백 → agent → A/B → 적용의 닫힌 루프를 가장 적은 구조 변화로 추가한다.'],
+    wireB:['B · 피드백 큐','긴 곡을 반복 수정하고 승인하는 리뷰 workflow에 강하다. 반면 처음 곡을 만드는 순간에는 queue가 과해 보일 수 있다.'],
+    wireC:['C · 대화형 단계','초보자와 AI-first onboarding에 가장 쉽다. 대신 숙련 사용자가 전체 arrangement를 직접 만지는 속도는 떨어진다.']
+  };
+  const wfButtons = [...document.querySelectorAll('.wf-tab')];
+  wfButtons.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      wfButtons.forEach(b => b.setAttribute('aria-selected', String(b === btn)));
+      document.querySelectorAll('.wf-stage').forEach(p => { p.hidden = p.id !== btn.dataset.wire; });
+      const [title, copy] = tradeoffs[btn.dataset.wire];
+      document.getElementById('wireTradeoff').innerHTML = `<strong>${title}</strong><p>${copy}</p>`;
+    });
+    btn.addEventListener('keydown', e => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+      e.preventDefault(); let next = idx;
+      if (e.key === 'ArrowLeft') next = (idx - 1 + wfButtons.length) % wfButtons.length;
+      if (e.key === 'ArrowRight') next = (idx + 1) % wfButtons.length;
+      if (e.key === 'Home') next = 0; if (e.key === 'End') next = wfButtons.length - 1;
+      wfButtons[next].focus(); wfButtons[next].click();
+    });
+  });
+
+  const filters = [...document.querySelectorAll('.filter')];
+  const findings = [...document.querySelectorAll('.finding')];
+  filters.forEach(btn => btn.addEventListener('click', () => {
+    filters.forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    findings.forEach(item => { item.hidden = btn.dataset.filter !== 'all' && item.dataset.severity !== btn.dataset.filter; });
+  }));
+})();
+</script>
+</body>
+</html>
