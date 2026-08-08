@@ -72,7 +72,7 @@ export const SF_PRESETS = {
   "sf-piano-gm": { name: "Grand Piano (GM)", desc: "GeneralUser GM 그랜드 피아노 — 기본 폰트만 설치해도 사용할 수 있는 피아노", gm: 0, gain: 1.0, reverb: 0.22, release: 0.4, font: "default.sf2" },
   "sf-piano": { name: "Grand Piano (Salamander)", desc: "Salamander 야마하 C5 그랜드 피아노 — 전용 1.2GiB 파일, 벨로시티 16층", gm: 0, gain: 1.0, reverb: 0.25, release: 0.4, font: "salamander.sf2" },
   "sf-epiano": { name: "Tine E.Piano (GM)", desc: "틴 전기피아노 샘플", gm: 4, gain: 1.0, reverb: 0.22, release: 0.3, font: "default.sf2" },
-  "sf-fm-epiano": { name: "Electric Piano 2 (GM)", desc: "GeneralUser GM 전기피아노 2 샘플 — 기존 Wurli 트랙의 대체음", gm: 5, gain: 1.0, reverb: 0.2, release: 0.3, font: "default.sf2" },
+  "sf-fm-epiano": { name: "Electric Piano 2 (GM)", desc: "GeneralUser GM 전기피아노 2 샘플", gm: 5, gain: 1.0, reverb: 0.2, release: 0.3, font: "default.sf2" },
   "sf-music-box": { name: "Music Box (GM)", desc: "GeneralUser GM 오르골 샘플", gm: 10, gain: 0.9, reverb: 0.4, release: 0.7, font: "default.sf2" },
   "sf-vibes": { name: "Vibraphone (GM)", desc: "비브라폰 샘플 — 재즈·라운지", gm: 11, gain: 1.0, reverb: 0.3, release: 0.8, font: "default.sf2" },
   "sf-glockenspiel-gm": { name: "Glockenspiel (GM)", desc: "GeneralUser GM 글로켄슈필 — 경량 기본 말렛", gm: 9, gain: 0.9, reverb: 0.25, release: 0.6, font: "default.sf2" },
@@ -83,12 +83,12 @@ export const SF_PRESETS = {
   "sf-steel": { name: "Steel Guitar (GM)", desc: "스틸 어쿠스틱 기타 샘플 — 포크·팝 스트로크", gm: 25, gain: 1.0, reverb: 0.22, release: 0.3, font: "default.sf2" },
   "sf-bass": { name: "Finger Bass (GM)", desc: "핑거 일렉 베이스 샘플", gm: 33, gain: 1.0, reverb: 0.05, release: 0.15, font: "default.sf2" },
   "sf-synth-bass": { name: "Synth Bass 1 (GM)", desc: "GeneralUser GM 신스 베이스 샘플", gm: 38, gain: 1.0, reverb: 0.04, release: 0.15, font: "default.sf2" },
-  "sf-pizzicato": { name: "Pizzicato Pluck (GM)", desc: "GeneralUser GM 피치카토 현악 샘플 — 기존 합성 플럭의 대체음", gm: 45, gain: 1.0, reverb: 0.25, release: 0.7, font: "default.sf2" },
+  "sf-pizzicato": { name: "Pizzicato Pluck (GM)", desc: "GeneralUser GM 피치카토 현악 샘플", gm: 45, gain: 1.0, reverb: 0.25, release: 0.7, font: "default.sf2" },
   "sf-harp-gm": { name: "Orchestral Harp (GM)", desc: "GeneralUser GM 오케스트라 하프 — 경량 기본 하프", gm: 46, gain: 1.0, reverb: 0.28, release: 0.8, font: "default.sf2" },
   "sf-timpani-gm": { name: "Timpani (GM)", desc: "GeneralUser GM 팀파니 — 경량 기본 팀파니", gm: 47, gain: 1.0, reverb: 0.3, release: 0.8, font: "default.sf2" },
   "sf-strings": { name: "String Ensemble (GM)", desc: "GeneralUser GM 현악 앙상블 샘플", gm: 48, gain: 0.9, reverb: 0.4, release: 0.6, font: "default.sf2" },
-  "sf-fantasia": { name: "New Age Pad (GM)", desc: "GeneralUser GM 판타지아 계열 패드 샘플 — 기존 DX Lush 트랙의 대체음", gm: 88, gain: 0.8, reverb: 0.4, release: 0.7, font: "default.sf2" },
-  "sf-warm-pad": { name: "Warm Pad (GM)", desc: "GeneralUser GM 웜 패드 샘플 — 기존 Airy Synth 트랙의 대체음", gm: 89, gain: 0.8, reverb: 0.45, release: 0.8, font: "default.sf2" },
+  "sf-fantasia": { name: "New Age Pad (GM)", desc: "GeneralUser GM 판타지아 계열 패드 샘플", gm: 88, gain: 0.8, reverb: 0.4, release: 0.7, font: "default.sf2" },
+  "sf-warm-pad": { name: "Warm Pad (GM)", desc: "GeneralUser GM 웜 패드 샘플", gm: 89, gain: 0.8, reverb: 0.45, release: 0.8, font: "default.sf2" },
   "sf-square-lead": { name: "Square Lead (GM)", desc: "GeneralUser GM 사각 리드 샘플", gm: 80, gain: 0.9, reverb: 0.2, release: 0.2, font: "default.sf2" },
   "sf-saw-lead": { name: "Saw Lead (GM)", desc: "GeneralUser GM 톱니 리드 샘플", gm: 81, gain: 0.9, reverb: 0.22, release: 0.2, font: "default.sf2" },
   // 기존 ID는 GeneralUser GM 선택지로 유지한다. Philharmonia는 아래의 -phil ID에서 명시적으로 고른다.
@@ -191,8 +191,8 @@ export const ORCH_PIECES = {
 export const SF_DRUM_KITS = {
   // release: 렌더 꼬리 계산용 — 크래시·오픈햇 잔향 실측(-60dB ≈ 3.1초)을 담는 값
   "sf-kit": { name: "Studio Kit (GM)", desc: "GeneralUser GM Standard 드럼 샘플", bank: 128, program: 0, release: 3.0, font: "default.sf2" },
-  "sf-808-kit": { name: "Electronic Kit (GM)", desc: "GeneralUser 전자 드럼 샘플 — 기존 합성 808 트랙의 대체음", bank: 128, program: 25, release: 3.0, font: "default.sf2" },
-  "sf-brush-kit": { name: "Brush Kit (GM)", desc: "GeneralUser 브러시 드럼 샘플 — 기존 로파이 킷의 대체음", bank: 128, program: 40, release: 3.5, font: "default.sf2" },
+  "sf-808-kit": { name: "Electronic Kit (GM)", desc: "GeneralUser 전자 드럼 샘플", bank: 128, program: 25, release: 3.0, font: "default.sf2" },
+  "sf-brush-kit": { name: "Brush Kit (GM)", desc: "GeneralUser 브러시 드럼 샘플", bank: 128, program: 40, release: 3.5, font: "default.sf2" },
   "sf-band-kit": { name: "Band Kit (Salamander)", desc: "어쿠스틱 밴드 드럼 실녹음 — 팝·록·발라드, 벨로시티 다층 펀치", bank: 128, program: 0, release: 4.2, font: "salamander-kit.sf2", velRange: 0.7 },
   "sf-orch-kit": {
     name: "Extended Percussion (GM)", desc: "기본 GM 폰트의 확장 타악. 피스: kick·snare·tom-l/m/h·crash·ride·tamtam·triangle·tambourine·castanets·woodblock·sleigh·cowbell·agogo·cabasa·guiro",
