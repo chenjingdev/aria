@@ -47,7 +47,7 @@ console.error(`[aria] 피아노롤 GUI: ${url}${restored ? " (이전 곡 복원�
 const { sf2Info, SF2_PATH } = await import("./sf2.js");
 console.error(sf2Info()
   ? `[aria] 사운드폰트 로드: ${sf2Info()} — 샘플 프리셋(sf-*) 사용 가능`
-  : `[aria] 사운드폰트 없음 (${SF2_PATH}) — 신스 프리셋만 사용 가능`);
+  : `[aria] 사운드폰트 없음 (${SF2_PATH}) — 필요한 음원을 설치해야 악기를 재생할 수 있음`);
 
 let closing = false;
 async function shutdown() {

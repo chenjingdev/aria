@@ -1275,7 +1275,7 @@ export function runOp(name, args = {}, source = "mcp") {
 }
 
 // 악기별 파일 내보내기 — 다른 도구(로직·에이블톤 등)에서 믹싱하려면 트랙마다 따로 필요하다.
-// 스템은 트랙 볼륨·음소거 없이, 그러나 팬·리버브·구간 게인은 담아서 굽는다(synth의 stem 모드와 같다).
+// 스템은 트랙 볼륨·음소거 없이, 그러나 팬·리버브·구간 게인은 담아서 굽는다.
 function exportStems(song, outPath, from_bar, to_bar) {
   const [from, to] = clampRange(song, from_bar, to_bar);
   const live = song.tracks.filter(t => t.notes.some(n => n.bar >= from && n.bar <= to));
