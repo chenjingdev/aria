@@ -14,7 +14,8 @@
 
 ## 프리셋과 트랙
 
-- 새 곡을 만들거나 악기를 추가·교체·선택할 때 `list_presets`를 호출한다. 합성 프리셋은 내장되어 있지만 SoundFont 프리셋은 로컬 파일 상태에 따라 사용 가능 여부가 달라질 수 있다.
+- 새 곡을 만들거나 악기를 추가·교체·선택할 때 `list_presets`를 호출한다. Aria는 자체 파형 합성 프리셋 없이 외부 SoundFont만 재생하며, 각 프리셋의 로컬 음원 설치 상태를 함께 돌려준다. 필요한 파일·bank·program이 없거나 손상됐으면 다른 악기로 대체하지 않고 오류를 표시하므로 먼저 사용 가능한 프리셋을 고른다.
+- 오케스트라 악기는 GeneralUser의 경량 GM판과 `-phil`이 붙은 Philharmonia 로컬판을 같은 악기의 별도 음색 선택지로 취급한다. 이름이 비슷해도 서로 자동 대체하지 않으며, 어느 쪽이 더 좋은지는 곡 안에서 같은 구간을 A/B해 정한다.
 - 템플릿은 현재 구현자가 정한 **하나의 선택적 스케치**로 편성과 BPM만 준비한다. 이름이 요청 장르와 같다는 이유만으로 선택하지 말고 exact palette를 먼저 확인한다. 학술적 장르 정의가 아니며, 넓거나 혼합된 장르는 blank song이 더 안전하다. 곡의 필요에 따라 프리셋·트랙·템포를 자유롭게 바꾼다.
 - `set_track`은 이름, 프리셋, 음량, 팬, mute/solo와 아래 음색 파라미터를 바꾼다.
   - `velRange`: velocity가 실제 음량에 미치는 폭.
@@ -86,7 +87,7 @@
 
 `humanize`로 실제 바뀐 note onset/velocity는 MIDI에 남지만 seed, 원래 grid, “humanize 의도”는 남지 않는다. 따라서 편집 가능성은 Aria 곡 저장으로, 최종 소리는 WAV로 함께 보존한다. [S54][S55][S69]
 
-`import_midi`는 현재 곡을 교체하지만 undo할 수 있다. Note, tempo, time signature, track/channel, 첫 program, 첫 channel volume/pan을 중심으로 가져오며 GM program과 drum note를 Aria preset/piece로 추정한다. Pitch bend, sustain/pedal, aftertouch, 대부분의 controller automation, lyric/marker 등은 현재 Aria 표현으로 왕복 보존되지 않으므로 원본 MIDI를 유지하고 가져온 뒤 표현과 음색을 다시 확인한다. [S54][S55][S69]
+`import_midi`는 현재 곡을 교체하지만 undo할 수 있다. Note, tempo, time signature, track/channel, 첫 program, 첫 channel volume/pan을 중심으로 가져오며 GM program과 drum note를 외부 SoundFont preset/piece로 추정한다. Pitch bend, sustain/pedal, aftertouch, 대부분의 controller automation, lyric/marker 등은 현재 Aria 표현으로 왕복 보존되지 않으므로 원본 MIDI를 유지하고 가져온 뒤 표현과 음색을 다시 확인한다. [S54][S55][S69]
 
 ## 작업별 도구 묶음
 

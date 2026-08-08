@@ -98,7 +98,12 @@ const instruments = [{
   zones
 }];
 const presets = [{ name: "Orch Percussion", bank: 128, program: 0, instIdx: 0 }];
-const res = writeSf2({ outPath: OUT, infoName: "Philharmonia Percussion", samples, instruments, presets });
+const res = writeSf2({
+  outPath: OUT,
+  infoName: "Philharmonia Percussion",
+  copyright: "Philharmonia Orchestra sound samples — see the official source page for use terms",
+  samples, instruments, presets
+});
 console.log(`\nphil-perc.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 console.log(`피스: ${kitPieces.join(", ")}`);
 

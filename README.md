@@ -5,7 +5,7 @@
 
 - 곡은 실행 중인 앱 안에 살고(자동 저장 `~/.aria/song.json`), LLM은 MCP 도구로 조작합니다
 - 사람은 브라우저 피아노롤 GUI에서 실시간으로 확인·재생·프리셋 변경
-- 재생은 내장 순수 JS 신스 → WAV 렌더 → macOS `afplay` (GUI 없이도 소리가 남)
+- 재생은 설치된 외부 SoundFont → 오프라인 WAV 렌더 → macOS `afplay` (GUI 없이도 소리가 남)
 - MIDI/WAV 내보내기 (기본 위치 `~/Music/aria/`)
 
 ## 설치·등록
@@ -30,7 +30,7 @@ GUI만 띄워보려면: `npm start`. MCP 브리지만 직접 시험하려면: `n
 |---|---|
 | `new_song` | 새 곡 생성 — `template`: citypop, lofi, ballad, bossa, edm, chiptune |
 | `get_song` / `set_song` | 곡 전체를 JSON 텍스트로 읽기 / 통째로 교체 (대규모 수정용) |
-| `list_presets` | 멜로디 프리셋 13종 · 드럼 킷 3종 · 템플릿 목록 |
+| `list_presets` | SoundFont 선율 프리셋 71종 · 샘플 드럼 킷 6종 · 템플릿 목록(설치 상태 포함) |
 | `add_track` / `remove_track` / `set_track` | 트랙 추가·삭제·변경(프리셋/볼륨/팬/이름) |
 | `set_tempo` / `clear_tempo` | 기준 템포 변경 · 마디별 템포 변화(rit./accel.) 추가·삭제 |
 | `add_notes` / `clear_notes` | 노트 추가 / 구간 삭제 |
@@ -40,16 +40,16 @@ GUI만 띄워보려면: `npm start`. MCP 브리지만 직접 시험하려면: `n
 
 ## SoundFont (샘플 프리셋)
 
-`~/.aria/soundfonts/default.sf2`에 GM 사운드폰트를 두면 피아노·현악·목관·금관·기타·베이스·드럼 프리셋이 열립니다. 기존 곡의 `sf-violin`, `sf-cello`, `sf-sax`, `sf-horn`, `sf-orch-kit` 같은 id도 이 기본 GM 폰트로 재생됩니다.
+Aria는 자체 파형 합성기를 포함하지 않으며, 모든 악기와 드럼을 `~/.aria/soundfonts/`에 설치된 외부 SoundFont로 재생합니다. `default.sf2`에는 GM 사운드폰트를 두고, Salamander·VSCO처럼 전용 파일을 요구하는 프리셋은 해당 파일을 별도로 설치합니다.
 
 - 기본 제공 스크립트 없이 파일만 두면 됨 (권장: [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS) ~32MB, 무료 라이선스. `ARIA_SF2` 환경변수로 다른 경로 지정 가능)
-- **다중 사운드폰트**: 같은 폴더에 `salamander.sf2`([Salamander Grand Piano](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) SF2판, 1.3GB, CC-BY 3.0 © Alexander Holm)를 두면 `sf-piano`가 자동으로 이걸 우선 사용 — 벨로시티 16층의 진짜 피아노. 프리셋의 `font` 필드로 어떤 프리셋이든 전용 폰트 지정 가능
-- 현악·목관·금관과 `sf-orch-kit`은 재배포 가능한 기본 GM 폰트의 대응 악기로 재생합니다. Philharmonia 원본 샘플을 다시 묶은 전용 폰트는 배포 조건과 품질 대비 효용 때문에 제품 프리셋에서 사용하지 않습니다.
+- **피아노 두 종류**: `sf-piano-gm`은 경량 `default.sf2`의 GM 피아노입니다. 같은 폴더에 `salamander.sf2`([Salamander Grand Piano](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) SF2판, 1.3GB, CC-BY 3.0 © Alexander Holm)를 두면 `sf-piano`로 벨로시티 16층의 Yamaha C5를 선택할 수 있습니다. 기존 곡 호환을 위해 `sf-piano` ID는 Salamander에 남겨 두며, 둘은 서로 대신 재생되지 않습니다
+- **오케스트라 두 종류**: `sf-violin` 같은 기본 ID는 경량 GeneralUser판이고, `sf-violin-phil`처럼 `-phil`이 붙은 ID는 로컬 Philharmonia판입니다. 현악 8종·목관 8종·금관 4종과 `sf-orch-kit-phil`을 별도로 고를 수 있으며 서로 대신 재생되지 않습니다. Philharmonia 파일 4개는 이 컴퓨터의 로컬 음원으로만 사용합니다.
 - **VSCO 2 CE 색채 악기**: `vsco.sf2`(9MB, `tools/build-vsco.mjs`, [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) CC0) → `sf-harp sf-glockenspiel sf-marimba sf-xylophone sf-timpani sf-cello-pizz`. 팀파니는 파일명에 음정이 없어 자기상관 f0 검출로 매핑(렌더 검증: C2 악보 → 66.2Hz)
-- **Salamander 밴드 드럼**: `salamander-kit.sf2`(10MB, `tools/build-salamander.mjs`, [Salamander Drumkit](https://archive.org/details/SalamanderDrumkit) 퍼블릭 도메인 © Alexander Holm) → 드럼 킷 `sf-band-kit`(표준 피스, 벨로시티 최대 6층). e808-kit의 실녹음 레이어도 이 킷을 우선 사용
-- 신스 프리셋과 완전히 같은 방식으로 사용 — 같은 노트 모델, 같은 velRange/attack/release/reverb 오버라이드
-- 어쿠스틱 리얼리즘(피아노·현악·기타)은 sf-*, 전자음·개성은 내장 신스가 유리
-- 파일이 없으면 sf-* 사용 시 명확한 에러가 나고, 나머지 기능은 영향 없음 (전용 폰트가 없는 프리셋은 default.sf2로 폴백)
+- **Salamander 밴드 드럼**: `salamander-kit.sf2`(10MB, `tools/build-salamander.mjs`, [Salamander Drumkit](https://archive.org/details/SalamanderDrumkit)) → 드럼 킷 `sf-band-kit`(표준 피스, 벨로시티 다층). 현재 보관한 원본 README는 CC BY-SA 3.0으로 적혀 있으므로, 별도의 퍼블릭 도메인 재라이선스 증빙을 확보하기 전에는 그 조건으로 취급합니다
+- 모든 SoundFont 프리셋은 같은 노트 모델과 `velRange`/`attack`/`release`/`reverb` 오버라이드를 사용합니다
+- 어쿠스틱 악기뿐 아니라 GM 전자음·패드·리드도 외부 SoundFont 샘플로 재생합니다
+- 프리셋이 요구하는 파일·bank·program이 없거나 손상됐으면 명확한 오류를 표시하며, 다른 악기로 몰래 대체하지 않습니다
 
 노트 형식: `{bar: 8, beat: 1.5, pitch: "F#3", dur: 0.5, vel: 96}` — beat·dur는 4분음표 단위.
 드럼 트랙은 pitch 자리에 피스 이름: `kick snare rim clap hhc hho tom-l tom-m tom-h crash ride shaker`.
@@ -82,8 +82,9 @@ set_tempo({bpm: 58, from_bar: 16, ramp: true})  # 13→16마디에서 서서히
 
 - 재생은 macOS(`afplay`) 전용 — 다른 OS는 `export`로 WAV를 뽑아 들어야 합니다
 - 루프 재생은 afplay 재스폰 방식이라 반복 사이 ~100ms 틈이 있음
-- 마스터 리미터 없음 — 3차 소프트 클리퍼만 있어 겹치는 노트가 많으면 점진적으로 왜곡됩니다. `play`가 돌려주는 클리핑 경고를 보세요
-- 노트별 pan 없음(트랙 단위), CC·피치벤드·비브라토 없음
+- 마스터에는 -0.3dBFS look-ahead 리미터와 소프트 클리퍼가 있지만 true-peak 납품 검사는 아닙니다. `play`의 리미터 감쇄·피크·LUFS 보고를 보고, 지속적으로 많이 눌리면 원래 트랙 밸런스를 고칩니다
+- 노트별 pan과 일반 MIDI CC는 없고, pitch bend는 노트별 단방향 선형 곡선, vibrato는 트랙별 고정 속도·지연에 깊이만 조절합니다
+- 현재 SoundFont 재생기는 linked stereo, SoundFont filter/LFO/modulator를 재현하지 못해 원본 음원의 표현과 공간감을 일부 잃습니다
 - WAV 렌더는 한 번에 10분까지 — 긴 곡은 `export({from_bar, to_bar})`로 나눠 뽑습니다
 - MIDI 내보내기는 멜로디 트랙 15개까지(채널 한계)
 - 마디 안에서의 박자표 변경은 불가(곡 단위 고정)

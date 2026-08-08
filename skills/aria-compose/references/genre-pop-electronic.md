@@ -54,7 +54,7 @@ city pop은 특히 경계가 흐리다. late-1970s~1980s 일본의 urban studio 
 
 ### Aria 출발점
 
-- `list_presets`에서 실제 piano/E.Piano, finger bass, band/lo-fi kit, clean/pluck/synth 후보를 고른다.
+- `list_presets`에서 설치 가능한 SoundFont를 확인하고 `sf-piano`/`sf-epiano`, `sf-bass`, `sf-band-kit`/`sf-brush-kit`, `sf-nylon`/`sf-pizzicato`/`sf-warm-pad` 같은 후보를 곡의 방향에 맞게 고른다.
 - 템포는 city pop이라는 이름에서 바로 정하지 않는다. relaxed AOR, medium funk pocket, disco drive 중 어느 움직임인지 고른 뒤 현재 템플릿 BPM은 청취 후보 하나로만 쓴다.
 - bass와 keys를 모두 정박에 길게 두지 말고 서로 빈칸을 나누게 한다.
 - 7th/9th는 색채 후보일 뿐 매 chord에 의무적으로 쌓지 않는다.
@@ -161,7 +161,7 @@ chiptune은 특정 게임 하드웨어의 제한과 그 제한을 미학으로 �
 
 ### Aria 출발점
 
-- `square-lead`, short pluck, synth bass를 후보로 두고 현재 preset을 확인한다.
+- `sf-square-lead`, `sf-pizzicato`, `sf-synth-bass`를 chip-inspired 샘플 후보로 두되 `list_presets`에서 필요한 SoundFont의 설치 상태를 먼저 확인한다.
 - hardware 느낌이면 동시 voice 수를 작게 유지하고 chord를 fast arpeggio로 암시한다.
 - **[출발점]** melody, bass, harmony/arpeggio, percussion의 3–4 역할로 시작한다. 이는 창작 제약이지 장르 전체의 필수조건이 아니다.
 - 짧은 motif와 octave/register change로 section 대비를 만든다.

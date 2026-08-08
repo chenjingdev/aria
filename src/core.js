@@ -2,13 +2,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { PRESETS, DRUM_KITS, DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS, isDrumPreset, presetLabel, presetExists } from "./presets.js";
-import { sf2Available, sf2Info, SF2_PATH } from "./sf2.js";
+import { DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS, isDrumPreset, presetLabel } from "./presets.js";
+import { fontStatus, resolveFont, requiredFontName, sf2Info } from "./sf2.js";
 import {
   createSong, validateSong, validateNote, findTrack, songText, songSummary, totalBars, beatsPerBar,
   tempoSegments, beatToSec, TRACK_OVERRIDES, MAX_TEMPO_POINTS, MAX_SECTIONS
 } from "./song.js";
-import { renderRange, wavBuffer } from "./synth.js";
+import { renderRange, wavBuffer } from "./renderer.js";
 import { lufs } from "./master.js";
 import { midiBuffer } from "./midi.js";
 import { importMidi } from "./midi-import.js";
@@ -30,6 +30,24 @@ export const state = {
 const listeners = new Set();
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function broadcast(ev) { for (const fn of listeners) { try { fn(ev); } catch { /* 리스너 오류 무시 */ } } }
+
+// 새 트랙·템플릿을 만들 때 필요한 음원이 실제로 열리고 요청한 bank/program을 갖는지 확인한다.
+// 누락된 전용 폰트를 default.sf2로 바꾸거나 무음으로 진행하지 않는다.
+function requirePresetAvailable(id) {
+  const spec = SF_PRESETS[id] ?? SF_DRUM_KITS[id];
+  if (!spec) throw new Error(`preset "${id}"이 없습니다 — list_presets로 확인하세요`);
+  const status = fontStatus(spec);
+  if (!status.available)
+    throw new Error(`preset "${id}"에 필요한 음원 ${status.name}을 사용할 수 없습니다: ${status.reason}`);
+  const sf = resolveFont(spec);
+  if (!sf)
+    throw new Error(`preset "${id}"에 필요한 음원 ${requiredFontName(spec)}을 열 수 없습니다`);
+  const bank = spec.bank ?? 0;
+  const program = spec.program ?? spec.gm ?? 0;
+  if (!sf.presets.has((bank << 8) | program))
+    throw new Error(`음원 ${requiredFontName(spec)}에 preset "${id}"용 bank ${bank}, program ${program}이 없습니다`);
+  return spec;
+}
 
 let logSeq = 0;
 export function addLog(source, text) {
@@ -336,6 +354,8 @@ export const ops = {
     // HTTP 경로는 zod를 거치지 않으므로 생성 결과도 반드시 검증을 통과시킨다.
     // 검증을 먼저 끝낸 뒤에야 부수효과(자동 보존·재생 중단)를 낸다 — 실패한 호출이 재생을 끊거나 디스크에 쓰면 안 된다.
     const next = validateSong(createSong({ title, bpm, template, timeSig }));
+    // 미설치 상태로 곡을 만든 뒤 나중에 재생에서야 무음이 되는 흐름을 허용하지 않는다.
+    for (const track of next.tracks) requirePresetAvailable(track.preset);
     if (state.song?.tracks.some(t => t.notes.length)) saveToLibrary(state.song.title, state.song);
     stopPlayback(broadcast);
     state.song = next;
@@ -364,21 +384,23 @@ export const ops = {
   },
 
   list_presets() {
-    const mel = Object.entries(PRESETS).map(([id, p]) => `  ${id} — ${p.name}: ${p.desc}`).join("\n");
-    const drums = Object.entries(DRUM_KITS).map(([id, k]) => `  ${id} — ${k.name}: ${k.desc}`).join("\n");
     const tpls = Object.entries(TEMPLATES).map(([id, t]) => `  ${id} — ${t.name}: ${t.desc}`).join("\n");
-    const sfLine = sf2Available()
-      ? `샘플(SoundFont) 프리셋 — 실제 악기 녹음, 어쿠스틱 리얼리즘이 필요할 때 (로드됨: ${sf2Info()}):\n`
-        + Object.entries(SF_PRESETS).map(([id, p]) => `  ${id} — ${p.name}: ${p.desc}`).join("\n")
-        + `\n  드럼: ${Object.entries(SF_DRUM_KITS).map(([id, k]) => `${id} — ${k.name}: ${k.desc}`).join(", ")}`
-      : `샘플(SoundFont) 프리셋: 사용 불가 — ${SF2_PATH}에 GM .sf2 파일이 없습니다. 두면 sf-piano 등 12종이 열립니다`;
-    return `멜로디 프리셋(내장 신스):\n${mel}\n\n드럼 킷 (pitch에 피스 이름 사용):\n${drums}\n  피스: ${Object.keys(DRUM_PIECES).join(", ")}\n\n${sfLine}\n\nnew_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
+    const line = ([id, p]) => {
+      const st = fontStatus(p);
+      return `  ${id} — ${p.name} [${st.available ? `설치됨: ${st.name}` : `${st.reason}: ${st.name}`}]: ${p.desc}`;
+    };
+    const info = sf2Info();
+    return `SoundFont 멜로디 프리셋${info ? ` (기본 폰트: ${info})` : ""}:\n${Object.entries(SF_PRESETS).map(line).join("\n")}`
+      + `\n\nSoundFont 드럼 킷 (pitch에 피스 이름 사용):\n${Object.entries(SF_DRUM_KITS).map(line).join("\n")}`
+      + `\n  공통 피스: ${Object.keys(DRUM_PIECES).join(", ")}`
+      + `\n\n미설치·손상 음원은 다른 폰트로 자동 대체하지 않습니다.`
+      + `\n\nnew_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
   },
 
   add_track({ name, preset, volume, pan, ...rest } = {}) {
     const song = needSong();
     if (!name || !preset) throw new Error("name과 preset이 필요합니다");
-    if (!presetExists(preset)) throw new Error(`preset "${preset}"이 없습니다 — list_presets로 확인하세요`);
+    requirePresetAvailable(preset);
     if (song.tracks.some(t => t.name.toLowerCase() === String(name).trim().toLowerCase()))
       throw new Error(`트랙 "${name}"이 이미 있습니다`);
     // 씨앗은 이름과 별개로 굳힌다 — 이후 이름을 바꿔도 소리가 안 변한다.
@@ -413,7 +435,7 @@ export const ops = {
       else { updated[key] = rest[key]; changes.push(`${key}→${rest[key]}`); }
     }
     if (preset !== undefined) {
-      if (!presetExists(preset)) throw new Error(`preset "${preset}"이 없습니다 — list_presets로 확인하세요`);
+      requirePresetAvailable(preset);
       const wasDrum = isDrumPreset(t.preset), isDrum = isDrumPreset(preset);
       if (wasDrum !== isDrum && t.notes.length)
         throw new Error(`"${t.name}"에 노트가 있어 ${wasDrum ? "드럼→멜로디" : "멜로디→드럼"} 전환이 불가합니다 — clear_notes 후 바꾸세요`);
@@ -1111,7 +1133,7 @@ export const ops = {
   },
 
   // 다른 도구에서 만든 MIDI를 끌어온다. 기존 곡은 통째로 교체되지만 undo_edit으로 되돌아간다.
-  import_midi({ path: inPath, quantize, prefer_samples, title } = {}) {
+  import_midi({ path: inPath, quantize, title } = {}) {
     if (typeof inPath !== "string" || !inPath.trim())
       throw new Error("path에 가져올 .mid 파일 경로를 주세요 (예: ~/Downloads/song.mid)");
     const file = path.resolve(inPath.trim().replace(/^~(?=\/|$)/, os.homedir()));
@@ -1120,9 +1142,10 @@ export const ops = {
     if (!stat.isFile()) throw new Error(`파일이 아닙니다: ${file}`);
     if (stat.size > 8 * 1024 * 1024) throw new Error(`MIDI 파일이 너무 큽니다(${(stat.size / 1e6).toFixed(1)}MB) — 8MB까지 읽습니다`);
     const { song, report } = importMidi(fs.readFileSync(file), {
-      quantize, preferSamples: prefer_samples === true,
+      quantize,
       title: title ?? path.basename(file).replace(/\.midi?$/i, "")
     });
+    for (const track of song.tracks) requirePresetAvailable(track.preset);
     state.song = song;
     mutated();
     // 멜로디 트랙이 16개 이상이면 가져오기는 되지만 다시 MIDI로 내보낼 수 없다(채널 15개 한계)

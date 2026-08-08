@@ -148,7 +148,12 @@ for (const inst of INSTRUMENTS) {
   inst.midis = midis; // 스윕 검증용
 }
 
-const res = writeSf2({ outPath: OUT, infoName: fam.info, samples, instruments, presets });
+const res = writeSf2({
+  outPath: OUT,
+  infoName: fam.info,
+  copyright: "Philharmonia Orchestra sound samples — see the official source page for use terms",
+  samples, instruments, presets
+});
 console.log(`\n${fam.out}: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // ── 전수 스윕 검증: 모든 녹음 음 × vel 4단 — 무음 구멍·지속 끊김·펌핑 검사 ──

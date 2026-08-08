@@ -1,5 +1,5 @@
 // aria — 곡 모델: 생성·검증·피치/시간 계산
-import { PRESETS, DRUM_KITS, DRUM_PIECES, TEMPLATES, isDrumPreset, presetExists, presetLabel, drumPieces } from "./presets.js";
+import { DRUM_PIECES, TEMPLATES, isDrumPreset, presetExists, presetLabel, drumPieces } from "./presets.js";
 
 const NOTE_RE = /^([A-Ga-g])([#b]?)(-?\d)$/;
 const SEMIS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };

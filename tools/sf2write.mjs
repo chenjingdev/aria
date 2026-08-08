@@ -19,7 +19,7 @@ const list = (kind, chunks) => chunk("LIST", [Buffer.from(kind, "ascii"), ...chu
 // samples: [{name, pcm:Int16Array, sampleRate, origPitch, loopStart, loopEnd, loop:bool}] (loop*는 샘플 내 상대 인덱스)
 // instruments: [{name, globalGens:[[op,amount]...], zones:[{keyLo,keyHi,velLo,velHi,sampleIdx,loop:bool}]}]
 // presets: [{name, bank, program, instIdx}]
-export function writeSf2({ outPath, infoName, samples, instruments, presets }) {
+export function writeSf2({ outPath, infoName, copyright, samples, instruments, presets }) {
   // ── sdta: 샘플 병합 (각 샘플 뒤 46 제로워드 — 스펙 요구) ──
   const GUARD = 46;
   const totalWords = samples.reduce((s, x) => s + x.pcm.length + GUARD, 0);
@@ -96,14 +96,16 @@ export function writeSf2({ outPath, infoName, samples, instruments, presets }) {
   const ifil = Buffer.concat([u16(2), u16(1)]);
   const ztext = s => { const b = Buffer.from(s + "\0", "ascii"); return b.length % 2 ? Buffer.concat([b, Buffer.alloc(1)]) : b; };
 
+  const infoChunks = [
+    chunk("ifil", ifil),
+    chunk("isng", ztext("EMU8000")),
+    chunk("INAM", ztext(infoName))
+  ];
+  if (copyright) infoChunks.push(chunk("ICOP", ztext(copyright)));
+
   const out = chunk("RIFF", [
     Buffer.from("sfbk", "ascii"),
-    list("INFO", [
-      chunk("ifil", ifil),
-      chunk("isng", ztext("EMU8000")),
-      chunk("INAM", ztext(infoName)),
-      chunk("ICOP", ztext("Philharmonia Orchestra samples (philharmonia.co.uk) - free for use in projects"))
-    ]),
+    list("INFO", infoChunks),
     list("sdta", [chunk("smpl", smpl)]),
     list("pdta", [
       chunk("phdr", phdrRecs),

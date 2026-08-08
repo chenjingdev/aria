@@ -1,7 +1,7 @@
 {
   "name": "aria",
   "version": "0.1.0",
-  "description": "LLM이 MCP로 제어하는 상주 작곡 앱 — 피아노롤 GUI + 내장 신스 + MIDI/WAV 내보내기",
+  "description": "LLM이 MCP로 제어하는 상주 작곡 앱 — 피아노롤 GUI + SoundFont 재생 + MIDI/WAV 내보내기",
   "type": "module",
   "bin": { "aria": "src/index.js", "aria-mcp": "src/mcp-bridge.js" },
   "scripts": {

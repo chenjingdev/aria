@@ -142,7 +142,12 @@ for (const inst of INSTRUMENTS) {
   inst.midis = midis;
 }
 
-const res = writeSf2({ outPath: OUT, infoName: "VSCO 2 CE Selection", samples, instruments, presets });
+const res = writeSf2({
+  outPath: OUT,
+  infoName: "VSCO 2 CE Selection",
+  copyright: "VSCO 2 Community Edition source samples — CC0 1.0; see the source LICENSE",
+  samples, instruments, presets
+});
 console.log(`\nvsco.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // ── 스윕: 전 녹음 음 × vel 3단 발음 확인 ──

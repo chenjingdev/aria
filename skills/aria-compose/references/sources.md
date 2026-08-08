@@ -96,7 +96,7 @@
 
 ## Aria 구현 원문
 
-- **[S69] A** Aria [`src/mcp.js`](../../../src/mcp.js), [`src/core.js`](../../../src/core.js), [`src/master.js`](../../../src/master.js), [`src/synth.js`](../../../src/synth.js), [`src/midi.js`](../../../src/midi.js), [`src/presets.js`](../../../src/presets.js). 도구 의미, limiter, LUFS, pitch bend/vibrato, rendering, MIDI, preset의 현재 source of truth다.
+- **[S69] A** Aria [`src/mcp.js`](../../../src/mcp.js), [`src/core.js`](../../../src/core.js), [`src/master.js`](../../../src/master.js), [`src/renderer.js`](../../../src/renderer.js), [`src/sf2.js`](../../../src/sf2.js), [`src/midi.js`](../../../src/midi.js), [`src/presets.js`](../../../src/presets.js). 도구 의미, limiter, LUFS, pitch bend/vibrato, 외부 SoundFont rendering, MIDI, preset의 현재 source of truth다.
 - **[S70] A** Aria [`test/smoke.js`](../../../test/smoke.js), [`test/mcp-bridge.js`](../../../test/mcp-bridge.js). 구현 제약과 MCP–GUI shared-state behavior를 검증하는 현재 회귀 테스트다.
 
 ## 확장 교재·역사·보완 연구

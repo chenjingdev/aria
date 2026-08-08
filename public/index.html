@@ -826,10 +826,6 @@ $("btnSave").onclick = () => rpc("save_song", {});
 // 스템은 트랙 볼륨·음소거 없이 구워지므로(구간 게인·리버브·팬은 포함) 켜고 끄는 게 실시간이다.
 const live = { on: false, busy: false, ctx: null, master: null, stems: new Map(), playing: null, endTimer: null };
 
-// 덕킹(e808 킥이 다른 트랙을 누름)은 모든 스템에 구워지므로, 킥이 바뀌면 전 스템이 낡는다
-const duckSig = () => JSON.stringify(song.tracks
-  .filter(t => t.preset.includes("808"))
-  .map(t => [t.name, !!t.mute, !!t.solo, t.notes.filter(n => n.pitch === "kick")]));
 // 볼륨 페이더는 dB 눈금 — 사람 귀는 배수(dB)로 듣지 비율로 듣지 않는다.
 // 0.8(예전 기본)은 -1.9dB, 1.0이 0dB(원래 크기), 2.0이 +6dB. -40dB는 사실상 무음이라 0으로 접는다.
 const VOL_MIN_DB = -40, VOL_MAX_DB = 6;
@@ -841,22 +837,21 @@ const dbLabel = v => v <= 0.0001 ? "−∞" : `${volToDb(v) > 0 ? "+" : ""}${vol
 const anySolo = () => song.tracks.some(t => t.solo);
 // 솔로가 켜져 있으면 솔로 트랙만, 아니면 음소거 아닌 트랙만 들린다
 const liveGainOf = t => (anySolo() ? !!t.solo : !t.mute) ? t.volume : 0;
-const stemHash = (t, from, to, ds) => JSON.stringify([
+const stemHash = (t, from, to) => JSON.stringify([
   t.preset, t.notes, t.gains ?? null, t.pan, t.velRange ?? null, t.attack ?? null,
   t.release ?? null, t.reverb ?? null, t.ensemble ?? null,
   t.eqLow ?? null, t.eqMid ?? null, t.eqHigh ?? null, t.vibrato ?? null,
-  song.bpm, song.timeSig, song.tempoMap ?? [], from, to, ds]);
+  song.bpm, song.timeSig, song.tempoMap ?? [], from, to]);
 
 async function ensureStems(from, to) {
-  const ds = duckSig();
-  const need = song.tracks.filter(t => live.stems.get(t.name)?.hash !== stemHash(t, from, to, ds));
+  const need = song.tracks.filter(t => live.stems.get(t.name)?.hash !== stemHash(t, from, to));
   for (let i = 0; i < need.length; i++) {
     const t = need[i];
     toast(`⚡ 렌더 중 ${i + 1}/${need.length} — ${t.name} (바뀐 악기만 다시 굽습니다)`);
     const r = await fetch(`/api/stem?track=${encodeURIComponent(t.name)}&from=${from}&to=${to}`);
     if (!r.ok) throw new Error(await r.text());
     const buffer = await live.ctx.decodeAudioData(await r.arrayBuffer());
-    live.stems.set(t.name, { buffer, hash: stemHash(t, from, to, ds) });
+    live.stems.set(t.name, { buffer, hash: stemHash(t, from, to) });
   }
   for (const k of [...live.stems.keys()]) if (!song.tracks.some(t => t.name === k)) live.stems.delete(k);
 }
@@ -924,7 +919,6 @@ function liveStop() {
 
 // 파형에 구워진 값이 재생 중에 바뀌면 다시 굽고 "듣던 자리에서" 이어 붙인다.
 // 예전에는 재생 시작 때 한 번만 구워서, 재생 중 음색·노트를 바꾸면 다음 ▶ 까지 안 들렸다.
-// 특히 e808 킥을 음소거해도 다른 스템에 구워진 덕킹(눌림)이 그대로 남아 있었다.
 let resyncTimer = null, resyncBusy = false;
 function liveResyncSoon() {
   if (!live.playing) return;
@@ -935,8 +929,7 @@ function liveResyncSoon() {
 async function liveResync() {
   if (!live.playing || resyncBusy || !song) return;
   const { from, to } = live.playing;
-  const ds = duckSig();
-  if (!song.tracks.some(t => live.stems.get(t.name)?.hash !== stemHash(t, from, to, ds))) return;
+  if (!song.tracks.some(t => live.stems.get(t.name)?.hash !== stemHash(t, from, to))) return;
   resyncBusy = true;
   const wasPlaying = live.playing;
   try {
@@ -1094,6 +1087,26 @@ function cleanInstrumentName(name) {
   // 일부 프리셋 이름의 내부 분류 기호는 일반 사용자에게 의미가 없어 화면에서만 숨긴다.
   return String(name).replace(/\s*⬡\s*$/, "");
 }
+function presetOptionHtml(id, pr, selected = null) {
+  const unavailable = pr.available === false;
+  return `<option value="${escapeHtml(id)}" ${id === selected ? "selected" : ""} ${unavailable ? "disabled" : ""}`
+    + ` title="${escapeHtml(unavailable ? `${pr.issue}: ${pr.font}` : pr.font)}">${escapeHtml(cleanInstrumentName(pr.name))}</option>`;
+}
+// 같은 악기의 GM·Philharmonia·VSCO·Salamander 변형을 한 묶음에 둔다.
+// family가 없는 단독 악기는 기존 순서를 유지하고, 묶음은 첫 변형이 있던 위치에 한 번만 그린다.
+function presetOptionsHtml(items, selected = null) {
+  const entries = Object.entries(items ?? {}), emitted = new Set();
+  let html = "";
+  for (const [id, pr] of entries) {
+    if (!pr.family) { html += presetOptionHtml(id, pr, selected); continue; }
+    if (emitted.has(pr.family)) continue;
+    emitted.add(pr.family);
+    const variants = entries.filter(([, p]) => p.family === pr.family);
+    if (variants.length === 1) html += presetOptionHtml(variants[0][0], variants[0][1], selected);
+    else html += `<optgroup label="${escapeHtml(pr.family)}">${variants.map(([vid, vp]) => presetOptionHtml(vid, vp, selected)).join("")}</optgroup>`;
+  }
+  return html;
+}
 function instrumentName(t) {
   return cleanInstrumentName(meta?.presets?.[t.preset]?.name ?? meta?.drumKits?.[t.preset]?.name ?? t.preset);
 }
@@ -1236,12 +1249,11 @@ function showAddTrackPop(cx, cy) {
   if (!song || !meta) return;
   resetFbPop();
   const p = $("fbPop");
-  const opt = ([id, pr]) => `<option value="${escapeHtml(id)}">${escapeHtml(cleanInstrumentName(pr.name))}</option>`;
   p.innerHTML = `<div class="fbhead">새 트랙</div>
     <div class="fbrow2"><input id="atName" type="text" style="flex:1;min-width:100px"></div>
     <select id="atPreset">
-      <optgroup label="멜로디">${Object.entries(meta.presets).map(opt).join("")}</optgroup>
-      <optgroup label="드럼 킷">${Object.entries(meta.drumKits).map(opt).join("")}</optgroup>
+      <option disabled>── 선율 악기 ──</option>${presetOptionsHtml(meta.presets)}
+      <option disabled>── 드럼 킷 ──</option>${presetOptionsHtml(meta.drumKits)}
     </select>
     <div class="fbrow"><button id="atAdd" class="primary">추가</button><button id="atCancel">취소</button></div>`;
   placeFbPop(cx, cy);
@@ -1275,8 +1287,7 @@ function renderDetHead() {
   const t = song?.tracks[selected];
   if (!t) { box.innerHTML = `<span class="meta">트랙이 없습니다 — AI에게 작곡을 부탁하면 여기에 채워집니다</span>`; return; }
   const drum = isDrumTrack(t);
-  const opts = !meta ? "" : Object.entries(drum ? meta.drumKits : meta.presets)
-    .map(([id, p]) => `<option value="${id}" ${id === t.preset ? "selected" : ""}>${escapeHtml(cleanInstrumentName(p.name))}</option>`).join("");
+  const opts = !meta ? "" : presetOptionsHtml(drum ? meta.drumKits : meta.presets, t.preset);
   const gains = t.gains ? ` · 구간 음량 ${t.gains.length}곳` : "";
   // 기본값에서 벗어난 음색이 하나라도 있으면 버튼에 점을 찍어 알린다
   const toneOn = TONE_ROWS.some(r => toneChanged(t, r));
@@ -2829,7 +2840,7 @@ function showFeelPop(cx, cy) {
 }
 
 // 세기(벨로시티) 3단 조절 — 숫자를 몰라도 되도록 이름 붙은 세 칸으로 이산화한다.
-// 조사한 대중용 앱들의 공통 결론: 초보에게는 연속 슬라이더보다 라벨 달린 몇 칸이 낫다
+// 조사한 대중용 앱들의 공통 결론: 비음악인에게는 연속 슬라이더보다 라벨 달린 몇 칸이 직관적이다
 const VEL_STEPS = [["약", 60], ["보통", 96], ["강", 120]];
 const velBand = v => v <= 78 ? 0 : v <= 108 ? 1 : 2;
 function velRowHtml(cur, idPrefix) {

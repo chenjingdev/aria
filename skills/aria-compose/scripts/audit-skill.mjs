@@ -122,14 +122,20 @@ for (const claim of staleMcpClaims) {
   if (mcpBody.includes(claim)) fail(`src/mcp.js에 폐기한 설명이 남아 있음: ${claim}`);
 }
 
-const { TEMPLATES } = await import(pathToFileURL(presetsPath).href);
+const { TEMPLATES, SF_PRESETS, SF_DRUM_KITS } = await import(pathToFileURL(presetsPath).href);
+const soundFontPresetIds = new Set([
+  ...Object.keys(SF_PRESETS),
+  ...Object.keys(SF_DRUM_KITS),
+]);
 for (const [id, template] of Object.entries(TEMPLATES)) {
   if (!template.name.includes("출발 스케치")) {
     fail(`src/presets.js: ${id} 템플릿이 선택적 출발 스케치로 표시되지 않음`);
   }
-}
-if (TEMPLATES.chiptune?.tracks.some((track) => track.preset === "e808-kit")) {
-  fail("src/presets.js: chiptune 출발 스케치가 808 kit를 자동 선택함");
+  for (const track of template.tracks) {
+    if (!soundFontPresetIds.has(track.preset) || !track.preset.startsWith("sf-")) {
+      fail(`src/presets.js: ${id} 템플릿의 ${track.preset}은 현재 외부 SoundFont 프리셋이 아님`);
+    }
+  }
 }
 
 if (errors.length) {

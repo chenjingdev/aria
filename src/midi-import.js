@@ -1,6 +1,6 @@
 // aria — 표준 MIDI 파일(SMF) 가져오기, 순수 JS. midi.js(내보내기)의 반대 방향이다.
 // 드럼 노트 매핑·GM 번호는 내보내기와 같은 표(DRUM_PIECES, preset.gm)를 쓴다 — 왕복이 어긋나면 안 된다.
-import { PRESETS, SF_PRESETS, DRUM_PIECES } from "./presets.js";
+import { SF_PRESETS, DRUM_PIECES } from "./presets.js";
 import { validateSong, beatsPerBar, MAX_TEMPO_POINTS } from "./song.js";
 
 const err = m => { throw new Error(m); };
@@ -143,33 +143,30 @@ function parseTrack(data, no, tolerant) {
 // ---------- 프리셋 추정 ----------
 // GM 악기군(8개 묶음)마다 정해 둔 대타 — 후보 중에 같은 군이 하나도 없을 때 쓴다.
 // 번호 거리만으로 고르면 군을 넘어가 버린다(나일론 기타 24 → 오르간 16).
-// 여기 값은 언제나 소리가 나는 합성 프리셋이다 — 사운드폰트가 없어도 곡이 벙어리가 되면 안 된다.
+// 모든 값은 SoundFont 프리셋이다. 필요한 파일이 없으면 상위 연산이 명시적으로 오류를 낸다.
 const GM_GROUP = [
-  "soft-piano",  // 0~7 피아노
-  "music-box",   // 8~15 크로매틱 타악
-  "organ",       // 16~23 오르간
-  "pluck",       // 24~31 기타
-  "finger-bass", // 32~39 베이스
-  "strings",     // 40~47 독주 현악
-  "strings",     // 48~55 앙상블·합창
-  "saw-lead",    // 56~63 금관
-  "square-lead", // 64~71 리드(색소폰·목관)
-  "airy-synth",  // 72~79 파이프(플루트 계열)
-  "saw-lead",    // 80~87 신스 리드
-  "airy-synth",  // 88~95 신스 패드
-  "dx-lush",     // 96~103 신스 효과음
-  "pluck",       // 104~111 민속 악기
-  "music-box",   // 112~119 타악기 계열
-  "airy-synth"   // 120~127 효과음
+  "sf-piano-gm",  // 0~7 피아노
+  "sf-music-box", // 8~15 크로매틱 타악
+  "sf-organ",     // 16~23 오르간
+  "sf-nylon",     // 24~31 기타
+  "sf-bass",      // 32~39 베이스
+  "sf-strings",   // 40~47 독주 현악
+  "sf-strings",   // 48~55 앙상블·합창
+  "sf-brass",     // 56~63 금관
+  "sf-sax",       // 64~71 색소폰·리드
+  "sf-flute",     // 72~79 파이프
+  "sf-saw-lead",  // 80~87 신스 리드 샘플
+  "sf-warm-pad",  // 88~95 신스 패드 샘플
+  "sf-fantasia",  // 96~103 신스 효과 샘플
+  "sf-nylon",     // 104~111 민속 악기 근사
+  "sf-music-box", // 112~119 타악기 계열
+  "sf-warm-pad"   // 120~127 효과음 근사
 ];
 
-// GM 프로그램 번호 → aria 프리셋.
-// gm이 정확히 같은 프리셋이 최우선이라야 내보내기와의 왕복에서 음색이 보존된다.
-export function guessPreset(gm, preferSamples = false) {
-  // preferSamples일 때만 sf-를 후보에 넣고, 목록 앞에 둬서 동점이면 샘플이 이기게 한다
-  const cands = preferSamples
-    ? [...Object.entries(SF_PRESETS), ...Object.entries(PRESETS)]
-    : Object.entries(PRESETS);
+// GM 프로그램 번호 → aria 프리셋. MIDI 가져오기는 경량 기본 폰트만 사용한다.
+// 같은 GM 번호의 VSCO/Salamander 전용판은 사용자가 나중에 명시적으로 선택한다.
+export function guessPreset(gm) {
+  const cands = Object.entries(SF_PRESETS).filter(([, p]) => p.font === "default.sf2");
   const exact = cands.find(([, p]) => p.gm === gm);
   if (exact) return exact[0];
   let best = null, bestDist = Infinity;
@@ -245,13 +242,12 @@ function uniqueName(base, used) {
 /**
  * SMF(표준 MIDI 파일)를 aria 곡으로 가져온다.
  * @param {Buffer|Uint8Array} buffer SMF 파일 내용
- * @param {{quantize?: number, preferSamples?: boolean, title?: string}} opts
+ * @param {{quantize?: number, title?: string}} opts
  * @returns {{song: object, report: string}} song은 validateSong을 통과한 곡, report는 한국어 요약
  */
 export function importMidi(buffer, opts = {}) {
   const bytes = toBytes(buffer);
   const quantize = readQuantize(opts.quantize);
-  const preferSamples = opts.preferSamples === true;
   const warn = [], drop = [];
   const { format, ntrks, division, chunks } = readSmf(bytes);
   if (!chunks.length) err("MTrk(트랙) 청크가 하나도 없습니다 — 내용이 빈 MIDI 파일입니다");
@@ -379,8 +375,7 @@ export function importMidi(buffer, opts = {}) {
   const presetLines = [];
   for (const p of parts) {
     const drum = p.ch === DRUM_CH;
-    // 샘플 프리셋은 사운드폰트가 있어야 소리가 난다 — 기본은 언제나 울리는 합성 프리셋으로 고른다
-    const preset = drum ? (preferSamples ? "sf-kit" : "acoustic-kit") : guessPreset(p.program ?? 0, preferSamples);
+    const preset = drum ? "sf-kit" : guessPreset(p.program ?? 0);
     const notes = [];
     for (const raw of p.notes) {
       let pitch;

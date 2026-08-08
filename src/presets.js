@@ -1,211 +1,184 @@
-// aria — 악기 프리셋 · 드럼 킷 · 스타일 템플릿 정의
-// engine: "fm"(2op+ FM) | "sub"(감산합성) | "add"(가산합성)
-// gm: MIDI 내보내기 시 사용할 General MIDI 프로그램 번호(0-based)
+// aria — 외부 SoundFont 악기·드럼 킷·선택적 출발 템플릿 정의.
+// Aria는 자체 파형 합성기를 포함하지 않는다. 모든 프리셋은 설치된 샘플 음원으로 렌더한다.
 
-export const PRESETS = {
-  "soft-piano": {
-    name: "Soft Piano", desc: "부드러운 어쿠스틱 피아노 느낌 — 발라드 반주", gm: 0,
-    engine: "fm", gain: 0.9, reverb: 0.22,
-    params: { ops: [{ ratio: 1, index: 1.1, decay: 2.5 }, { ratio: 3, index: 0.35, decay: 0.25 }],
-      adsr: [0.002, 2.8, 0, 0.35], lp: 5500, keyscale: 0.5 }
-  },
-  "fm-epiano": {
-    name: "FM E.Piano", desc: "DX7 계열 전기피아노 — 시티팝·R&B 코드 반주의 기본", gm: 4,
-    engine: "fm", gain: 0.9, reverb: 0.2,
-    params: { ops: [{ ratio: 1, index: 1.6, decay: 1.4 }, { ratio: 14, index: 0.4, decay: 0.06 }],
-      adsr: [0.002, 1.9, 0, 0.3], lp: 7500, keyscale: 0.4 }
-  },
-  "wurli": {
-    name: "Wurli Soft", desc: "우울리처 느낌의 따뜻한 전기피아노 — 로파이·소울", gm: 5,
-    engine: "fm", gain: 0.9, reverb: 0.18,
-    params: { ops: [{ ratio: 1, index: 0.9, decay: 0.9 }, { ratio: 7, index: 0.25, decay: 0.05 }],
-      adsr: [0.003, 1.4, 0, 0.25], lp: 3800, keyscale: 0.4 }
-  },
-  "dx-lush": {
-    name: "DX Lush", desc: "디튠된 FM 패드성 키보드 — 몽환적인 코드에", gm: 88,
-    engine: "fm", gain: 0.7, reverb: 0.42,
-    params: { ops: [{ ratio: 2, index: 1.1, decay: 1.2 }, { ratio: 1, index: 0.7, decay: 2.2 }],
-      adsr: [0.03, 2.6, 0.15, 0.7], lp: 6500, keyscale: 0.3, voices: 2, detune: 7 }
-  },
-  "music-box": {
-    name: "Music Box", desc: "오르골 — 잔향 긴 고음 멜로디", gm: 10,
-    engine: "fm", gain: 0.8, reverb: 0.45,
-    params: { ops: [{ ratio: 3.93, index: 0.5, decay: 0.12 }],
-      adsr: [0.001, 2.4, 0, 0.5], lp: 9000, keyscale: 0.2 }
-  },
-  "finger-bass": {
-    name: "Finger Bass", desc: "핑거 일렉 베이스 — 시티팝·팝의 기본 베이스", gm: 33,
-    engine: "sub", gain: 1.0, reverb: 0.04,
-    params: { oscs: [{ wave: "triangle", level: 0.75 }, { wave: "saw", level: 0.4 }],
-      cutoff: 900, fenv: 1900, fdecay: 0.16, adsr: [0.004, 0.34, 0.3, 0.09] }
-  },
-  "synth-bass": {
-    name: "Synth Bass", desc: "굵은 신스 베이스 — EDM·펑크", gm: 38,
-    engine: "sub", gain: 1.0, reverb: 0.03,
-    params: { oscs: [{ wave: "saw", level: 0.55 }, { wave: "square", oct: -1, level: 0.35 }, { wave: "sine", oct: -1, level: 0.42 }],
-      unison: { voices: 3, detune: 7, spread: 0.22 }, // 저역은 좁게 — 넓히면 위상이 무너진다
-      cutoff: 750, fenv: 2600, fdecay: 0.12, adsr: [0.003, 0.3, 0.4, 0.08] }
-  },
-  "airy-synth": {
-    name: "Airy Synth", desc: "공기감 있는 신스 패드/리드 — 뒤에 깔거나 위에 띄우거나", gm: 89,
-    engine: "sub", gain: 0.5, reverb: 0.5,
-    params: { oscs: [{ wave: "saw", detune: -4, level: 0.45 }, { wave: "saw", detune: 4, level: 0.45 },
-        { wave: "saw", oct: 1, detune: 2, level: 0.2 }],
-      unison: { voices: 5, detune: 18, spread: 0.9 },
-      cutoff: 3200, fenv: 800, fdecay: 0.6, adsr: [0.28, 0.8, 0.75, 0.9] }
-  },
-  "strings": {
-    name: "Strings Pad", desc: "현악 앙상블 패드 — 발라드·영화음악", gm: 48,
-    engine: "sub", gain: 0.5, reverb: 0.45,
-    params: { oscs: [{ wave: "saw", detune: -3, level: 0.4 }, { wave: "saw", detune: 3, level: 0.4 },
-        { wave: "saw", oct: -1, level: 0.25 }],
-      unison: { voices: 5, detune: 10, spread: 0.8 },
-      cutoff: 4200, fenv: 400, fdecay: 1.0, adsr: [0.4, 1.2, 0.8, 1.3] }
-  },
-  "pluck": {
-    name: "Pluck", desc: "짧게 튕기는 신스 플럭 — 아르페지오·리듬 백킹", gm: 45,
-    engine: "sub", gain: 0.8, reverb: 0.3,
-    params: { oscs: [{ wave: "saw", level: 0.65 }, { wave: "square", level: 0.18 }],
-      unison: { voices: 5, detune: 12, spread: 0.7 },
-      cutoff: 1200, fenv: 5200, fdecay: 0.09, adsr: [0.001, 0.22, 0, 0.12] }
-  },
-  "saw-lead": {
-    name: "Saw Lead", desc: "선명한 톱니파 리드 — 멜로디 전면에", gm: 81,
-    engine: "sub", gain: 0.78, reverb: 0.25,
-    params: { oscs: [{ wave: "saw", level: 0.55 }, { wave: "saw", oct: -1, level: 0.22 }],
-      unison: { voices: 7, detune: 16, spread: 0.85 }, // 수퍼쏘 — 현대 팝 리드의 기본형
-      cutoff: 6500, fenv: 1500, fdecay: 0.25, adsr: [0.008, 0.4, 0.75, 0.18] }
-  },
-  "square-lead": {
-    name: "Square Lead", desc: "칩튠 느낌 사각파 리드 — 레트로 게임 멜로디", gm: 80,
-    engine: "sub", gain: 0.6, reverb: 0.22,
-    params: { oscs: [{ wave: "square", level: 0.7 }],
-      cutoff: 4800, fenv: 600, fdecay: 0.2, adsr: [0.005, 0.3, 0.65, 0.12] }
-  },
-  "organ": {
-    name: "Organ", desc: "드로우바 오르간 — 가스펠·재즈·록", gm: 16,
-    engine: "add", gain: 0.6, reverb: 0.2,
-    params: { partials: [{ mult: 1, level: 0.55 }, { mult: 2, level: 0.4 }, { mult: 3, level: 0.18 },
-        { mult: 4, level: 0.22 }, { mult: 8, level: 0.1 }],
-      adsr: [0.004, 0.04, 0.92, 0.06] }
-  }
-};
-
-// 드럼 킷 — pitch 자리에 피스 이름을 쓴다 (예: "kick", "snare")
-// character가 신스 파라미터 변형을 결정. gmNote: MIDI 내보내기용 GM 퍼커션 노트(채널 10)
+// 드럼 킷의 공통 피스 이름 → General MIDI 퍼커션 노트(채널 10)
 export const DRUM_PIECES = {
   "kick": 36, "snare": 38, "rim": 37, "clap": 39, "hhc": 42, "hho": 46,
   "tom-l": 43, "tom-m": 47, "tom-h": 50, "crash": 49, "ride": 51, "shaker": 70
 };
 
-export const DRUM_KITS = {
-  "lofi-kit": { name: "Lo-fi Kit", desc: "빈티지하게 뭉개진 드럼 — 로파이·시티팝", character: "lofi" },
-  "acoustic-kit": { name: "Acoustic Kit", desc: "자연스러운 어쿠스틱 드럼 — 밴드 사운드", character: "acoustic" },
-  "e808-kit": { name: "808 Kit", desc: "긴 서브 킥의 전자 드럼 — 힙합·EDM", character: "e808" }
-};
-
 // 선택적 출발 템플릿 — new_song(template)이 만드는 제품 스케치. 장르 정의가 아니며 노트는 비어 있다.
 export const TEMPLATES = {
   "citypop": {
-    name: "시티팝 출발 스케치", desc: "한 가지 band/electronic 방향: 96bpm · 어쿠스틱 드럼 + 핑거 베이스 + FM 전기피아노 + 에어리 리드", bpm: 96,
+    name: "시티팝 출발 스케치", desc: "한 가지 band/electronic 방향: 96bpm · 샘플 드럼 + 핑거 베이스 + 전기피아노 + 패드", bpm: 96,
     tracks: [
-      { name: "Drums", preset: "acoustic-kit", volume: 0.9, pan: 0 },
-      { name: "Bass", preset: "finger-bass", volume: 0.85, pan: 0 },
-      { name: "E.Piano", preset: "fm-epiano", volume: 0.8, pan: -0.15 },
-      { name: "Lead", preset: "airy-synth", volume: 0.7, pan: 0.1 }
+      { name: "Drums", preset: "sf-band-kit", volume: 0.9, pan: 0 },
+      { name: "Bass", preset: "sf-bass", volume: 0.85, pan: 0 },
+      { name: "E.Piano", preset: "sf-epiano", volume: 0.8, pan: -0.15 },
+      { name: "Lead", preset: "sf-warm-pad", volume: 0.7, pan: 0.1 }
     ]
   },
   "lofi": {
-    name: "웜 루프 출발 스케치", desc: "한 가지 lo-fi-adjacent 방향: 72bpm · 로파이 드럼 + 핑거 베이스 + 우울리 + 오르골", bpm: 72,
+    name: "웜 루프 출발 스케치", desc: "한 가지 lo-fi-adjacent 방향: 72bpm · 샘플 드럼 + 핑거 베이스 + 전기피아노 + 오르골", bpm: 72,
     tracks: [
-      { name: "Drums", preset: "lofi-kit", volume: 0.85, pan: 0 },
-      { name: "Bass", preset: "finger-bass", volume: 0.8, pan: 0 },
-      { name: "Keys", preset: "wurli", volume: 0.8, pan: -0.1 },
-      { name: "Melody", preset: "music-box", volume: 0.6, pan: 0.15 }
+      { name: "Drums", preset: "sf-brush-kit", volume: 0.85, pan: 0 },
+      { name: "Bass", preset: "sf-bass", volume: 0.8, pan: 0 },
+      { name: "Keys", preset: "sf-fm-epiano", volume: 0.8, pan: -0.1 },
+      { name: "Melody", preset: "sf-music-box", volume: 0.6, pan: 0.15 }
     ]
   },
   "ballad": {
-    name: "발라드 출발 스케치", desc: "한 가지 slow narrative 방향: 68bpm · 소프트 피아노 + 스트링 패드 + 어쿠스틱 드럼", bpm: 68,
+    name: "발라드 출발 스케치", desc: "한 가지 slow narrative 방향: 68bpm · 그랜드 피아노 + 현악 앙상블 + 샘플 드럼", bpm: 68,
     tracks: [
-      { name: "Piano", preset: "soft-piano", volume: 0.9, pan: 0 },
-      { name: "Strings", preset: "strings", volume: 0.6, pan: 0 },
-      { name: "Bass", preset: "finger-bass", volume: 0.75, pan: 0 },
-      { name: "Drums", preset: "acoustic-kit", volume: 0.7, pan: 0 }
+      { name: "Piano", preset: "sf-piano-gm", volume: 0.9, pan: 0 },
+      { name: "Strings", preset: "sf-strings", volume: 0.6, pan: 0 },
+      { name: "Bass", preset: "sf-bass", volume: 0.75, pan: 0 },
+      { name: "Drums", preset: "sf-band-kit", volume: 0.7, pan: 0 }
     ]
   },
   "bossa": {
-    name: "어쿠스틱 2-feel 출발 스케치", desc: "한 가지 bossa-adjacent 방향: 128bpm(하프타임 느낌) · 어쿠스틱 드럼 + 소프트 피아노 + 플럭", bpm: 128,
+    name: "어쿠스틱 2-feel 출발 스케치", desc: "한 가지 bossa-adjacent 방향: 128bpm(하프타임 느낌) · 샘플 드럼 + 그랜드 피아노 + 나일론 기타", bpm: 128,
     tracks: [
-      { name: "Drums", preset: "acoustic-kit", volume: 0.75, pan: 0 },
-      { name: "Bass", preset: "finger-bass", volume: 0.8, pan: 0 },
-      { name: "Piano", preset: "soft-piano", volume: 0.8, pan: -0.1 },
-      { name: "Guitar", preset: "pluck", volume: 0.65, pan: 0.2 }
+      { name: "Drums", preset: "sf-brush-kit", volume: 0.75, pan: 0 },
+      { name: "Bass", preset: "sf-bass", volume: 0.8, pan: 0 },
+      { name: "Piano", preset: "sf-piano-gm", volume: 0.8, pan: -0.1 },
+      { name: "Guitar", preset: "sf-nylon", volume: 0.65, pan: 0.2 }
     ]
   },
   "edm": {
-    name: "4-on-floor 신스 출발 스케치", desc: "넓은 EDM 전체가 아닌 한 가지 dance-electronic 방향: 124bpm · 808 드럼 + 신스 베이스 + 플럭 코드 + 톱니 리드", bpm: 124,
+    name: "4-on-floor 샘플 출발 스케치", desc: "넓은 EDM 전체가 아닌 GM 전자음 샘플 방향: 124bpm · 샘플 드럼 + 신스 베이스 + 플럭 + 톱니 리드", bpm: 124,
     tracks: [
-      { name: "Drums", preset: "e808-kit", volume: 0.95, pan: 0 },
-      { name: "Bass", preset: "synth-bass", volume: 0.9, pan: 0 },
-      { name: "Chords", preset: "pluck", volume: 0.7, pan: -0.1 },
-      { name: "Lead", preset: "saw-lead", volume: 0.75, pan: 0.1 }
+      { name: "Drums", preset: "sf-808-kit", volume: 0.95, pan: 0 },
+      { name: "Bass", preset: "sf-synth-bass", volume: 0.9, pan: 0 },
+      { name: "Chords", preset: "sf-pizzicato", volume: 0.7, pan: -0.1 },
+      { name: "Lead", preset: "sf-saw-lead", volume: 0.75, pan: 0.1 }
     ]
   },
   "chiptune": {
-    name: "사각파 하이브리드 출발 스케치", desc: "한 가지 chip-inspired 방향: 140bpm · 사각파 리드 + 베이스 + 플럭 화성, 타악기는 곡에 맞게 별도 선택", bpm: 140,
+    name: "칩 계열 샘플 출발 스케치", desc: "한 가지 chip-inspired GM 샘플 방향: 140bpm · 사각 리드 + 베이스 + 플럭 화성, 타악기는 곡에 맞게 별도 선택", bpm: 140,
     tracks: [
-      { name: "Bass", preset: "square-lead", volume: 0.7, pan: 0 },
-      { name: "Lead", preset: "square-lead", volume: 0.7, pan: 0.05 },
-      { name: "Harmony", preset: "pluck", volume: 0.55, pan: -0.15 }
+      { name: "Bass", preset: "sf-square-lead", volume: 0.7, pan: 0 },
+      { name: "Lead", preset: "sf-square-lead", volume: 0.7, pan: 0.05 },
+      { name: "Harmony", preset: "sf-pizzicato", volume: 0.55, pan: -0.15 }
     ]
   }
 };
 
-// ---------- 샘플(SoundFont) 기반 프리셋 ----------
-// 신스 프리셋과 같은 자리에서 골라 쓰는 id들 — 렌더만 ~/.aria/soundfonts/default.sf2의 샘플로 한다.
-// gm: 사운드폰트에서 찾을 GM 프로그램 번호(MIDI 내보내기에도 그대로 쓰임)
+// ---------- SoundFont 기반 프리셋 ----------
+// gm: 사운드폰트에서 찾을 General MIDI 프로그램 번호(MIDI 내보내기에도 그대로 쓰임)
 export const SF_PRESETS = {
-  // font: 이 프리셋이 우선 사용할 사운드폰트 파일(~/.aria/soundfonts/ 기준). 없으면 default.sf2로 폴백
-  "sf-piano": { name: "Grand Piano", desc: "그랜드 피아노 — Salamander(야마하 C5, 벨로시티 16층) 우선 사용", gm: 0, gain: 1.0, reverb: 0.25, release: 0.4, font: "salamander.sf2" },
-  "sf-epiano": { name: "Tine E.Piano", desc: "틴 전기피아노 샘플 — 신스 FM보다 진짜에 가까운 질감", gm: 4, gain: 1.0, reverb: 0.22, release: 0.3 },
-  "sf-vibes": { name: "Vibraphone", desc: "비브라폰 샘플 — 재즈·라운지", gm: 11, gain: 1.0, reverb: 0.3, release: 0.8 },
-  "sf-organ": { name: "Drawbar Organ", desc: "드로우바 오르간 샘플", gm: 16, gain: 0.9, reverb: 0.2, release: 0.15 },
-  "sf-nylon": { name: "Nylon Guitar", desc: "나일론 기타 샘플 — 보사노바·발라드 아르페지오", gm: 24, gain: 1.0, reverb: 0.25, release: 0.3 },
-  "sf-steel": { name: "Steel Guitar", desc: "스틸 어쿠스틱 기타 샘플 — 포크·팝 스트로크", gm: 25, gain: 1.0, reverb: 0.22, release: 0.3 },
-  "sf-bass": { name: "Finger Bass", desc: "핑거 일렉 베이스 실제 샘플", gm: 33, gain: 1.0, reverb: 0.05, release: 0.15 },
-  "sf-strings": { name: "String Ensemble", desc: "현악 앙상블 샘플 — 신스 패드보다 진짜 현의 결", gm: 48, gain: 0.9, reverb: 0.4, release: 0.6 },
-  // 배포가 어려운 전용 샘플 대신 기본 GM 폰트의 악기군을 사용한다.
-  // id는 유지해 기존 곡의 노트·믹스·자동화를 건드리지 않고 음원만 안전하게 교체한다.
-  "sf-violin": { name: "Violin", desc: "바이올린 — 기본 GM 폰트의 독주 현악", gm: 40, gain: 1.15, reverb: 0.3, release: 0.5 },
-  "sf-viola": { name: "Viola", desc: "비올라 — 기본 GM 폰트의 따뜻한 중음 현악", gm: 41, gain: 1.25, reverb: 0.3, release: 0.5 },
-  "sf-cello": { name: "Cello", desc: "첼로 — 기본 GM 폰트의 저중음 현악", gm: 42, gain: 1.1, reverb: 0.3, release: 0.5 },
-  "sf-contrabass": { name: "Contrabass", desc: "콘트라베이스 — 기본 GM 폰트의 최저음 현악", gm: 43, gain: 0.7, reverb: 0.25, release: 0.5 },
-  "sf-violin-pizz": { name: "Pizzicato Strings (High)", desc: "고음역 피치카토 현악 — 기본 GM 피치카토 앙상블", gm: 45, gain: 1.1, reverb: 0.25, release: 1.2 },
-  "sf-viola-pizz": { name: "Pizzicato Strings (Mid)", desc: "중음역 피치카토 현악 — 기본 GM 피치카토 앙상블", gm: 45, gain: 1.15, reverb: 0.25, release: 1.2 },
-  "sf-contrabass-pizz": { name: "Acoustic Bass (Pizz.)", desc: "콘트라베이스 피치카토 대체음 — 기본 GM 어쿠스틱 베이스", gm: 32, gain: 1.0, reverb: 0.15, release: 1.2 },
-  "sf-violin-sord": { name: "Slow Strings", desc: "약음기 현악 대체음 — 기본 GM 슬로 스트링 앙상블", gm: 49, gain: 1.2, reverb: 0.35, release: 0.5 },
-  "sf-choir": { name: "Choir Aahs", desc: "합창 아~ 샘플 — 영화적 배경", gm: 52, gain: 0.9, reverb: 0.45, release: 0.6 },
-  "sf-brass": { name: "Brass Section", desc: "브라스 섹션 샘플 — 펑크·소울 스탭", gm: 61, gain: 0.95, reverb: 0.2, release: 0.2 },
-  "sf-sax": { name: "Alto Sax", desc: "알토 색소폰 — 기본 GM 폰트의 리드 음색", gm: 65, gain: 1.0, reverb: 0.25, release: 0.25 },
-  "sf-flute": { name: "Flute", desc: "플루트 — 기본 GM 폰트의 가벼운 고음 목관", gm: 73, gain: 0.95, reverb: 0.3, release: 0.3 },
-  "sf-oboe": { name: "Oboe", desc: "오보에 — 기본 GM 폰트의 서정적 목관", gm: 68, gain: 0.95, reverb: 0.3, release: 0.3 },
-  "sf-english-horn": { name: "English Horn", desc: "코랑글레 — 기본 GM 폰트의 어두운 중음 목관", gm: 69, gain: 1.0, reverb: 0.3, release: 0.3 },
-  "sf-clarinet": { name: "Clarinet", desc: "클라리넷 — 기본 GM 폰트의 부드러운 목관", gm: 71, gain: 0.95, reverb: 0.28, release: 0.3 },
-  "sf-bass-clarinet": { name: "Bass Clarinet (Sketch)", desc: "베이스 클라리넷 대체음 — 기본 GM 클라리넷을 저음역에서 사용", gm: 71, gain: 1.0, reverb: 0.28, release: 0.35 },
-  "sf-bassoon": { name: "Bassoon", desc: "바순 — 기본 GM 폰트의 저음 목관", gm: 70, gain: 1.0, reverb: 0.28, release: 0.3 },
-  "sf-contrabassoon": { name: "Contrabassoon (Sketch)", desc: "콘트라바순 대체음 — 기본 GM 바순을 최저음역에서 사용", gm: 70, gain: 1.05, reverb: 0.25, release: 0.35 },
-  "sf-horn": { name: "French Horn", desc: "프렌치 호른 — 기본 GM 폰트의 중저음 금관", gm: 60, gain: 0.95, reverb: 0.35, release: 0.4 },
-  "sf-trumpet": { name: "Trumpet", desc: "트럼펫 — 기본 GM 폰트의 밝은 금관", gm: 56, gain: 0.9, reverb: 0.3, release: 0.25 },
-  "sf-trombone": { name: "Trombone", desc: "트롬본 — 기본 GM 폰트의 중저음 금관", gm: 57, gain: 0.95, reverb: 0.3, release: 0.3 },
-  "sf-tuba": { name: "Tuba", desc: "튜바 — 기본 GM 폰트의 최저음 금관", gm: 58, gain: 1.0, reverb: 0.25, release: 0.35 },
+  // font: 반드시 사용할 사운드폰트 파일(~/.aria/soundfonts/ 기준). 없으면 오류로 표시하며 대체하지 않는다.
+  // sf-piano는 기존 저장곡 호환을 위해 Salamander ID로 유지한다. 경량 GM판은 별도 ID다.
+  "sf-piano-gm": { name: "Grand Piano (GM)", desc: "GeneralUser GM 그랜드 피아노 — 기본 폰트만 설치해도 사용할 수 있는 피아노", gm: 0, gain: 1.0, reverb: 0.22, release: 0.4, font: "default.sf2" },
+  "sf-piano": { name: "Grand Piano (Salamander)", desc: "Salamander 야마하 C5 그랜드 피아노 — 전용 1.2GiB 파일, 벨로시티 16층", gm: 0, gain: 1.0, reverb: 0.25, release: 0.4, font: "salamander.sf2" },
+  "sf-epiano": { name: "Tine E.Piano (GM)", desc: "틴 전기피아노 샘플", gm: 4, gain: 1.0, reverb: 0.22, release: 0.3, font: "default.sf2" },
+  "sf-fm-epiano": { name: "Electric Piano 2 (GM)", desc: "GeneralUser GM 전기피아노 2 샘플 — 기존 Wurli 트랙의 대체음", gm: 5, gain: 1.0, reverb: 0.2, release: 0.3, font: "default.sf2" },
+  "sf-music-box": { name: "Music Box (GM)", desc: "GeneralUser GM 오르골 샘플", gm: 10, gain: 0.9, reverb: 0.4, release: 0.7, font: "default.sf2" },
+  "sf-vibes": { name: "Vibraphone (GM)", desc: "비브라폰 샘플 — 재즈·라운지", gm: 11, gain: 1.0, reverb: 0.3, release: 0.8, font: "default.sf2" },
+  "sf-glockenspiel-gm": { name: "Glockenspiel (GM)", desc: "GeneralUser GM 글로켄슈필 — 경량 기본 말렛", gm: 9, gain: 0.9, reverb: 0.25, release: 0.6, font: "default.sf2" },
+  "sf-marimba-gm": { name: "Marimba (GM)", desc: "GeneralUser GM 마림바 — 경량 기본 말렛", gm: 12, gain: 1.0, reverb: 0.22, release: 0.5, font: "default.sf2" },
+  "sf-xylophone-gm": { name: "Xylophone (GM)", desc: "GeneralUser GM 실로폰 — 경량 기본 말렛", gm: 13, gain: 0.95, reverb: 0.22, release: 0.4, font: "default.sf2" },
+  "sf-organ": { name: "Drawbar Organ (GM)", desc: "드로우바 오르간 샘플", gm: 16, gain: 0.9, reverb: 0.2, release: 0.15, font: "default.sf2" },
+  "sf-nylon": { name: "Nylon Guitar (GM)", desc: "나일론 기타 샘플 — 보사노바·발라드 아르페지오", gm: 24, gain: 1.0, reverb: 0.25, release: 0.3, font: "default.sf2" },
+  "sf-steel": { name: "Steel Guitar (GM)", desc: "스틸 어쿠스틱 기타 샘플 — 포크·팝 스트로크", gm: 25, gain: 1.0, reverb: 0.22, release: 0.3, font: "default.sf2" },
+  "sf-bass": { name: "Finger Bass (GM)", desc: "핑거 일렉 베이스 샘플", gm: 33, gain: 1.0, reverb: 0.05, release: 0.15, font: "default.sf2" },
+  "sf-synth-bass": { name: "Synth Bass 1 (GM)", desc: "GeneralUser GM 신스 베이스 샘플", gm: 38, gain: 1.0, reverb: 0.04, release: 0.15, font: "default.sf2" },
+  "sf-pizzicato": { name: "Pizzicato Pluck (GM)", desc: "GeneralUser GM 피치카토 현악 샘플 — 기존 합성 플럭의 대체음", gm: 45, gain: 1.0, reverb: 0.25, release: 0.7, font: "default.sf2" },
+  "sf-harp-gm": { name: "Orchestral Harp (GM)", desc: "GeneralUser GM 오케스트라 하프 — 경량 기본 하프", gm: 46, gain: 1.0, reverb: 0.28, release: 0.8, font: "default.sf2" },
+  "sf-timpani-gm": { name: "Timpani (GM)", desc: "GeneralUser GM 팀파니 — 경량 기본 팀파니", gm: 47, gain: 1.0, reverb: 0.3, release: 0.8, font: "default.sf2" },
+  "sf-strings": { name: "String Ensemble (GM)", desc: "GeneralUser GM 현악 앙상블 샘플", gm: 48, gain: 0.9, reverb: 0.4, release: 0.6, font: "default.sf2" },
+  "sf-fantasia": { name: "New Age Pad (GM)", desc: "GeneralUser GM 판타지아 계열 패드 샘플 — 기존 DX Lush 트랙의 대체음", gm: 88, gain: 0.8, reverb: 0.4, release: 0.7, font: "default.sf2" },
+  "sf-warm-pad": { name: "Warm Pad (GM)", desc: "GeneralUser GM 웜 패드 샘플 — 기존 Airy Synth 트랙의 대체음", gm: 89, gain: 0.8, reverb: 0.45, release: 0.8, font: "default.sf2" },
+  "sf-square-lead": { name: "Square Lead (GM)", desc: "GeneralUser GM 사각 리드 샘플", gm: 80, gain: 0.9, reverb: 0.2, release: 0.2, font: "default.sf2" },
+  "sf-saw-lead": { name: "Saw Lead (GM)", desc: "GeneralUser GM 톱니 리드 샘플", gm: 81, gain: 0.9, reverb: 0.22, release: 0.2, font: "default.sf2" },
+  // 기존 ID는 GeneralUser GM 선택지로 유지한다. Philharmonia는 아래의 -phil ID에서 명시적으로 고른다.
+  "sf-violin": { name: "Violin (GM)", desc: "바이올린 — GeneralUser GM 독주 현악", gm: 40, gain: 1.15, reverb: 0.3, release: 0.5, font: "default.sf2" },
+  "sf-viola": { name: "Viola (GM)", desc: "비올라 — GeneralUser GM 중음 현악", gm: 41, gain: 1.25, reverb: 0.3, release: 0.5, font: "default.sf2" },
+  "sf-cello": { name: "Cello (GM)", desc: "첼로 — GeneralUser GM 저중음 현악", gm: 42, gain: 1.1, reverb: 0.3, release: 0.5, font: "default.sf2" },
+  "sf-contrabass": { name: "Contrabass (GM)", desc: "콘트라베이스 — GeneralUser GM 최저음 현악", gm: 43, gain: 0.7, reverb: 0.25, release: 0.5, font: "default.sf2" },
+  "sf-violin-pizz": { name: "Pizzicato Strings High (GM)", desc: "고음역 피치카토 — GeneralUser GM 앙상블", gm: 45, gain: 1.1, reverb: 0.25, release: 1.2, font: "default.sf2" },
+  "sf-viola-pizz": { name: "Pizzicato Strings Mid (GM)", desc: "중음역 피치카토 — GeneralUser GM 앙상블", gm: 45, gain: 1.15, reverb: 0.25, release: 1.2, font: "default.sf2" },
+  "sf-contrabass-pizz": { name: "Acoustic Bass Pizz. (GM)", desc: "콘트라베이스 피치카토 대체음 — GeneralUser GM 어쿠스틱 베이스", gm: 32, gain: 1.0, reverb: 0.15, release: 1.2, font: "default.sf2" },
+  "sf-violin-sord": { name: "Slow Strings (GM)", desc: "약음기 현악 대체음 — GeneralUser GM 슬로 스트링", gm: 49, gain: 1.2, reverb: 0.35, release: 0.5, font: "default.sf2" },
+  "sf-choir": { name: "Choir Aahs (GM)", desc: "GeneralUser GM 합창 아~ 샘플", gm: 52, gain: 0.9, reverb: 0.45, release: 0.6, font: "default.sf2" },
+  "sf-brass": { name: "Brass Section (GM)", desc: "GeneralUser GM 브라스 섹션 샘플", gm: 61, gain: 0.95, reverb: 0.2, release: 0.2, font: "default.sf2" },
+  "sf-sax": { name: "Alto Sax (GM)", desc: "GeneralUser GM 알토 색소폰", gm: 65, gain: 1.0, reverb: 0.25, release: 0.25, font: "default.sf2" },
+  "sf-flute": { name: "Flute (GM)", desc: "GeneralUser GM 플루트", gm: 73, gain: 0.95, reverb: 0.3, release: 0.3, font: "default.sf2" },
+  "sf-oboe": { name: "Oboe (GM)", desc: "GeneralUser GM 오보에", gm: 68, gain: 0.95, reverb: 0.3, release: 0.3, font: "default.sf2" },
+  "sf-english-horn": { name: "English Horn (GM)", desc: "GeneralUser GM 코랑글레", gm: 69, gain: 1.0, reverb: 0.3, release: 0.3, font: "default.sf2" },
+  "sf-clarinet": { name: "Clarinet (GM)", desc: "GeneralUser GM 클라리넷", gm: 71, gain: 0.95, reverb: 0.28, release: 0.3, font: "default.sf2" },
+  "sf-bass-clarinet": { name: "Bass Clarinet Sketch (GM)", desc: "GeneralUser GM 클라리넷을 저음역에서 쓰는 대체음", gm: 71, gain: 1.0, reverb: 0.28, release: 0.35, font: "default.sf2" },
+  "sf-bassoon": { name: "Bassoon (GM)", desc: "GeneralUser GM 바순", gm: 70, gain: 1.0, reverb: 0.28, release: 0.3, font: "default.sf2" },
+  "sf-contrabassoon": { name: "Contrabassoon Sketch (GM)", desc: "GeneralUser GM 바순을 최저음역에서 쓰는 대체음", gm: 70, gain: 1.05, reverb: 0.25, release: 0.35, font: "default.sf2" },
+  "sf-horn": { name: "French Horn (GM)", desc: "GeneralUser GM 프렌치 호른", gm: 60, gain: 0.95, reverb: 0.35, release: 0.4, font: "default.sf2" },
+  "sf-trumpet": { name: "Trumpet (GM)", desc: "GeneralUser GM 트럼펫", gm: 56, gain: 0.9, reverb: 0.3, release: 0.25, font: "default.sf2" },
+  "sf-trombone": { name: "Trombone (GM)", desc: "GeneralUser GM 트롬본", gm: 57, gain: 0.95, reverb: 0.3, release: 0.3, font: "default.sf2" },
+  "sf-tuba": { name: "Tuba (GM)", desc: "GeneralUser GM 튜바", gm: 58, gain: 1.0, reverb: 0.25, release: 0.35, font: "default.sf2" },
+
+  // 사용자가 별도로 설치한 Philharmonia 4개 폰트를 명시적으로 고르는 선택지. 누락 시 GM으로 대체하지 않는다.
+  // program은 이 전용 SF2 안의 실제 번호, gm은 표준 MIDI로 내보낼 때의 가장 가까운 프로그램이다.
+  "sf-violin-phil": { name: "Violin (Philharmonia)", desc: "Philharmonia 바이올린 샘플", program: 40, gm: 40, gain: 1.0, reverb: 0.3, release: 0.5, font: "philharmonia.sf2" },
+  "sf-viola-phil": { name: "Viola (Philharmonia)", desc: "Philharmonia 비올라 샘플", program: 41, gm: 41, gain: 1.0, reverb: 0.3, release: 0.5, font: "philharmonia.sf2" },
+  "sf-cello-phil": { name: "Cello (Philharmonia)", desc: "Philharmonia 첼로 샘플", program: 42, gm: 42, gain: 1.0, reverb: 0.3, release: 0.5, font: "philharmonia.sf2" },
+  "sf-contrabass-phil": { name: "Contrabass (Philharmonia)", desc: "Philharmonia 콘트라베이스 샘플", program: 43, gm: 43, gain: 0.85, reverb: 0.28, release: 0.55, font: "philharmonia.sf2" },
+  "sf-violin-pizz-phil": { name: "Violin Pizzicato (Philharmonia)", desc: "Philharmonia 바이올린 피치카토 샘플", program: 44, gm: 45, gain: 1.0, reverb: 0.25, release: 0.9, font: "philharmonia.sf2" },
+  "sf-viola-pizz-phil": { name: "Viola Pizzicato (Philharmonia)", desc: "Philharmonia 비올라 피치카토 샘플", program: 45, gm: 45, gain: 1.0, reverb: 0.25, release: 0.9, font: "philharmonia.sf2" },
+  "sf-contrabass-pizz-phil": { name: "Contrabass Pizzicato (Philharmonia)", desc: "Philharmonia 콘트라베이스 피치카토 샘플", program: 46, gm: 32, gain: 0.9, reverb: 0.22, release: 1.0, font: "philharmonia.sf2" },
+  "sf-violin-sord-phil": { name: "Violin Sordino (Philharmonia)", desc: "Philharmonia 약음기 바이올린 샘플", program: 48, gm: 49, gain: 1.0, reverb: 0.35, release: 0.55, font: "philharmonia.sf2" },
+  "sf-flute-phil": { name: "Flute (Philharmonia)", desc: "Philharmonia 플루트 샘플", program: 73, gm: 73, gain: 0.95, reverb: 0.3, release: 0.3, font: "phil-winds.sf2" },
+  "sf-oboe-phil": { name: "Oboe (Philharmonia)", desc: "Philharmonia 오보에 샘플", program: 68, gm: 68, gain: 0.95, reverb: 0.3, release: 0.3, font: "phil-winds.sf2" },
+  "sf-english-horn-phil": { name: "English Horn (Philharmonia)", desc: "Philharmonia 코랑글레 샘플", program: 69, gm: 69, gain: 1.0, reverb: 0.3, release: 0.3, font: "phil-winds.sf2" },
+  "sf-clarinet-phil": { name: "Clarinet (Philharmonia)", desc: "Philharmonia 클라리넷 샘플", program: 71, gm: 71, gain: 0.95, reverb: 0.28, release: 0.3, font: "phil-winds.sf2" },
+  "sf-bass-clarinet-phil": { name: "Bass Clarinet (Philharmonia)", desc: "Philharmonia 베이스 클라리넷 샘플", program: 72, gm: 71, gain: 1.0, reverb: 0.28, release: 0.35, font: "phil-winds.sf2" },
+  "sf-bassoon-phil": { name: "Bassoon (Philharmonia)", desc: "Philharmonia 바순 샘플", program: 70, gm: 70, gain: 1.0, reverb: 0.28, release: 0.3, font: "phil-winds.sf2" },
+  "sf-contrabassoon-phil": { name: "Contrabassoon (Philharmonia)", desc: "Philharmonia 콘트라바순 샘플", program: 74, gm: 70, gain: 1.05, reverb: 0.25, release: 0.35, font: "phil-winds.sf2" },
+  "sf-sax-phil": { name: "Alto Sax (Philharmonia)", desc: "Philharmonia 알토 색소폰 샘플", program: 65, gm: 65, gain: 1.0, reverb: 0.25, release: 0.25, font: "phil-winds.sf2" },
+  "sf-trumpet-phil": { name: "Trumpet (Philharmonia)", desc: "Philharmonia 트럼펫 샘플", program: 56, gm: 56, gain: 0.9, reverb: 0.3, release: 0.25, font: "phil-brass.sf2" },
+  "sf-horn-phil": { name: "French Horn (Philharmonia)", desc: "Philharmonia 프렌치 호른 샘플", program: 60, gm: 60, gain: 0.95, reverb: 0.35, release: 0.4, font: "phil-brass.sf2" },
+  "sf-trombone-phil": { name: "Trombone (Philharmonia)", desc: "Philharmonia 트롬본 샘플", program: 57, gm: 57, gain: 0.95, reverb: 0.3, release: 0.3, font: "phil-brass.sf2" },
+  "sf-tuba-phil": { name: "Tuba (Philharmonia)", desc: "Philharmonia 튜바 샘플", program: 58, gm: 58, gain: 1.0, reverb: 0.25, release: 0.35, font: "phil-brass.sf2" },
   "sf-timpani": { name: "Timpani (VSCO)", desc: "팀파니 — 실녹음 다이내믹 3층, 오케스트라의 천둥, F#1~D#2 부근", gm: 47, gain: 1.0, reverb: 0.35, release: 0.8, font: "vsco.sf2" },
   "sf-harp": { name: "Harp (VSCO)", desc: "하프 — 아르페지오·글리산도, 서정적 색채", gm: 46, gain: 1.0, reverb: 0.35, release: 0.8, font: "vsco.sf2" },
   "sf-glockenspiel": { name: "Glockenspiel (VSCO)", desc: "글로켄슈필 — 반짝이는 금속 종소리 고음", gm: 9, gain: 0.9, reverb: 0.3, release: 0.6, font: "vsco.sf2" },
   "sf-marimba": { name: "Marimba (VSCO)", desc: "마림바 — 둥글고 따뜻한 나무 말렛", gm: 12, gain: 1.0, reverb: 0.25, release: 0.5, font: "vsco.sf2" },
   "sf-xylophone": { name: "Xylophone (VSCO)", desc: "실로폰 — 마르고 또렷한 나무 말렛 고음", gm: 13, gain: 0.95, reverb: 0.25, release: 0.4, font: "vsco.sf2" },
   "sf-cello-pizz": { name: "Cello Pizz (VSCO)", desc: "첼로 섹션 피치카토 — 통통 튀는 저음 반주", gm: 45, gain: 1.05, reverb: 0.25, release: 1.0, font: "vsco.sf2" },
-  "sf-bandoneon": { name: "Tango Accordion", desc: "탱고 아코디언(반도네온) 샘플 — 탱고·뮈제트의 심장", gm: 23, gain: 0.95, reverb: 0.25, release: 0.2 }
+  "sf-bandoneon": { name: "Tango Accordion (GM)", desc: "GeneralUser GM 탱고 아코디언 샘플", gm: 23, gain: 0.95, reverb: 0.25, release: 0.2, font: "default.sf2" }
 };
+
+// 같은 악기의 음원 출처만 다른 선택지를 UI에서 한 그룹으로 보여주기 위한 표시 메타데이터.
+// family는 사용자에게 보일 악기군 이름, source는 해당 샘플 라이브러리 이름이다.
+const SOURCE_VARIANT_FAMILIES = [
+  ["Grand Piano", [["sf-piano-gm", "GM"], ["sf-piano", "Salamander"]]],
+  ["Glockenspiel", [["sf-glockenspiel-gm", "GM"], ["sf-glockenspiel", "VSCO"]]],
+  ["Marimba", [["sf-marimba-gm", "GM"], ["sf-marimba", "VSCO"]]],
+  ["Xylophone", [["sf-xylophone-gm", "GM"], ["sf-xylophone", "VSCO"]]],
+  ["Orchestral Harp", [["sf-harp-gm", "GM"], ["sf-harp", "VSCO"]]],
+  ["Timpani", [["sf-timpani-gm", "GM"], ["sf-timpani", "VSCO"]]],
+  ["Violin", [["sf-violin", "GM"], ["sf-violin-phil", "Philharmonia"]]],
+  ["Viola", [["sf-viola", "GM"], ["sf-viola-phil", "Philharmonia"]]],
+  ["Cello", [["sf-cello", "GM"], ["sf-cello-phil", "Philharmonia"]]],
+  ["Contrabass", [["sf-contrabass", "GM"], ["sf-contrabass-phil", "Philharmonia"]]],
+  ["Violin Pizzicato", [["sf-violin-pizz", "GM"], ["sf-violin-pizz-phil", "Philharmonia"]]],
+  ["Viola Pizzicato", [["sf-viola-pizz", "GM"], ["sf-viola-pizz-phil", "Philharmonia"]]],
+  ["Contrabass Pizzicato", [["sf-contrabass-pizz", "GM"], ["sf-contrabass-pizz-phil", "Philharmonia"]]],
+  ["Violin Sordino", [["sf-violin-sord", "GM"], ["sf-violin-sord-phil", "Philharmonia"]]],
+  ["Flute", [["sf-flute", "GM"], ["sf-flute-phil", "Philharmonia"]]],
+  ["Oboe", [["sf-oboe", "GM"], ["sf-oboe-phil", "Philharmonia"]]],
+  ["English Horn", [["sf-english-horn", "GM"], ["sf-english-horn-phil", "Philharmonia"]]],
+  ["Clarinet", [["sf-clarinet", "GM"], ["sf-clarinet-phil", "Philharmonia"]]],
+  ["Bass Clarinet", [["sf-bass-clarinet", "GM"], ["sf-bass-clarinet-phil", "Philharmonia"]]],
+  ["Bassoon", [["sf-bassoon", "GM"], ["sf-bassoon-phil", "Philharmonia"]]],
+  ["Contrabassoon", [["sf-contrabassoon", "GM"], ["sf-contrabassoon-phil", "Philharmonia"]]],
+  ["Alto Sax", [["sf-sax", "GM"], ["sf-sax-phil", "Philharmonia"]]],
+  ["Trumpet", [["sf-trumpet", "GM"], ["sf-trumpet-phil", "Philharmonia"]]],
+  ["French Horn", [["sf-horn", "GM"], ["sf-horn-phil", "Philharmonia"]]],
+  ["Trombone", [["sf-trombone", "GM"], ["sf-trombone-phil", "Philharmonia"]]],
+  ["Tuba", [["sf-tuba", "GM"], ["sf-tuba-phil", "Philharmonia"]]]
+];
+for (const [family, variants] of SOURCE_VARIANT_FAMILIES)
+  for (const [id, source] of variants) Object.assign(SF_PRESETS[id], { family, source });
+
 // GM 확장 타악 피스 — sf-orch-kit의 기존 곡 호환용 이름을 유지한다.
 export const ORCH_PIECES = {
   kick: 36, snare: 38, "tom-l": 43, "tom-m": 47, "tom-h": 50, crash: 49, ride: 51,
@@ -217,11 +190,19 @@ export const ORCH_PIECES = {
 // pieces: 킷 전용 피스 어휘(없으면 DRUM_PIECES). 검증·렌더·MIDI 내보내기가 이 맵을 따른다.
 export const SF_DRUM_KITS = {
   // release: 렌더 꼬리 계산용 — 크래시·오픈햇 잔향 실측(-60dB ≈ 3.1초)을 담는 값
-  "sf-kit": { name: "Studio Kit", desc: "실제 드럼 녹음 샘플 킷 (GM Standard)", bank: 128, program: 0, release: 3.0 },
+  "sf-kit": { name: "Studio Kit (GM)", desc: "GeneralUser GM Standard 드럼 샘플", bank: 128, program: 0, release: 3.0, font: "default.sf2" },
+  "sf-808-kit": { name: "Electronic Kit (GM)", desc: "GeneralUser 전자 드럼 샘플 — 기존 합성 808 트랙의 대체음", bank: 128, program: 25, release: 3.0, font: "default.sf2" },
+  "sf-brush-kit": { name: "Brush Kit (GM)", desc: "GeneralUser 브러시 드럼 샘플 — 기존 로파이 킷의 대체음", bank: 128, program: 40, release: 3.5, font: "default.sf2" },
   "sf-band-kit": { name: "Band Kit (Salamander)", desc: "어쿠스틱 밴드 드럼 실녹음 — 팝·록·발라드, 벨로시티 다층 펀치", bank: 128, program: 0, release: 4.2, font: "salamander-kit.sf2", velRange: 0.7 },
   "sf-orch-kit": {
-    name: "Extended GM Percussion", desc: "기본 GM 폰트의 확장 타악. 피스: kick·snare·tom-l/m/h·crash·ride·tamtam·triangle·tambourine·castanets·woodblock·sleigh·cowbell·agogo·cabasa·guiro",
-    bank: 128, program: 0, release: 6.0, pieces: ORCH_PIECES, velRange: 0.9
+    name: "Extended Percussion (GM)", desc: "기본 GM 폰트의 확장 타악. 피스: kick·snare·tom-l/m/h·crash·ride·tamtam·triangle·tambourine·castanets·woodblock·sleigh·cowbell·agogo·cabasa·guiro",
+    bank: 128, program: 0, release: 6.0, pieces: ORCH_PIECES, velRange: 0.9, font: "default.sf2",
+    family: "Orchestral Percussion", source: "GM"
+  },
+  "sf-orch-kit-phil": {
+    name: "Orchestral Percussion (Philharmonia)", desc: "Philharmonia 오케스트라 타악 샘플. 피스: kick·snare·tom-l/m/h·crash·ride·tamtam·triangle·tambourine·castanets·woodblock·sleigh·cowbell·agogo·cabasa·guiro",
+    bank: 128, program: 0, release: 6.0, pieces: ORCH_PIECES, velRange: 0.9, font: "phil-perc.sf2",
+    family: "Orchestral Percussion", source: "Philharmonia"
   }
 };
 
@@ -230,12 +211,10 @@ export function drumPieces(id) { return SF_DRUM_KITS[id]?.pieces ?? DRUM_PIECES;
 
 export function isSfPreset(id) { return Object.hasOwn(SF_PRESETS, id); }
 export function isSfDrumKit(id) { return Object.hasOwn(SF_DRUM_KITS, id); }
-export function isDrumPreset(id) { return Object.hasOwn(DRUM_KITS, id) || isSfDrumKit(id); }
-export function presetExists(id) {
-  return Object.hasOwn(PRESETS, id) || Object.hasOwn(DRUM_KITS, id) || isSfPreset(id) || isSfDrumKit(id);
-}
+export function isDrumPreset(id) { return isSfDrumKit(id); }
+export function presetExists(id) { return isSfPreset(id) || isSfDrumKit(id); }
 export function presetLabel(id) {
-  return PRESETS[id]?.name ?? DRUM_KITS[id]?.name ?? SF_PRESETS[id]?.name ?? SF_DRUM_KITS[id]?.name ?? id;
+  return SF_PRESETS[id]?.name ?? SF_DRUM_KITS[id]?.name ?? id;
 }
 // MIDI 내보내기용 GM 프로그램 번호
-export function presetGm(id) { return PRESETS[id]?.gm ?? SF_PRESETS[id]?.gm ?? 0; }
+export function presetGm(id) { return SF_PRESETS[id]?.gm ?? 0; }

@@ -1,4 +1,4 @@
-// Salamander Drumkit(퍼블릭 도메인, 2022-03-04 작자 공지) → salamander-kit.sf2 (bank 128 program 0)
+// Salamander Drumkit(로컬 원본 README 기준 CC BY-SA 3.0) → salamander-kit.sf2 (bank 128 program 0)
 // 어쿠스틱 밴드 드럼 실녹음, 벨로시티 최대 6층(PP~FF). 표준 DRUM_PIECES 키에 매핑.
 // 원본에 없는 피스는 근사 대체: clap ← 스네어즈-오프 스네어, shaker ← 풋 하이햇 칙.
 import fs from "node:fs";
@@ -78,7 +78,12 @@ const instruments = [{
   zones
 }];
 const presets = [{ name: "Salamander Kit", bank: 128, program: 0, instIdx: 0 }];
-const res = writeSf2({ outPath: OUT, infoName: "Salamander Drumkit", samples, instruments, presets });
+const res = writeSf2({
+  outPath: OUT,
+  infoName: "Salamander Drumkit",
+  copyright: "Salamander Drumkit © Alexander Holm — local source README: CC BY-SA 3.0",
+  samples, instruments, presets
+});
 console.log(`\nsalamander-kit.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // 스윕

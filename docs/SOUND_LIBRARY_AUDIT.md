@@ -1,17 +1,18 @@
 # Aria 음원 라이브러리 전수 감사 및 확장 조사
 
-- 기준일: 2026-08-07 (KST)
-- 조사 범위: 로컬에 설치된 SF2 8개, Aria가 노출하는 프리셋 56개, 내장 신스, 빌드 파이프라인, 공식·1차 출처가 확인되는 미수집 무료/오픈 음원과 비교용 상용 음원
+- 기준 조사일: 2026-08-07 (KST), 제품 목록 갱신: 2026-08-08
+- 조사 범위: 로컬에 설치된 SF2 8개, Aria가 노출하는 외부 SoundFont 프리셋 77개, 빌드 파이프라인, 공식·1차 출처가 확인되는 미수집 무료/오픈 음원과 비교용 상용 음원
 - 평가 원칙: **원본 라이브러리의 잠재 품질**과 **현재 Aria가 실제로 살리는 품질**을 구분한다. 파일 크기나 유명세만으로 음질을 판정하지 않는다.
 
 ## 결론부터
 
-1. **Philharmonia는 삭제 대상이 아니다.** 현재 설치된 현악·목관·금관·타악 4개는 약 408.88 MiB이며, GeneralUser 대체음보다 샘플 길이·벨로시티 층·자연 감쇠가 뚜렷하게 낫다. 다만 공식 조건상 샘플 또는 sampler instrument 형태로 재배포하면 안 되므로 **사용자 로컬 전용 Orchestra HD 팩**으로 남겨야 한다.
-2. 로컬 음원은 총 **1.63 GiB(1.75 GB)**지만, 현재 소스 코드가 직접 사용하는 것은 `default.sf2`, `salamander.sf2`, `salamander-kit.sf2`, `vsco.sf2` 네 개뿐이다. Philharmonia 네 개는 설치만 되어 있고 지금은 호출되지 않는다.
-3. Aria 화면의 많은 실악기 이름은 전용 고급 음원이 아니라 30.82 MiB짜리 **GeneralUser GS 대체음**이다. 바이올린·플루트·호른·기타·합창 등이 “존재한다”와 “충분히 사실적이다”는 같은 뜻이 아니다.
-4. 다음 활용·수집 우선순위는 **이미 내려받은 VSCO 2 CE 전체 원본 활용 → VCSL/FreePats 수집 → University of Iowa 선별팩**이다. 앞의 두 계열은 CC0 중심이라 제품화가 쉽다.
-5. 지금 가장 큰 병목은 음원 수보다 **재생 엔진**이다. 현재 JS SF2 렌더러는 stereo link/pan, 필터, LFO, modulators, exclusive group 등을 완전히 재현하지 못한다. GeneralUser 공식 문서도 완전한 SoundFont 엔진이 아니면 많은 프리셋이 제대로 재생되지 않는다고 경고한다. 더 큰 SF2를 계속 추가하기 전에 SoundFont 엔진 교체와 SFZ 지원을 먼저 검토해야 한다.
-6. Git에는 음원 바이너리를 넣지 않는다. 앱 안에서 출처·용량·라이선스를 보여주고 다운로드/로컬 빌드를 제공하는 **팩 매니저 + manifest** 구조가 맞다.
+1. **Aria 자체 합성 신스는 제거됐다.** 현재 제품은 외부 SoundFont만 재생하고, 필요한 음원이 없거나 손상됐으면 자동 대체가 아니라 명시적인 설치 오류를 보여 준다.
+2. **Philharmonia는 삭제 대상이 아니다.** 현재 설치된 현악·목관·금관·타악 4개는 약 408.88 MiB이며, GeneralUser 대체음보다 샘플 길이·벨로시티 층·자연 감쇠가 뚜렷하게 낫다. 다만 공식 조건상 샘플 또는 sampler instrument 형태로 재배포하면 안 되므로 **사용자 로컬 전용 Orchestra HD 팩**으로 남겨야 한다.
+3. 로컬 음원은 총 **1.63 GiB(1.75 GB)**이며, 현재 소스 코드는 8개를 모두 명시적 선택지로 연결한다. GeneralUser와 Philharmonia는 같은 악기라도 별도 ID라 사용자가 음색을 직접 고른다.
+4. Aria 화면의 많은 실악기 이름은 전용 고급 음원이 아니라 30.82 MiB짜리 **GeneralUser GS 대체음**이다. 바이올린·플루트·호른·기타·합창 등이 “존재한다”와 “충분히 사실적이다”는 같은 뜻이 아니다.
+5. 다음 활용·수집 우선순위는 **이미 내려받은 VSCO 2 CE 전체 원본 활용 → VCSL/FreePats 수집 → University of Iowa 선별팩**이다. 앞의 두 계열은 CC0 중심이라 제품화가 쉽다.
+6. 지금 가장 큰 병목은 음원 수보다 **재생 엔진**이다. 현재 JS SF2 렌더러는 stereo link/pan, 필터, LFO, modulators, exclusive group 등을 완전히 재현하지 못한다. GeneralUser 공식 문서도 완전한 SoundFont 엔진이 아니면 많은 프리셋이 제대로 재생되지 않는다고 경고한다. 더 큰 SF2를 계속 추가하기 전에 SoundFont 엔진 교체와 SFZ 지원을 먼저 검토해야 한다.
+7. Git에는 음원 바이너리를 넣지 않는다. 앱 안에서 출처·용량·라이선스를 보여주고 다운로드/로컬 빌드를 제공하는 **팩 매니저 + manifest** 구조가 맞다.
 
 ## 1. 품질 표시 기준
 
@@ -20,8 +21,7 @@
 | 상 | 전용 실녹음, 여러 세기/음역 또는 긴 자연 감쇠가 있고 현재 Aria에서도 핵심 특성의 상당 부분이 살아남음 |
 | 중 | 실녹음이지만 일부 레이어·라운드로빈·스테레오·주법이 줄었거나 현재 엔진이 일부 정보를 버림 |
 | 스케치 | 작곡·편곡 확인에는 유용하지만 독주·노출 구간에서 합성티/반복/짧은 루프가 드러날 가능성이 큼 |
-| 합성 | 사실적 악기 복제가 아니라 의도적으로 만든 FM/감산/가산 신스 음색. 현실성 대신 캐릭터로 평가 |
-| 미사용 | 파일은 설치되어 있으나 현재 `src/presets.js`가 선택하지 않음 |
+| 선택 설치 | 프리셋은 노출되지만 필요한 로컬 파일이 없으면 `미설치`로 비활성화됨 |
 
 등급은 공식 스펙, 로컬 SF2 구조, Aria 렌더러 지원 범위와 동일 음정 A/B 구조 검사를 합친 **엔지니어링 판단**이다. 최종 음색 선택은 실제 곡 안에서의 청취 비교로 확정해야 한다.
 
@@ -30,8 +30,8 @@
 | 구분 | 용량 | 상태 |
 |---|---:|---|
 | 런타임 SF2 8개 (`~/.aria/soundfonts`) | 1,666.55 MiB / 1.627 GiB / 1.747 GB | 앱이 읽는 설치 음원 |
-| 현재 코드가 참조하는 4개 SF2 | 1,257.67 MiB | GeneralUser, Salamander piano/drum, VSCO subset |
-| 설치됐지만 미참조인 Philharmonia 4개 | 408.88 MiB | 삭제하지 말고 local-only 팩으로 복구할 대상 |
+| 기본·선택 프리셋이 참조하는 SF2 8개 | 1,666.55 MiB | GeneralUser, Salamander piano/drum, VSCO subset, Philharmonia local pack |
+| Philharmonia 로컬 선택팩 4개 | 408.88 MiB | GeneralUser판과 별도 ID로 선택 가능; 파일이 없으면 `미설치` 표시 |
 | 임시 scratchpad의 원본·변환 중간물 | 약 7.4 GiB | 빌드 스크립트가 아직 이 임시 절대경로에 의존 |
 | 음원 관련 총 로컬 점유 | 약 9.0 GiB | 중간물 정리 전 추정 |
 
@@ -44,7 +44,7 @@ scratchpad를 바로 지우면 현재 커스텀 SF2 네 종류를 재현하기 �
 | VSCO 2 CE | 3,168 WAV / 약 3 GB | 84 sample headers | 약 2.65%. **가장 먼저 확장할 안전한 CC0 자산** |
 | Salamander Drumkit | 536 WAV | 28 sample headers | 약 5.22%. 첫 RR만 골라 원본 장점을 대부분 버림 |
 | Philharmonia | 14,374 MP3 | 4개 SF2 합계 3,170 sample headers | 약 22.05%. 다만 local-only 조건을 우선해야 함 |
-| GeneralUser GS | 287 preset map | Aria가 27개 고유 melodic programs + Standard 1 kit 사용 | 이미 가진 GM 프로그램 대다수가 숨겨져 있음 |
+| GeneralUser GS | 287 preset map | Aria가 40개 고유 melodic programs + 3개 drum programs 사용 | 이미 가진 GM 프로그램 대다수가 숨겨져 있음 |
 
 따라서 “아직 수집하지 못했다”는 말을 두 가지로 나눠야 한다. **VSCO와 Salamander 드럼은 원본을 이미 받았지만 앱이 거의 쓰지 못하는 상태**이고, VCSL·Iowa·FreePats·Karoryfer 후보는 실제로 아직 받지 않은 신규 라이브러리다.
 
@@ -54,14 +54,14 @@ scratchpad를 바로 지우면 현재 커스텀 SF2 네 종류를 재현하기 �
 
 | 파일 | 정확한 크기 | 내부 구성 | 원출처·라이선스 | 현재 사용 | 원본 잠재력 | 현재 Aria 품질 | 판단 |
 |---|---:|---|---|---|---|---|---|
-| `default.sf2` | 30.82 MiB | 287 presets / 324 instruments / 920 sample headers, 767 looped, 6~48 kHz. 내부 이름은 `GeneralUser GS 2.0.3 BETA` | [GeneralUser GS 2.0.3](https://github.com/mrbumpy409/GeneralUser-GS), 전용 허용 라이선스. 음악·소프트웨어 사용/수정 허용, 일부 포함 샘플의 정확한 기원은 저자도 100% 확신하지 못한다고 고지 | **활성 기본값** | 중~상(정상 SoundFont 엔진 기준) | **스케치~중, 악기별 편차 큼** | 31 MiB starter/fallback로 유지. 완전한 엔진 적용 전 품질 기본값으로 과신 금지 |
+| `default.sf2` | 30.82 MiB | 287 presets / 324 instruments / 920 sample headers, 767 looped, 6~48 kHz. 내부 이름은 `GeneralUser GS 2.0.3 BETA` | [GeneralUser GS 2.0.3](https://github.com/mrbumpy409/GeneralUser-GS), 전용 허용 라이선스. 음악·소프트웨어 사용/수정 허용, 일부 포함 샘플의 정확한 기원은 저자도 100% 확신하지 못한다고 고지 | **활성 기본값** | 중~상(정상 SoundFont 엔진 기준) | **스케치~중, 악기별 편차 큼** | 31 MiB starter 선택지로 유지. 완전한 엔진 적용 전 품질 기본값으로 과신 금지 |
 | `salamander.sf2` | 1,207.79 MiB | Grand Piano 1 preset / 960 sample headers = 480 L+R pairs, A0~C8, 48 kHz, 모든 키 구간 16 velocity layers | Alexander Holm의 Yamaha C5, 48 kHz/24-bit 원본, [CC BY 3.0](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html#SalamanderGrandPiano) | `sf-piano`으로 **활성** | 상 | **중~상** | 보존. 현재 엔진은 stereo pair/pan을 살리지 못해 1.2 GiB stereo 자산을 사실상 mono로 축소하는 것이 병목 |
 | `salamander-kit.sf2` | 10.07 MiB | Band Kit 1 preset / 28 sample headers / 12 pieces / 실제 1~3 velocity layers | Alexander Holm Salamander Drumkit. 로컬 archive는 CC BY-SA 3.0, [저자 공식 페이지는 2022-03-04 public-domain 전환](https://rytmenpinne.wordpress.com/sounds-and-such/salamander-drumkit/) 고지 | `sf-band-kit`으로 **활성** | 중~상(원본 전체) | **중 이하** | 현재 변환본은 각 세기의 첫 RR만 택해 원본의 반복 회피 장점을 대부분 버림. 라이선스 증빙도 manifest에 고정 필요 |
 | `vsco.sf2` | 8.98 MiB | 6 presets / 84 mono one-shot sample headers: harp, glockenspiel, marimba, xylophone, cello pizz, timpani | [VSCO 2 CE](https://versilian-studios.com/vsco-community/), CC0 | 6개 프리셋으로 **활성** | 중~상(전체판) | **중** | 원본 3,168 WAV를 이미 갖고 있지만 runtime에는 84개만 사용. “미수집”보다 **미활용**이 정확함 |
-| `philharmonia.sf2` | 142.10 MiB | 8 presets / 1,091 sample headers, 991 looped: violin, viola, cello, contrabass, violin/viola/contrabass pizz, violin sordino | [Philharmonia 공식 샘플](https://philharmonia.co.uk/resources/sound-samples/). 상업 작품 사용 가능, 샘플 또는 sampler instrument 형태 제공 금지 | **미사용** | 상 | 재연결 시 **중~상** | 삭제 금지. 로컬 전용 Orchestra HD strings 팩으로 다시 우선 연결하고 GM fallback 유지 |
-| `phil-winds.sf2` | 192.74 MiB | 8 presets / 1,435 sample headers, 전부 looped: flute, oboe, English horn, clarinet, bass clarinet, bassoon, contrabassoon, alto sax | Philharmonia, 위와 동일 | **미사용** | 상 | 재연결 시 **중~상** | 특히 GM에 독립 프리셋이 없는 bass clarinet/contrabassoon 때문에 가치 큼 |
-| `phil-brass.sf2` | 71.44 MiB | 4 presets / 620 sample headers, 전부 looped: trumpet, horn, trombone, tuba | Philharmonia, 위와 동일 | **미사용** | 상 | 재연결 시 **중~상** | GeneralUser의 짧은/ensemble 중심 대체음보다 로컬 전용 기본값으로 적합 |
-| `phil-perc.sf2` | 2.59 MiB | 1 kit / 24 one-shot sample headers / 17 mapped pieces | Philharmonia, 위와 동일 | **미사용** | 상 | 재연결 시 **중~상** | tam-tam·triangle처럼 자연 tail 차이가 큰 악기 때문에 보존 가치가 큼 |
+| `philharmonia.sf2` | 142.10 MiB | 8 presets / 1,091 sample headers, 991 looped: violin, viola, cello, contrabass, violin/viola/contrabass pizz, violin sordino | [Philharmonia 공식 샘플](https://philharmonia.co.uk/resources/sound-samples/). 상업 작품 사용 가능, 샘플 또는 sampler instrument 형태 제공 금지 | **로컬 선택팩 활성** | 상 | **중~상** | `-phil` 현악 8종으로 노출. GeneralUser판과 사용자가 명시적으로 선택 |
+| `phil-winds.sf2` | 192.74 MiB | 8 presets / 1,435 sample headers, 전부 looped: flute, oboe, English horn, clarinet, bass clarinet, bassoon, contrabassoon, alto sax | Philharmonia, 위와 동일 | **로컬 선택팩 활성** | 상 | **중~상** | `-phil` 목관·색소폰 8종. bass clarinet/contrabassoon도 독립 음색 |
+| `phil-brass.sf2` | 71.44 MiB | 4 presets / 620 sample headers, 전부 looped: trumpet, horn, trombone, tuba | Philharmonia, 위와 동일 | **로컬 선택팩 활성** | 상 | **중~상** | `-phil` 금관 4종. GeneralUser판과 별도 선택 |
+| `phil-perc.sf2` | 2.59 MiB | 1 kit / 24 one-shot sample headers / 17 mapped pieces | Philharmonia, 위와 동일 | **로컬 선택팩 활성** | 상 | **중~상** | `sf-orch-kit-phil`; tam-tam·triangle 등 자연 tail 선택지 |
 
 ### 전문 팩 내부 악기·레이어 상세
 
@@ -95,7 +95,7 @@ scratchpad를 바로 지우면 현재 커스텀 SF2 네 종류를 재현하기 �
 | Trombone | 179 | E2~E6 | 1~5 |
 | Tuba | 221 | F1~F4 | 5~6 |
 
-이 수치는 “상용 오케스트라 라이브러리급”이라는 뜻은 아니다. 원본은 MP3이고 Aria 빌더가 mono 변환·자동 loop를 적용했으며, normal sustain 중심이라 legato transition·keyswitch·continuous dynamics·RR가 없다. 다만 현재 GeneralUser fallback보다 독주 악기 정체성과 세기별 실녹음 변화가 훨씬 풍부하다는 근거는 충분하다.
+이 수치는 “상용 오케스트라 라이브러리급”이라는 뜻은 아니다. 원본은 MP3이고 Aria 빌더가 mono 변환·자동 loop를 적용했으며, normal sustain 중심이라 legato transition·keyswitch·continuous dynamics·RR가 없다. 다만 현재 GeneralUser 대체음보다 독주 악기 정체성과 세기별 실녹음 변화가 훨씬 풍부하다는 근거는 충분하다.
 
 #### Philharmonia percussion
 
@@ -131,7 +131,7 @@ scratchpad를 바로 지우면 현재 커스텀 SF2 네 종류를 재현하기 �
 
 ### 동일 음정 구조 비교에서 확인된 차이
 
-| 악기·음 | Philharmonia 로컬팩 | GeneralUser fallback | 의미 |
+| 악기·음 | Philharmonia 로컬팩 | GeneralUser 대체음 | 의미 |
 |---|---|---|---|
 | Cello C3 | 약 2.0~2.3초 source, 약 1.26~1.40초 loop, soft/hard 층 분리 | 약 1.11초 source, 약 0.211초 loop | 긴 음의 결·루프 자연스러움에서 Philharmonia 우위 |
 | Clarinet G4 | 약 2.09초 source, 약 1.4초 loop, 4 velocity layers | 약 0.25초 source, 99 ms loop, 1 layer | 다이내믹과 유지음에서 큰 차이 |
@@ -139,87 +139,100 @@ scratchpad를 바로 지우면 현재 커스텀 SF2 네 종류를 재현하기 �
 | Tam-tam | 약 8.53초 자연 one-shot | 약 1초 길이의 Chinese-cymbal 계열 loop | 같은 악기로 보기 어려운 수준의 tail 차이 |
 | Open triangle | 약 0.72초 자연 one-shot | 약 50 ms loop | 잔향의 금속성·자연 감쇠 차이 |
 
-## 4. 현재 Aria가 노출하는 56개 프리셋
+## 4. 현재 Aria가 노출하는 SoundFont 프리셋 77개
 
-### 4.1 내장 합성 악기 13개
+> **2026-08-08 제품 변경:** 코드 안에서 파형을 만들던 선율 신스 13개와 합성 드럼 3개를 제거했다. 현재 목록은 외부 SoundFont 선율 악기 71개와 샘플 드럼 6개뿐이다. GeneralUser와 Philharmonia는 별도 선택지이며, 필요한 파일·bank·program이 없거나 손상됐으면 다른 악기로 자동 대체하지 않고 설치 오류를 표시한다.
 
-| ID | 화면 이름 | 방식 | 역할 | 품질 판단 |
-|---|---|---|---|---|
-| `soft-piano` | Soft Piano | FM | 부드러운 피아노형 반주 | 합성 캐릭터. 실제 피아노 대체는 `sf-piano`가 우선 |
-| `fm-epiano` | FM E.Piano | FM | DX 계열 EP | 합성 목적 적합 |
-| `wurli` | Wurli Soft | FM | 따뜻한 EP형 질감 | 합성 스케치. 실제 Wurlitzer 샘플은 없음 |
-| `dx-lush` | DX Lush | FM | 패드성 키보드 | 합성 목적 적합 |
-| `music-box` | Music Box | FM | 오르골형 멜로디 | 합성 목적 적합 |
-| `finger-bass` | Finger Bass | 감산 | 베이스 | 실제 핑거 베이스 대체가 아니라 합성 근사 |
-| `synth-bass` | Synth Bass | 감산 | 전자 베이스 | 합성 목적 적합 |
-| `airy-synth` | Airy Synth | 감산 | 패드/리드 | 합성 목적 적합 |
-| `strings` | Strings Pad | 감산 | 현악형 패드 | 실제 현악이 아니라 패드 |
-| `pluck` | Pluck | 감산 | 리듬/아르페지오 | 합성 목적 적합 |
-| `saw-lead` | Saw Lead | 감산 | 수퍼쏘형 리드 | 합성 목적 적합 |
-| `square-lead` | Square Lead | 감산 | 칩형 리드 | 합성 목적 적합 |
-| `organ` | Organ | 가산 | drawbar organ형 | 합성 스케치. Leslie·키클릭·drawbar 변형은 없음 |
-
-### 4.2 내장 합성 드럼 3개
-
-| ID | 화면 이름 | 소스 | 판단 |
-|---|---|---|---|
-| `lofi-kit` | Lo-fi Kit | Aria 합성 | 캐릭터 킷. 실드럼 대체 아님 |
-| `acoustic-kit` | Acoustic Kit | Aria 합성 | 이름과 달리 실제 어쿠스틱 녹음이 아닌 근사 합성 |
-| `e808-kit` | 808 Kit | Aria 합성 + 설치 시 일부 Salamander 실녹음 layer | 전자 드럼 캐릭터용. 순수 808 모델만 재생하는 구조는 아님 |
-
-### 4.3 샘플 기반 선율 악기 37개
+### 4.1 SoundFont 선율 악기 71개
 
 | ID | 화면 이름 | 현재 실제 소스 | 현재 품질 | 비고 |
 |---|---|---|---|---|
-| `sf-piano` | Grand Piano | Salamander C5 | 중~상 | 전용 1.2 GiB 팩 |
-| `sf-epiano` | Tine E.Piano | GeneralUser | 스케치~중 | 전용 Rhodes/Tine 라이브러리 미수집 |
-| `sf-vibes` | Vibraphone | GeneralUser | 스케치 | VCSL/VSCO의 전용 후보 있음 |
-| `sf-organ` | Drawbar Organ | GeneralUser | 스케치~중 | GeneralUser modulators를 현재 엔진이 온전히 재현하지 못함 |
-| `sf-nylon` | Nylon Guitar | GeneralUser | 스케치 | strum, fret position, mute, release 미지원 |
-| `sf-steel` | Steel Guitar | GeneralUser | 스케치 | 실제 기타 주법 라이브러리 필요 |
-| `sf-bass` | Finger Bass | GeneralUser | 스케치 | slide/ghost/mute/release 미지원 |
-| `sf-strings` | String Ensemble | GeneralUser | 스케치~중 | 앙상블 sketch용 |
-| `sf-violin` | Violin | GeneralUser | 스케치 | Philharmonia 로컬팩이 설치됐지만 미연결 |
-| `sf-viola` | Viola | GeneralUser | 스케치 | 위와 동일 |
-| `sf-cello` | Cello | GeneralUser | 스케치 | 위와 동일 |
-| `sf-contrabass` | Contrabass | GeneralUser | 스케치 | 위와 동일 |
-| `sf-violin-pizz` | Pizzicato Strings (High) | GeneralUser GM45 | 스케치 | 독주 violin pizz가 아니라 ensemble fallback |
-| `sf-viola-pizz` | Pizzicato Strings (Mid) | GeneralUser GM45 | 스케치 | 위와 동일 |
-| `sf-contrabass-pizz` | Acoustic Bass (Pizz.) | GeneralUser GM32 | 스케치 | orchestral contrabass pizz가 아닌 acoustic bass 대체 |
-| `sf-violin-sord` | Slow Strings | GeneralUser GM49 | 스케치 | sordino 독주가 아닌 slow strings 대체 |
-| `sf-choir` | Choir Aahs | GeneralUser | 스케치 | 전용 choir/voice 라이브러리 없음 |
-| `sf-brass` | Brass Section | GeneralUser | 스케치~중 | 섹션 스탭 확인용 |
-| `sf-sax` | Alto Sax | GeneralUser | 스케치 | Philharmonia alto sax 설치본은 미연결 |
-| `sf-flute` | Flute | GeneralUser | 스케치 | Philharmonia 설치본은 미연결 |
-| `sf-oboe` | Oboe | GeneralUser | 스케치 | 위와 동일 |
-| `sf-english-horn` | English Horn | GeneralUser | 스케치 | 위와 동일 |
-| `sf-clarinet` | Clarinet | GeneralUser | 스케치 | 위와 동일 |
-| `sf-bass-clarinet` | Bass Clarinet (Sketch) | GeneralUser clarinet 저역 | 스케치 | 전용 음색이 아니므로 Philharmonia 복구 가치가 큼 |
-| `sf-bassoon` | Bassoon | GeneralUser | 스케치 | Philharmonia 설치본은 미연결 |
-| `sf-contrabassoon` | Contrabassoon (Sketch) | GeneralUser bassoon 저역 | 스케치 | 전용 음색이 아님 |
-| `sf-horn` | French Horn | GeneralUser | 스케치 | ensemble 성격이 강함 |
-| `sf-trumpet` | Trumpet | GeneralUser | 스케치 | Philharmonia 설치본은 미연결 |
-| `sf-trombone` | Trombone | GeneralUser | 스케치 | 위와 동일 |
-| `sf-tuba` | Tuba | GeneralUser | 스케치 | 위와 동일 |
+| `sf-piano-gm` | Grand Piano (GM) | GeneralUser GM0 | 스케치~중 | 경량 기본 피아노 |
+| `sf-piano` | Grand Piano (Salamander) | Salamander C5 | 중~상 | 기존 곡 호환 ID. 전용 1.2 GiB 팩 |
+| `sf-epiano` | Tine E.Piano (GM) | GeneralUser | 스케치~중 | 전용 Rhodes/Tine 라이브러리 미수집 |
+| `sf-fm-epiano` | Electric Piano 2 (GM) | GeneralUser GM5 | 스케치 | Wurli 계열 곡의 외부 샘플 대체음 |
+| `sf-music-box` | Music Box (GM) | GeneralUser GM10 | 스케치 | 오르골 계열 샘플 |
+| `sf-vibes` | Vibraphone (GM) | GeneralUser | 스케치 | VCSL/VSCO의 전용 후보 있음 |
+| `sf-glockenspiel-gm` | Glockenspiel (GM) | GeneralUser GM9 | 스케치 | VSCO판과 별도 선택 |
+| `sf-marimba-gm` | Marimba (GM) | GeneralUser GM12 | 스케치 | VSCO판과 별도 선택 |
+| `sf-xylophone-gm` | Xylophone (GM) | GeneralUser GM13 | 스케치 | VSCO판과 별도 선택 |
+| `sf-organ` | Drawbar Organ (GM) | GeneralUser | 스케치~중 | GeneralUser modulators를 현재 엔진이 온전히 재현하지 못함 |
+| `sf-nylon` | Nylon Guitar (GM) | GeneralUser | 스케치 | strum, fret position, mute, release 미지원 |
+| `sf-steel` | Steel Guitar (GM) | GeneralUser | 스케치 | 실제 기타 주법 라이브러리 필요 |
+| `sf-bass` | Finger Bass (GM) | GeneralUser | 스케치 | slide/ghost/mute/release 미지원 |
+| `sf-synth-bass` | Synth Bass 1 (GM) | GeneralUser GM38 | 스케치 | 전자 베이스의 정적 SoundFont 샘플 |
+| `sf-pizzicato` | Pizzicato Pluck (GM) | GeneralUser GM45 | 스케치 | 플럭 역할의 외부 샘플 대체음 |
+| `sf-harp-gm` | Orchestral Harp (GM) | GeneralUser GM46 | 스케치 | VSCO판과 별도 선택 |
+| `sf-timpani-gm` | Timpani (GM) | GeneralUser GM47 | 스케치 | VSCO판과 별도 선택 |
+| `sf-strings` | String Ensemble (GM) | GeneralUser | 스케치~중 | 앙상블 sketch용 |
+| `sf-fantasia` | New Age Pad (GM) | GeneralUser GM88 | 스케치 | 패드 계열 정적 샘플 |
+| `sf-warm-pad` | Warm Pad (GM) | GeneralUser GM89 | 스케치 | 웜 패드 계열 정적 샘플 |
+| `sf-square-lead` | Square Lead (GM) | GeneralUser GM80 | 스케치 | chip-inspired 정적 샘플 |
+| `sf-saw-lead` | Saw Lead (GM) | GeneralUser GM81 | 스케치 | 전자 리드 정적 샘플 |
+| `sf-violin` | Violin (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-viola` | Viola (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-cello` | Cello (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-contrabass` | Contrabass (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-violin-pizz` | Pizzicato Strings High (GM) | GeneralUser GM45 | 스케치 | 독주 violin pizz가 아니라 ensemble 대체음 |
+| `sf-viola-pizz` | Pizzicato Strings Mid (GM) | GeneralUser GM45 | 스케치 | 위와 동일 |
+| `sf-contrabass-pizz` | Acoustic Bass Pizz. (GM) | GeneralUser GM32 | 스케치 | orchestral contrabass pizz가 아닌 acoustic bass 대체 |
+| `sf-violin-sord` | Slow Strings (GM) | GeneralUser GM49 | 스케치 | sordino 독주가 아닌 slow strings 대체 |
+| `sf-choir` | Choir Aahs (GM) | GeneralUser | 스케치 | 전용 choir/voice 라이브러리 없음 |
+| `sf-brass` | Brass Section (GM) | GeneralUser | 스케치~중 | 섹션 스탭 확인용 |
+| `sf-sax` | Alto Sax (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-flute` | Flute (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-oboe` | Oboe (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-english-horn` | English Horn (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-clarinet` | Clarinet (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-bass-clarinet` | Bass Clarinet (GM Sketch) | GeneralUser clarinet 저역 | 스케치 | 전용 Philharmonia판과 별도 선택 |
+| `sf-bassoon` | Bassoon (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-contrabassoon` | Contrabassoon (GM Sketch) | GeneralUser bassoon 저역 | 스케치 | 전용 Philharmonia판과 별도 선택 |
+| `sf-horn` | French Horn (GM) | GeneralUser | 스케치 | ensemble 성격이 강하며 Philharmonia판과 별도 선택 |
+| `sf-trumpet` | Trumpet (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-trombone` | Trombone (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
+| `sf-tuba` | Tuba (GM) | GeneralUser | 스케치 | Philharmonia판과 별도 선택 |
 | `sf-timpani` | Timpani (VSCO) | VSCO 선별팩 | 중 | 키에 따라 1~5층, F#1~D#2 범위 제한 |
 | `sf-harp` | Harp (VSCO) | VSCO 선별팩 | 중 | 22 headers, 단일 velocity 선별본 |
 | `sf-glockenspiel` | Glockenspiel (VSCO) | VSCO 선별팩 | 중 | 단일 계열 선별본 |
 | `sf-marimba` | Marimba (VSCO) | VSCO 선별팩 | 중 | 단일 계열 선별본 |
 | `sf-xylophone` | Xylophone (VSCO) | VSCO 선별팩 | 중 | 단일 계열 선별본 |
 | `sf-cello-pizz` | Cello Pizz (VSCO) | VSCO 선별팩 | 중 | 2 velocity, RR1만 사용 |
-| `sf-bandoneon` | Tango Accordion | GeneralUser | 스케치~중 | 실제 bandoneon 전용팩은 없음 |
+| `sf-bandoneon` | Tango Accordion (GM) | GeneralUser | 스케치~중 | 실제 bandoneon 전용팩은 없음 |
+| `sf-violin-phil` | Violin (Philharmonia) | Philharmonia strings | 중~상 | 4~6 velocity layers/key |
+| `sf-viola-phil` | Viola (Philharmonia) | Philharmonia strings | 중~상 | 1~5 layers/key |
+| `sf-cello-phil` | Cello (Philharmonia) | Philharmonia strings | 중~상 | 4~5 layers/key |
+| `sf-contrabass-phil` | Contrabass (Philharmonia) | Philharmonia strings | 중~상 | 4~6 layers/key |
+| `sf-violin-pizz-phil` | Violin Pizz. (Philharmonia) | Philharmonia strings | 중~상 | 독주 violin pizzicato |
+| `sf-viola-pizz-phil` | Viola Pizz. (Philharmonia) | Philharmonia strings | 중~상 | 독주 viola pizzicato |
+| `sf-contrabass-pizz-phil` | Contrabass Pizz. (Philharmonia) | Philharmonia strings | 중 | 단일층이지만 전용 악기 |
+| `sf-violin-sord-phil` | Violin Sordino (Philharmonia) | Philharmonia strings | 중~상 | 전용 con sordino 2~3층 |
+| `sf-flute-phil` | Flute (Philharmonia) | Philharmonia winds | 중~상 | 1~5 layers/key |
+| `sf-oboe-phil` | Oboe (Philharmonia) | Philharmonia winds | 중~상 | 1~5 layers/key |
+| `sf-english-horn-phil` | English Horn (Philharmonia) | Philharmonia winds | 중~상 | 5~6 layers/key |
+| `sf-clarinet-phil` | Clarinet (Philharmonia) | Philharmonia winds | 중~상 | 4 layers/key |
+| `sf-bass-clarinet-phil` | Bass Clarinet (Philharmonia) | Philharmonia winds | 중~상 | GeneralUser 저역 근사와 다른 전용 음색 |
+| `sf-bassoon-phil` | Bassoon (Philharmonia) | Philharmonia winds | 중~상 | 1~5 layers/key |
+| `sf-contrabassoon-phil` | Contrabassoon (Philharmonia) | Philharmonia winds | 중~상 | GeneralUser 저역 근사와 다른 전용 음색 |
+| `sf-sax-phil` | Alto Sax (Philharmonia) | Philharmonia winds | 중~상 | 1~6 layers/key |
+| `sf-trumpet-phil` | Trumpet (Philharmonia) | Philharmonia brass | 중~상 | 1~4 layers/key |
+| `sf-horn-phil` | French Horn (Philharmonia) | Philharmonia brass | 중~상 | 1~3 layers/key |
+| `sf-trombone-phil` | Trombone (Philharmonia) | Philharmonia brass | 중~상 | 1~5 layers/key |
+| `sf-tuba-phil` | Tuba (Philharmonia) | Philharmonia brass | 중~상 | 5~6 layers/key |
 
-### 4.4 샘플 드럼 3개
+### 4.2 샘플 드럼 6개
 
 | ID | 화면 이름 | 현재 실제 소스 | 현재 품질 | 비고 |
 |---|---|---|---|---|
-| `sf-kit` | Studio Kit | GeneralUser Standard Kit | 스케치~중 | 완전한 SoundFont engine 적용 시 개선 여지 |
+| `sf-kit` | Studio Kit (GM) | GeneralUser Standard Kit | 스케치~중 | 완전한 SoundFont engine 적용 시 개선 여지 |
+| `sf-808-kit` | Electronic Kit (GM) | GeneralUser Electronic Kit | 스케치 | 전자 드럼의 정적 SoundFont 샘플 |
+| `sf-brush-kit` | Brush Kit (GM) | GeneralUser Brush Kit | 스케치 | 브러시 드럼의 정적 SoundFont 샘플 |
 | `sf-band-kit` | Band Kit (Salamander) | Salamander 축소 변환본 | 중 이하 | 12 pieces, 28 headers. 원본 RR·피스 다양성을 크게 줄임 |
-| `sf-orch-kit` | Extended GM Percussion | GeneralUser Orchestral/GM mapping | 스케치 | tam-tam 등 일부는 전용 Philharmonia와 질적으로 다름 |
+| `sf-orch-kit` | Extended Percussion (GM) | GeneralUser Orchestral/GM mapping | 스케치 | tam-tam 등 일부는 전용 Philharmonia와 질적으로 다름 |
+| `sf-orch-kit-phil` | Orchestral Percussion (Philharmonia) | Philharmonia local pack | 중~상 | 17피스 전용 실녹음; 파일이 없으면 비활성 |
 
-### 4.5 GeneralUser 안에 있지만 UI에 숨겨진 자산
+### 4.3 GeneralUser 안에 있지만 UI에 숨겨진 자산
 
-`default.sf2`는 GM bank 0의 128개 melodic programs를 모두 포함하지만 Aria의 현재 30개 ID는 **27개 고유 프로그램**만 사용한다. 즉 101개 GM 프로그램과 12개 추가 drum kits, 다수 GS variation이 UI에서 선택되지 않는다. harpsichord, clavinet, celesta, soprano/tenor/baritone sax, piccolo, recorder, pan flute, tubular bells, synth lead/pad, ethnic instruments 등이 여기에 포함된다.
+`default.sf2`는 GM bank 0의 128개 melodic programs를 모두 포함하지만 Aria의 현재 GeneralUser 선율 ID는 **40개 고유 프로그램**만 사용한다. 즉 88개 GM 프로그램과 여러 추가 drum kits, 다수 GS variation이 UI에서 선택되지 않는다. harpsichord, clavinet, celesta, soprano/tenor/baritone sax, piccolo, recorder, pan flute, tubular bells, ethnic instruments 등이 여기에 포함된다.
 
 이를 전부 버튼으로 노출할 필요는 없다. Aria의 단순한 UX는 유지하되 AI가 필요할 때 내부적으로 고르거나, `건반 > 밝은 피아노/하프시코드`, `관악 > 높은 플루트/낮은 색소폰`처럼 쉬운 의미 그룹으로 선별하는 편이 낫다.
 
@@ -234,30 +247,30 @@ scratchpad를 바로 지우면 현재 커스텀 SF2 네 종류를 재현하기 �
 
 ## 5. 중복은 어떻게 정리할 것인가
 
-중복을 전부 삭제하면 안 된다. 같은 악기라도 **starter fallback**, **고품질 실녹음**, **캐릭터 음색**의 역할이 다르다.
+중복을 전부 삭제하면 안 된다. 같은 악기라도 **경량 starter**, **고품질 실녹음**, **캐릭터 샘플**의 역할이 다르다. 다만 이 선택은 별도 프리셋으로 노출해야 하며, 파일이 없을 때 다른 음원으로 몰래 바꾸면 안 된다.
 
 | 악기군 | 겹치는 소스 | 권장 기본 | 남겨둘 이유 |
 |---|---|---|---|
-| Grand piano | built-in Soft Piano / GeneralUser / Salamander | Salamander HD, 미설치 시 GeneralUser | Soft Piano는 합성 캐릭터, GeneralUser는 가벼운 fallback |
-| 현악 독주 | GeneralUser / Philharmonia | 로컬 설치 시 Philharmonia | GeneralUser는 31 MiB starter와 곡 호환 fallback |
-| 목관·금관 | GeneralUser / Philharmonia | 로컬 설치 시 Philharmonia | bass clarinet·contrabassoon의 실제 전용 음색 보존 |
-| 말렛·harp·timpani | GeneralUser / VSCO subset | VSCO subset | GeneralUser는 미설치·범위 밖 fallback |
-| 어쿠스틱 드럼 | 합성 Acoustic / GeneralUser / Salamander 축소본 | Salamander 또는 향후 전용 band pack | 합성은 캐릭터, GeneralUser는 초경량, 전용팩은 사실감 담당 |
-| 오케스트라 타악 | GeneralUser / Philharmonia | 로컬 설치 시 Philharmonia | 긴 자연 tail과 악기 정체성이 다름 |
-| EP/organ | built-in synth / GeneralUser | 곡 성격에 따라 병존 | 한쪽은 음색 설계, 한쪽은 샘플형 sketch. 아직 고급 실녹음 기본값은 없음 |
+| Grand piano | GeneralUser bank / Salamander | 용도에 따라 명시적으로 선택 | `sf-piano-gm`은 경량 GM, `sf-piano`는 HD. 어느 쪽도 다른 쪽으로 자동 대체하지 않음 |
+| 현악 독주 | GeneralUser / Philharmonia | 두 소스를 별도 프리셋으로 제공 | GeneralUser는 경량 starter, Philharmonia는 로컬 전용 고품질 선택지 |
+| 목관·금관 | GeneralUser / Philharmonia | 두 소스를 별도 프리셋으로 제공 | bass clarinet·contrabassoon의 실제 전용 음색 보존 |
+| 말렛·harp·timpani | GeneralUser / VSCO subset | VSCO subset | GeneralUser판이 필요하면 별도 경량 프리셋으로 노출 |
+| 드럼 | GeneralUser studio/electronic/brush / Salamander band | 사용 목적에 따라 명시적으로 선택 | GeneralUser는 경량·전자 색채, Salamander는 실드럼 질감 담당 |
+| 오케스트라 타악 | GeneralUser / Philharmonia | 두 소스를 별도 프리셋으로 제공 | 긴 자연 tail과 악기 정체성이 다름 |
+| EP/organ | GeneralUser | 현재는 경량 샘플만 사용 | 전용 실녹음 EP와 조절 가능한 tonewheel/Leslie는 아직 없음 |
 
-UI에서는 악기 하나 아래에 `기본`, `HD`, `캐릭터` 변형으로 보여주고, 56개를 평평한 목록으로 늘어놓지 않는 편이 Aria의 비전과 맞다.
+UI에서는 악기 하나 아래에 `GM`, `Philharmonia`, `VSCO` 변형으로 묶어 보여주고, 77개를 평평한 목록으로 늘어놓지 않는 편이 Aria의 비전과 맞다.
 
 ## 6. 아직 부족하거나 사실상 없는 음원
 
 | 악기군 | 현재 상태 | 실질 공백 | 우선도 |
 |---|---|---|---:|
-| Solo/section strings | Philharmonia normal/pizz/sord가 로컬에 있으나 미사용 | staccato, tremolo, legato/transition, 여러 RR와 section 운용 | P0: 기존 복구 / P1: 확장 |
+| Solo/section strings | Philharmonia normal/pizz/sord가 로컬 선택지로 활성 | staccato, tremolo, legato/transition, 여러 RR와 section 운용 | P1: articulation·section 확장 |
 | Woodwinds/brass | Philharmonia normal 중심 | staccato/accent/legato, piccolo, bass flute, soprano/tenor/baritone sax, bass trombone | P1 |
 | Acoustic/electric guitar | GeneralUser 근사만 있음 | 실제 strum, palm mute, fret/position, release/noise, chord voicing | P1 |
-| Electric/acoustic bass | GeneralUser·합성 근사 | finger/pick/slap/ghost/slide/mute/RR | P1 |
+| Electric/acoustic bass | GeneralUser 샘플 | finger/pick/slap/ghost/slide/mute/RR | P1 |
 | Band drums | 28-header 축소본 | RR, 더 많은 cymbal/hat articulation, brush, mic/room 선택 | P1 |
-| Rhodes/Wurli/organ | 합성 + GeneralUser | 전용 실녹음 EP, pedal/release, Leslie/rotor | P1~P2 |
+| Rhodes/Wurli/organ | GeneralUser 샘플 | 전용 실녹음 EP, pedal/release, Leslie/rotor | P1~P2 |
 | Choir/voice | GeneralUser Aahs뿐 | 남녀/section, vowels, dynamics, releases, phrases가 아닌 chromatic playable choir | P1, 단 권리 검토 중요 |
 | World/folk | GeneralUser 내부 일부가 UI에 노출되지 않음 | kalimba/mbira, recorders, harmonica, didgeridoo, hand percussion, regional strings | P2 |
 | Orchestral color percussion | VSCO 4 mallet + Philharmonia 일부 | vibraphone, tubular bells, gong, bell tree, mark tree, hand percussion 확장 | P1~P2 |
@@ -289,9 +302,9 @@ UI에서는 악기 하나 아래에 `기본`, `HD`, `캐릭터` 변형으로 보
 | [FreePats Muldjord stereo kit](https://freepats.zenvoid.org/Percussion/acoustic-drum-kit.html) | SF2 53 MiB. 2 kicks, snare, 4 toms, HH, crashes, rides, china | CC BY 4.0 | velocity layers. randomized 동작은 SFZ판에만 있음 | metal/rock 확장용 즉시 A/B 후보 |
 | [FreePats clean/jazz/direct electric guitar](https://freepats.zenvoid.org/ElectricGuitar/clean-electric-guitar.html) | SF2 129/66/60 MiB | CC0 | Fender direct와 amp/effect 처리 버전. layer/RR 상세는 불명 | GeneralUser보다 출처는 명확. **청취 전 premium 판정 금지** |
 | [FreePats distorted electric guitar](https://freepats.zenvoid.org/ElectricGuitar/distorted-electric-guitar.html) | SF2 317/121 MiB | CC0 | distorted/processed 버전, layer/RR 상세 불명 | rock guitar 색채 A/B 후보. amp/cab 편집성은 낮음 |
-| [FreePats clean electric bass](https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html) | pick 2.2 MiB / finger 2.5 MiB SF2 | CC0 | layer/RR 상세 불명 | 크기는 좋지만 flagship가 아니라 임시 fallback 후보 |
+| [FreePats clean electric bass](https://freepats.zenvoid.org/ElectricGuitar/clean-electric-bass.html) | pick 2.2 MiB / finger 2.5 MiB SF2 | CC0 | layer/RR 상세 불명 | 크기는 좋지만 flagship가 아니라 경량 선택지 후보 |
 | [FreePats electric organ](https://freepats.zenvoid.org/Organ/electric-organ.html) | drawbar 5.8 MiB, percussive 12 MiB, rock 12 MiB SF2 | CC0 | setBfree 출력을 정적으로 샘플한 bank | 즉시 사용 가능하지만 drawbar/Leslie 조절은 없음 |
-| [FreePats synthesized FM piano](https://freepats.zenvoid.org/ElectricPiano/synthesized-piano.html) | 13/4.6 MiB SF2 | CC0 | synth 출력의 정적 sample | built-in FM EP와 기능 중복. 낮은 우선순위 |
+| [FreePats synthesized FM piano](https://freepats.zenvoid.org/ElectricPiano/synthesized-piano.html) | 13/4.6 MiB SF2 | CC0 | synth 출력의 정적 sample | 현재 GeneralUser Electric Piano 2와 역할이 겹친다. 낮은 우선순위 |
 
 #### SFZ 또는 전용 mapping을 도입할 때 가치가 큰 후보
 
@@ -314,7 +327,7 @@ UI에서는 악기 하나 아래에 `기본`, `HD`, `캐릭터` 변형으로 보
 | [Dave Choir](https://www.decentsamples.com/product/dave-choir-kontakt/) | 68 MiB, 한 baritone voice를 16회 overdub, Ah/Ooh, 352 notes, 1 layer/0 RR | 무료 SFZ/Kontakt/Decent Sampler지만 [EULA](https://www.decentsamples.com/decent-samples-end-user-license-agreement/)가 샘플 재배포를 금지 | 링크를 통한 user-installed 비교만. flagship choir로는 얕음 |
 | [Karoryfer 272 Merry Orks](https://shop.karoryfer.com/pages/free-272-merry-orks) | 38 MiB, female death-metal phonemes, vowels 3 RR/consonants 4 RR | CC0 | 특수 보컬 효과. choir 대체가 아님 |
 | Karoryfer Hadziha/Torgbe | 약 0.98/1 GB, 2,300/3,800 samples의 실제 choir 상품 | 유료 SFZ이며 sample redistribution 허용 근거 없음 | user-installed 상용팩 후보일 뿐 Aria 배포 자산 아님 |
-| [FreePats Synth Pad Choir](https://freepats.zenvoid.org/Synthesizer/synth-pad.html) | 소형 SF2 | CC0 | 합성 pad | 현재 GeneralUser/built-in 영역과 중복, 실제 choir 아님 |
+| [FreePats Synth Pad Choir](https://freepats.zenvoid.org/Synthesizer/synth-pad.html) | 소형 SF2 | CC0 | 합성 pad | 현재 GeneralUser pad 영역과 중복, 실제 choir 아님 |
 
 추가로 남은 진짜 공백은 **permissive steel-string acoustic guitar, slap/pop bass, true Rhodes/Clavinet, 조절 가능한 tonewheel+Leslie organ, redistributable real choir/solo voice**다. 이름이 비슷한 근사 음원을 억지로 “수집 완료”로 표시하면 안 된다.
 
@@ -345,7 +358,6 @@ UI에서는 악기 하나 아래에 `기본`, `HD`, `캐릭터` 변형으로 보
 | Velocity layer hard switch | layer 경계에서 음색과 음량이 갑자기 바뀔 수 있음 | 원본 의도에 맞는 layer curve/crossfade 지원 |
 | Exclusive group 미지원 | open/closed hi-hat choke 등 실제 드럼 동작이 어색함 | SF2 exclusiveClass 및 SFZ group/off_by 지원 |
 | Round robin 미보존 | 같은 드럼/short articulation 반복에서 machine-gun 효과 | 원본 RR을 manifest/build/runtime 모두에 유지 |
-| SF preset `detuneCents` 미적용 | ensemble 옵션이 실제 detune stacking이 아니라 미세 지연 복제에 머묾 | sample playback pitch 계산에 detune을 반영하고 회귀 검사 |
 | SFZ 미지원 | VSCO/VCSL/VPO의 공식 patch와 articulation을 버리고 축소 변환해야 함 | 필요한 SFZ opcode subset 구현 또는 별도 engine 검토. [sfizz](https://github.com/sfztools/sfizz)는 BSD-2-Clause지만 2026-06-21 archive되어 유지보수 인수/포크 위험을 먼저 평가. [liquidsfz](https://github.com/swesterfeld/liquidsfz)는 RR·keyswitch·CC crossfade를 지원하는 현행 PoC 후보지만 macOS/Windows 빌드와 MPL-2.0 통합을 먼저 검증 |
 | 모든 SF2를 통째로 메모리에 로드/cache | 1.2 GiB piano와 향후 3~5 GB 팩에서 메모리 압박 | sample streaming, lazy zone/sample load, FLAC/SF3 전략 |
 
@@ -355,7 +367,7 @@ GeneralUser 공식 문서는 standards-compliant synth 의존성이 높고 BASSM
 
 | 팩 | 기본 포함 여부 | 내용 | 설치 방식 |
 |---|---|---|---|
-| Starter | 예 | GeneralUser 또는 더 명확한 starter bank + Aria 내장 synth | 앱 첫 실행 시 경량 다운로드. 완전한 SF2 engine 전제 |
+| Starter | 예 | GeneralUser 또는 더 명확한 외부 starter bank | 앱 첫 실행 시 경량 다운로드. 완전한 SF2 engine 전제 |
 | Piano HD | 선택 | Salamander C5 | 공식 출처/저자/CC BY 표시 후 다운로드, attribution 보존 |
 | Orchestra HD Local | 선택 | Philharmonia strings/winds/brass/perc | 공식 원본을 사용자 컴퓨터가 직접 받아 로컬 빌드. 변환본 재배포 금지 |
 | Orchestra Open | 선택 | VSCO 2 CE full + 필요한 FreePats/Iowa 보강 | CC0 중심. 악기/주법 단위 선택 설치 |
@@ -375,7 +387,7 @@ GeneralUser 공식 문서는 standards-compliant synth 의존성이 높고 BASSM
 | `format`, `engineRequirements` | SF2/SF3/SFZ/WAV, 필요한 opcode/engine |
 | `bytes`, `sha256`, `installedFiles` | 다운로드 무결성·중복·업데이트 판단 |
 | `instruments`, `articulations`, `velocityLayers`, `roundRobins`, `micPositions` | 품질과 기능을 UI/AI가 이해하는 데이터 |
-| `fallbackPreset`, `legacyAliases` | 팩이 없을 때 기존 곡을 깨뜨리지 않음 |
+| `replacementPreset`, `legacyAliases`, `missingAssetBehavior` | 기존 곡 이전 후보를 기록하되 자동 대체하지 않고 설치/교체 선택지를 명시 |
 | `qualityEvidence`, `knownLimitations` | 홍보 문구와 실제 Aria 재생 품질을 분리 |
 
 권장 경로는 `~/.aria/assets/<pack-id>/<version>/`이며, 원본 cache와 생성된 runtime pack을 분리한다. Git에는 manifest, 빌더, 라이선스/attribution 텍스트만 추적한다.
@@ -385,10 +397,10 @@ GeneralUser 공식 문서는 standards-compliant synth 의존성이 높고 BASSM
 | 문제 | 현재 증거 | 영향 | 수정 방향 |
 |---|---|---|---|
 | 임시 절대경로 의존 | `tools/build-*.mjs` 네 파일이 `/private/tmp/.../scratchpad`를 하드코딩 | 다른 컴퓨터·새 세션에서 재빌드 불가 | manifest의 asset root 또는 CLI 인자로 전환 |
-| 잘못된 SF2 저작권 메타데이터 | `tools/sf2write.mjs`가 모든 결과의 `ICOP`를 Philharmonia로 고정 | VSCO와 Salamander 변환본에도 잘못된 출처가 삽입됨 | writer에 pack별 INFO metadata 전달 |
+| SF2 저작권 메타데이터 | writer의 Philharmonia 고정값은 제거했고 빌더가 팩별 `ICOP`를 전달 | 기존에 이미 생성한 파일은 재빌드 전까지 옛 메타가 남을 수 있음 | manifest·라이선스 스냅샷을 만든 뒤 팩별로 재빌드 |
 | 라이선스 파일 미동봉 | 런타임 폴더에는 SF2만 있고 attribution/license manifest 없음 | 배포·감사·업데이트 시 근거 소실 | 각 팩 옆에 license snapshot과 provenance JSON 저장 |
 | Aria 자체 LICENSE/NOTICE 없음 | 저장소 root에 프로젝트 라이선스와 third-party notice가 없음 | 공개 배포 범위와 제3자 자산 고지가 불명확 | 코드 라이선스 결정 후 root LICENSE + THIRD_PARTY_NOTICES 추가 |
-| Philharmonia 설치본 미참조 | `src/presets.js`가 관련 `font` pin을 제거한 상태 | 이미 가진 고품질 음원을 못 쓰고 GM 대체음으로 재생 | local pack 감지 시 우선, 없으면 GeneralUser fallback |
+| 악기 선택 목록의 탐색성 | 같은 악기의 GM/Philharmonia/VSCO/Salamander 변형은 현재 악기 가족별로 묶임 | 71개 선율 악기가 늘면 가족 자체를 찾는 스크롤은 여전히 길어질 수 있음 | 현재 묶음과 저장 ID·strict 누락 표시는 유지하고, 필요할 때 악기 대분류나 검색을 추가 |
 | Salamander drum RR 손실 | builder가 velocity별 첫 RR만 선택 | 반복 드럼이 기계적으로 들릴 수 있음 | 원본 RR 보존 가능한 SFZ/runtime 구조로 재작성 |
 | GeneralUser 엔진 불일치 | 공식 문서는 완전한 synth 의존, 현재 parser는 modulator/filter/LFO 생략 | 작은 파일의 장점을 제대로 못 살림 | 엔진 A/B 후 parser 교체/보강 |
 
@@ -396,8 +408,8 @@ GeneralUser 공식 문서는 standards-compliant synth 의존성이 높고 BASSM
 
 ### P0 — 가진 것을 잃지 않고 정상화
 
-1. Philharmonia 4개를 삭제하지 않고 `local-only`로 manifest 등록한다.
-2. Philharmonia 설치 시 해당 20개 악기+타악을 우선 사용하고, 미설치 시 GeneralUser로 자동 fallback한다.
+1. 현재 별도 프리셋으로 연결된 Philharmonia 4개를 `local-only` manifest에 등록한다.
+2. 현재 구현된 악기별 `GM / Philharmonia / VSCO / Salamander` 변형 묶음과 미설치 표시를 회귀 테스트로 유지한다.
 3. 임시 scratchpad 7.4 GiB를 영구 asset cache로 옮기고 원출처 URL·라이선스·hash를 연결한다.
 4. `sf2write`의 잘못된 `ICOP`와 빌드 절대경로를 수정한다.
 5. 현재 8개 파일의 동일 음정 A/B와 대표 곡 회귀 청취를 보존한다.
@@ -415,7 +427,7 @@ GeneralUser 공식 문서는 standards-compliant synth 의존성이 높고 BASSM
 1. VCSL의 world/hand percussion/recorders/harmonicas/organ을 악기 단위로 추가한다.
 2. Iowa에서 bass flute, bass clarinet, sax, bass trombone 등을 선별한다.
 3. 전용 Rhodes/Wurli/organ 팩을 검증한다.
-4. 범용 choir는 권리와 재생 방식이 명확한 후보가 나올 때까지 GeneralUser fallback로 남긴다.
+4. 범용 choir는 권리와 재생 방식이 명확한 후보가 나올 때까지 GeneralUser Choir Aahs를 현재 선택지로 남긴다.
 
 ## 12. 파일 무결성 부록
 

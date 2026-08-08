@@ -6,10 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { state, subscribe, runOp, libraryNames, keyInfo } from "./core.js";
 import { playInfo } from "./player.js";
-import { renderRange, wavBuffer, toneDefaults } from "./synth.js";
+import { renderRange, wavBuffer, toneDefaults } from "./renderer.js";
 import { totalBars, beatsPerBar, tempoSegments, beatToSec } from "./song.js";
-import { PRESETS, DRUM_KITS, DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS } from "./presets.js";
-import { sf2Available } from "./sf2.js";
+import { DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS } from "./presets.js";
+import { fontStatus } from "./sf2.js";
 import {
   PREFERRED_PORT,
   PORT_ATTEMPTS,
@@ -88,21 +88,25 @@ export function startWeb() {
         const ping = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* noop */ } }, 25000);
         req.on("close", () => { clearInterval(ping); sseClients.delete(res); });
       } else if (req.method === "GET" && url.pathname === "/api/meta") {
-        const sfOk = sf2Available();
+        const metaPreset = p => {
+          const st = fontStatus(p);
+          return {
+            name: `${p.name} ⬡${st.available ? "" : " · 미설치"}`,
+            desc: p.desc,
+            available: st.available,
+            font: st.name,
+            issue: st.reason,
+            family: p.family ?? null,
+            source: p.source ?? null
+          };
+        };
         const json = {
-          presets: {
-            ...Object.fromEntries(Object.entries(PRESETS).map(([id, p]) => [id, { name: p.name, desc: p.desc }])),
-            ...(sfOk ? Object.fromEntries(Object.entries(SF_PRESETS).map(([id, p]) => [id, { name: `${p.name} ⬡`, desc: p.desc }])) : {})
-          },
-          drumKits: {
-            ...Object.fromEntries(Object.entries(DRUM_KITS).map(([id, k]) => [id, { name: k.name, desc: k.desc }])),
-            ...(sfOk ? Object.fromEntries(Object.entries(SF_DRUM_KITS).map(([id, k]) => [id, { name: `${k.name} ⬡`, desc: k.desc }])) : {})
-          },
+          presets: Object.fromEntries(Object.entries(SF_PRESETS).map(([id, p]) => [id, metaPreset(p)])),
+          drumKits: Object.fromEntries(Object.entries(SF_DRUM_KITS).map(([id, p]) => [id, metaPreset(p)])),
           drumPieces: Object.keys(DRUM_PIECES),
           templates: Object.fromEntries(Object.entries(TEMPLATES).map(([id, t]) => [id, { name: t.name, desc: t.desc }])),
           // 프리셋별 음색 기본값 — GUI의 음색 판이 "기본" 눈금을 정직한 위치에 찍는 데 쓴다
-          tone: Object.fromEntries([...Object.keys(PRESETS), ...Object.keys(DRUM_KITS),
-            ...(sfOk ? [...Object.keys(SF_PRESETS), ...Object.keys(SF_DRUM_KITS)] : [])]
+          tone: Object.fromEntries([...Object.keys(SF_PRESETS), ...Object.keys(SF_DRUM_KITS)]
             .map(id => [id, toneDefaults(id)]))
         };
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });

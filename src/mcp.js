@@ -24,7 +24,7 @@ const toneShape = {
   reverb: z.number().min(0).max(1).optional()
     .describe("리버브 센드 양 0~1. 프리셋 기본(0.03~0.5)을 덮어쓴다. 공간을 넓히려면 0.5~0.8"),
   ensemble: z.number().min(1).max(4).optional()
-    .describe("합주 스태킹 1~4 — 독주 샘플(sf-바이올린 등)을 미세 디튠·지연으로 겹쳐 그 인원이 함께 켜는 것처럼. 오케스트라 파트를 두껍게 할 때. 합성 프리셋·드럼에는 효과 없음"),
+    .describe("합주 스태킹 1~4 — 독주 샘플(sf-바이올린 등)을 미세 디튠·지연으로 겹쳐 그 인원이 함께 켜는 것처럼. 오케스트라 파트를 두껍게 할 때. 드럼에는 효과 없음"),
   eqLow: z.number().min(-12).max(12).optional()
     .describe("저역 EQ dB (200Hz 셸빙) — 답답하고 웅웅거리면 내리고(-3~-6), 얇으면 올린다"),
   eqMid: z.number().min(-12).max(12).optional()
@@ -230,7 +230,6 @@ const TOOLS = [
   ["import_midi", "다른 도구에서 만든 표준 MIDI 파일(.mid)을 읽어 현재 곡으로 가져온다. 트랙 이름·템포 변화·박자표·드럼 채널을 살리고, 악기(program change)는 가장 가까운 aria 프리셋으로 추정한다. 기존 곡은 교체되지만 undo_edit으로 되돌아간다. 참고: 480PPQ 격자 위 음은 그대로 보존되지만 셋잇단은 왕복에서 길이가 1/1000박쯤 밀린다.", {
     path: z.string().describe("가져올 .mid 파일 경로 (예: ~/Downloads/song.mid)"),
     quantize: z.number().optional().describe("격자에 맞춰 정리할 단위(박) — 0.25면 16분음표. 생략하면 원본 타이밍 그대로"),
-    prefer_samples: z.boolean().optional().describe("true면 합성 프리셋 대신 실제 녹음 샘플(sf-*) 프리셋으로 추정한다. 사운드폰트가 있어야 소리가 난다"),
     title: z.string().max(120).optional().describe("곡 제목(생략하면 파일 이름)")
   }],
   ["ab_save", "지금 곡 전체를 전역 A안 또는 B안에 담아 둔다. 기존 슬롯은 덮어쓰므로 영구 원본 보존에는 고유 이름의 save_song을 함께 쓴다. 비교 질문과 재생 범위는 별도로 기록한다.", {
@@ -273,7 +272,7 @@ const INSTRUCTIONS = `aria는 작곡 앱이다. 사용자가 곡을 만들어 �
 6. 사용자는 GUI 피아노롤에서 구간을 드래그해 피드백을 남길 수 있다 — 수정 요청을 받으면 list_feedback부터 확인하고, 반영한 항목은 resolve_feedback으로 닫는다
 
 작곡 요령:
-- 프리셋은 두 계열: 내장 신스(전자음·개성)와 샘플 sf-*(실제 악기 녹음 — 피아노·현악·기타 등 어쿠스틱 리얼리즘). list_presets에서 sf 프리셋이 "사용 가능"인지 확인하고, 발라드·재즈·클래식 무드면 sf-piano/sf-strings/sf-kit부터 고려하라
+- 모든 프리셋은 외부 SoundFont 샘플이다. list_presets에서 각 프리셋의 필수 음원 파일이 설치됐는지 확인하고, 미설치 음원은 다른 악기로 자동 대체하지 않는다
 - 코드(화음)는 구성음을 같은 bar/beat에 여러 노트로 쌓는다 (Fmaj7 = F3+A3+C4+E4)
 - beat·dur는 4분음표 단위: beat 0~3.999(4/4), dur 0.25=16분음표. 오프비트(2.5, 3.5)와 vel 변화(60~110)를 쓰면 리듬이 살아난다
 - 드럼 트랙은 pitch에 피스 이름: kick snare rim clap hhc hho tom-l/m/h crash ride shaker

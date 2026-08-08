@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { renderRange, wavBuffer } from "./synth.js";
+import { renderRange, wavBuffer } from "./renderer.js";
 import { lufs } from "./master.js";
 
 const MAX_LOOPS = 500;

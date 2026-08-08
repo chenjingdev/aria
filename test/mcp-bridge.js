@@ -7,7 +7,10 @@ import os from "node:os";
 import path from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { createTestSoundfonts } from "./soundfont-fixture.js";
 
+const soundfonts = createTestSoundfonts("aria-mcp-sf2");
+process.env.ARIA_SF2 = soundfonts.defaultPath;
 const dataDir = path.join(os.tmpdir(), `aria-mcp-test-${process.pid}-${Date.now()}`);
 const runtimeFile = path.join(dataDir, "runtime.json");
 process.env.ARIA_DATA_DIR = dataDir;
@@ -93,7 +96,8 @@ try {
       ARIA_DATA_DIR: dataDir,
       ARIA_RUNTIME_FILE: runtimeFile,
       ARIA_AUTOSTART: "0",
-      ARIA_SCAN: "0"
+      ARIA_SCAN: "0",
+      ARIA_SF2: soundfonts.defaultPath
     }
   });
   client = new Client({ name: "aria-bridge-test", version: "1.0.0" });
@@ -221,7 +225,8 @@ try {
       ARIA_DATA_DIR: path.join(dataDir, "auto-data"),
       ARIA_RUNTIME_FILE: autoRuntimeFile,
       ARIA_PORT: String(occupiedPort),
-      ARIA_SCAN: "0"
+      ARIA_SCAN: "0",
+      ARIA_SF2: soundfonts.defaultPath
     }
   });
   const autoTransport2 = new StdioClientTransport({
@@ -233,7 +238,8 @@ try {
       ARIA_DATA_DIR: path.join(dataDir, "auto-data"),
       ARIA_RUNTIME_FILE: autoRuntimeFile,
       ARIA_PORT: String(occupiedPort),
-      ARIA_SCAN: "0"
+      ARIA_SCAN: "0",
+      ARIA_SF2: soundfonts.defaultPath
     }
   });
   client = new Client({ name: "aria-autostart-test", version: "1.0.0" });
@@ -320,6 +326,7 @@ try {
     if (child.exitCode === null) try { child.kill("SIGTERM"); } catch { /* noop */ }
   }
   fs.rmSync(dataDir, { recursive: true, force: true });
+  soundfonts.cleanup();
 }
 
 console.log(`통과 ${passed}건 — MCP 브리지 문제 없음`);

@@ -65,6 +65,9 @@ button { font:inherit; }
 h1,h2,h3 { font-family:"Arial Narrow","Apple SD Gothic Neo",sans-serif; text-wrap:balance; line-height:1.13; }
 h1 { max-width:920px; margin:0; font-size:clamp(36px,6vw,72px); letter-spacing:-.045em; }
 .lede { max-width:var(--measure); margin:20px 0 0; color:var(--muted); font-size:clamp(16px,2vw,20px); }
+.snapshot-note { margin:0 0 24px; padding:14px 16px; border:1px solid var(--warning); border-left:5px solid var(--warning); background:var(--warning-soft); color:var(--ink); max-width:var(--measure); }
+.snapshot-note strong { display:block; margin-bottom:4px; font:800 12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.06em; }
+.snapshot-note p { margin:0; }
 .verdict { margin-top:28px; display:grid; grid-template-columns:auto 1fr; gap:14px; align-items:start; padding:16px 18px; border:1px solid var(--line-strong); background:color-mix(in srgb,var(--surface) 92%,var(--accent)); box-shadow:var(--shadow); }
 .verdict b { color:var(--critical); font:800 13px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; }
 .verdict p { margin:0; max-width:var(--measure); }
@@ -253,6 +256,7 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.91em;
   <main class="main" id="content">
     <header class="hero">
       <div class="container">
+        <div class="snapshot-note" role="note"><strong>HISTORICAL SNAPSHOT · 2026-08-08 이전</strong><p>이 보고서의 본문과 줄 번호는 내장 합성 신스와 <code>src/synth.js</code>가 있던 당시를 분석한 기록입니다. 현재 Aria는 내장 선율 신스 13개와 합성 드럼 3개를 제거했으며, 외부 SoundFont만 <code>src/renderer.js</code>와 <code>src/sf2.js</code>로 재생합니다. 현재 동작은 README와 실제 소스·테스트를 우선하세요.</p></div>
         <p class="eyebrow">CODEBASE AUDIT · v0.1.0 · 2026.08.06</p>
         <h1>좋은 작곡 엔진이<br>한 제품 경로로 모이지 못했다.</h1>
         <p class="lede">Aria의 MCP, 피아노롤, 순수 JS 신스와 SF2는 이미 강하다. 지금 필요한 것은 새 기능이 아니라 MIDI·렌더·저장·브라우저 모니터링을 하나의 신뢰 가능한 세션으로 묶는 일이다.</p>
@@ -440,7 +444,7 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.91em;
   const tradeoffs = {
     wireA:['추천: A · 편집기 + AI Dock','현재 Aria의 DAW-like 편집기를 버리지 않으면서, 피드백 → agent → A/B → 적용의 닫힌 루프를 가장 적은 구조 변화로 추가한다.'],
     wireB:['B · 피드백 큐','긴 곡을 반복 수정하고 승인하는 리뷰 workflow에 강하다. 반면 처음 곡을 만드는 순간에는 queue가 과해 보일 수 있다.'],
-    wireC:['C · 대화형 단계','초보자와 AI-first onboarding에 가장 쉽다. 대신 숙련 사용자가 전체 arrangement를 직접 만지는 속도는 떨어진다.']
+    wireC:['C · 대화형 단계','비음악인과 AI-first onboarding에 가장 쉽다. 대신 숙련 사용자가 전체 arrangement를 직접 만지는 속도는 떨어진다.']
   };
   const wfButtons = [...document.querySelectorAll('.wf-tab')];
   wfButtons.forEach((btn, idx) => {
