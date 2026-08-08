@@ -6,10 +6,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { state, subscribe, runOp, libraryNames, keyInfo } from "./core.js";
 import { playInfo } from "./player.js";
-import { renderRange, wavBuffer, toneDefaults } from "./renderer.js";
+import { renderRange } from "./sampler-renderer.js";
+import { wavBuffer, toneDefaults } from "./renderer.js";
 import { totalBars, beatsPerBar, tempoSegments, beatToSec } from "./song.js";
 import { DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS } from "./presets.js";
-import { fontStatus } from "./sf2.js";
+import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
+import { listPacks, startPackInstall } from "./packs.js";
 import {
   PREFERRED_PORT,
   PORT_ATTEMPTS,
@@ -87,22 +89,75 @@ export function startWeb() {
         for (const entry of state.log.slice(-50)) sseSend(res, { type: "log", entry });
         const ping = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* noop */ } }, 25000);
         req.on("close", () => { clearInterval(ping); sseClients.delete(res); });
+      } else if (req.method === "GET" && url.pathname === "/api/packs") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ packs: listPacks() }));
+      } else if (req.method === "POST" && url.pathname === "/api/packs/install") {
+        if (crossOrigin(req)) {
+          res.writeHead(403, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: false, error: "교차 출처 요청은 허용되지 않습니다" }));
+          return;
+        }
+        const parts = [];
+        let size = 0, overflow = false;
+        req.on("data", chunk => {
+          size += chunk.length;
+          if (size > 64 * 1024) {
+            overflow = true;
+            res.writeHead(413, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: "요청이 너무 큽니다" }));
+            req.destroy();
+            return;
+          }
+          parts.push(chunk);
+        });
+        req.on("end", () => {
+          if (overflow) return;
+          try {
+            const { id } = JSON.parse(Buffer.concat(parts).toString("utf8") || "{}");
+            const pack = startPackInstall(id);
+            res.writeHead(202, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+            res.end(JSON.stringify({ ok: true, pack }));
+          } catch (error) {
+            res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify({ ok: false, error: error.message }));
+          }
+        });
       } else if (req.method === "GET" && url.pathname === "/api/meta") {
-        const metaPreset = p => {
-          const st = fontStatus(p);
+        const metaPreset = (p, drum = false) => {
+          const st = samplerAssetStatus(p, { shallow: true });
           return {
             name: `${p.name} ⬡${st.available ? "" : " · 미설치"}`,
             desc: p.desc,
             available: st.available,
-            font: st.name,
+            asset: samplerAssetName(p, st),
+            // 기존 브라우저 탭 호환용 별칭. 새 UI는 asset을 사용한다.
+            font: samplerAssetName(p, st),
+            engine: samplerEngineLabel(p),
             issue: st.reason,
             family: p.family ?? null,
-            source: p.source ?? null
+            familyDetail: p.familyDetail ?? p.family ?? null,
+            source: p.source ?? null,
+            sourceDetail: p.sourceDetail ?? p.source ?? null,
+            articulation: p.articulation ?? null,
+            articulations: p.articulations ?? null,
+            defaultArticulation: p.defaultArticulation ?? null,
+            category: p.category ?? null,
+            sourceEntry: p.sourceEntry ?? null,
+            recordedNote: p.recordedNote ?? null,
+            recordedDynamic: p.recordedDynamic ?? null,
+            aliasSearch: p.aliasSearch ?? null,
+            kind: p.kind === "clip" ? "clip" : drum ? "percussion" : "instrument",
+            assetKind: p.kind ?? (drum ? "drum-kit" : "instrument"),
+            recommended: p.recommended === true,
+            durationSec: Number.isFinite(p.durationSec) ? p.durationSec : null,
+            pieces: drum ? Object.keys(p.pieces ?? DRUM_PIECES) : null,
+            pieceLabels: p.pieceLabels ?? null
           };
         };
         const json = {
-          presets: Object.fromEntries(Object.entries(SF_PRESETS).map(([id, p]) => [id, metaPreset(p)])),
-          drumKits: Object.fromEntries(Object.entries(SF_DRUM_KITS).map(([id, p]) => [id, metaPreset(p)])),
+          presets: Object.fromEntries(Object.entries(SF_PRESETS).map(([id, p]) => [id, metaPreset(p, false)])),
+          drumKits: Object.fromEntries(Object.entries(SF_DRUM_KITS).map(([id, p]) => [id, metaPreset(p, true)])),
           drumPieces: Object.keys(DRUM_PIECES),
           templates: Object.fromEntries(Object.entries(TEMPLATES).map(([id, t]) => [id, { name: t.name, desc: t.desc }])),
           // 프리셋별 음색 기본값 — GUI의 음색 판이 "기본" 눈금을 정직한 위치에 찍는 데 쓴다

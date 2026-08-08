@@ -5,17 +5,25 @@
 
 - 곡은 실행 중인 앱 안에 살고(자동 저장 `~/.aria/song.json`), LLM은 MCP 도구로 조작합니다
 - 사람은 브라우저 피아노롤 GUI에서 실시간으로 확인·재생·프리셋 변경
-- 재생은 설치된 외부 SoundFont → 오프라인 WAV 렌더 → macOS `afplay` (GUI 없이도 소리가 남)
+- 재생은 설치된 외부 샘플 팩(SF2/SFZ) → 검증된 오픈소스 엔진 → 오프라인 PCM/WAV 렌더 → macOS `afplay` 순서입니다
 - MIDI/WAV 내보내기 (기본 위치 `~/Music/aria/`)
 
 ## 설치·등록
 
 ```bash
-cd aria && npm install
+cd aria
+npm install
+
+# SFZ 재생 엔진을 검토된 버전으로 로컬 빌드·설치
+# 사전 준비: Node.js 18 이상, Git, CMake
+npm run engine:install:sfizz
 
 # Claude Code에 MCP 브리지로 등록 (모든 프로젝트에서 사용)
 claude mcp add -s user aria -- node /절대/경로/aria/src/mcp-bridge.js
 ```
+
+`npm test`도 실제 SFZ 경로를 검증하므로 첫 실행 전에 `npm run engine:install:sfizz`가 필요합니다.
+설치기는 고정된 sfizz 소스와 의존성을 받아 로컬에서 빌드하고, 패치·실행 파일·라이선스 고지를 검증한 뒤 `~/.aria/engines/`에 넣습니다.
 
 새 Claude Code 세션에서 "발라드 풍으로 8마디 스케치해서 들려줘"라고 하면 됩니다.
 첫 도구 호출 때 Aria 앱이 꺼져 있으면 자동으로 열립니다. GUI는 7788을 우선 사용하되 이미 다른 앱이 쓰고 있으면
@@ -30,41 +38,53 @@ GUI만 띄워보려면: `npm start`. MCP 브리지만 직접 시험하려면: `n
 |---|---|
 | `new_song` | 새 곡 생성 — `template`: citypop, lofi, ballad, bossa, edm, chiptune |
 | `get_song` / `set_song` | 곡 전체를 JSON 텍스트로 읽기 / 통째로 교체 (대규모 수정용) |
-| `list_presets` | SoundFont 선율 프리셋 71종 · 샘플 드럼 킷 6종 · 템플릿 목록(설치 상태 포함) |
-| `add_track` / `remove_track` / `set_track` | 트랙 추가·삭제·변경(프리셋/볼륨/팬/이름) |
+| `list_presets` | 출처·악기군 요약 또는 이름/악기군/출처로 검색한 샘플 프리셋 목록(설치 상태·주법·드럼 피스 포함) |
+| `add_track` / `remove_track` / `set_track` | 트랙 추가·삭제·변경(프리셋/아티큘레이션/볼륨/팬/이름) |
 | `set_tempo` / `clear_tempo` | 기준 템포 변경 · 마디별 템포 변화(rit./accel.) 추가·삭제 |
 | `add_notes` / `clear_notes` | 노트 추가 / 구간 삭제 |
 | `play` / `stop` | 구간 재생(`from_bar`,`to_bar`,`loop`) / 정지 — 반환값에 피크·RMS·클리핑 경고 포함 |
 | `export` | MIDI/WAV 내보내기 (`from_bar`/`to_bar`로 구간만 WAV 렌더) |
 | `save_song` / `load_song` / `list_songs` | 곡 라이브러리(`~/.aria/songs/`) 보관·전환·목록 — new_song/load_song 시 현재 곡은 자동 보존 |
 
-## SoundFont (샘플 프리셋)
+## 음원 엔진과 샘플 팩
 
-Aria는 자체 파형 합성기를 포함하지 않으며, 모든 악기와 드럼을 `~/.aria/soundfonts/`에 설치된 외부 SoundFont로 재생합니다. `default.sf2`에는 GM 사운드폰트를 두고, Salamander·VSCO처럼 전용 파일을 요구하는 프리셋은 해당 파일을 별도로 설치합니다.
+Aria는 자체 파형 합성기를 포함하지 않습니다. 악기와 드럼은 외부 샘플 팩으로 재생하며, 두 포맷을 같은 곡·재생·WAV·스템 경로에서 사용할 수 있습니다.
 
-- 기본 제공 스크립트 없이 파일만 두면 됨 (권장: [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS) ~32MB, 무료 라이선스. `ARIA_SF2` 환경변수로 다른 경로 지정 가능)
-- **피아노 두 종류**: `sf-piano-gm`은 경량 `default.sf2`의 GM 피아노입니다. 같은 폴더에 `salamander.sf2`([Salamander Grand Piano](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) SF2판, 1.3GB, CC-BY 3.0 © Alexander Holm)를 두면 `sf-piano`로 벨로시티 16층의 Yamaha C5를 선택할 수 있습니다. 기존 곡 호환을 위해 `sf-piano` ID는 Salamander에 남겨 두며, 둘은 서로 대신 재생되지 않습니다
-- **오케스트라 두 종류**: `sf-violin` 같은 기본 ID는 경량 GeneralUser판이고, `sf-violin-phil`처럼 `-phil`이 붙은 ID는 로컬 Philharmonia판입니다. 현악 8종·목관 8종·금관 4종과 `sf-orch-kit-phil`을 별도로 고를 수 있으며 서로 대신 재생되지 않습니다. Philharmonia 파일 4개는 이 컴퓨터의 로컬 음원으로만 사용합니다.
-- **VSCO 2 CE 색채 악기**: `vsco.sf2`(9MB, `tools/build-vsco.mjs`, [VSCO 2 Community Edition](https://github.com/sgossner/VSCO-2-CE) CC0) → `sf-harp sf-glockenspiel sf-marimba sf-xylophone sf-timpani sf-cello-pizz`. 팀파니는 파일명에 음정이 없어 자기상관 f0 검출로 매핑(렌더 검증: C2 악보 → 66.2Hz)
-- **Salamander 밴드 드럼**: `salamander-kit.sf2`(10MB, `tools/build-salamander.mjs`, [Salamander Drumkit](https://archive.org/details/SalamanderDrumkit)) → 드럼 킷 `sf-band-kit`(표준 피스, 벨로시티 다층). 현재 보관한 원본 README는 CC BY-SA 3.0으로 적혀 있으므로, 별도의 퍼블릭 도메인 재라이선스 증빙을 확보하기 전에는 그 조건으로 취급합니다
-- 모든 SoundFont 프리셋은 같은 노트 모델과 `velRange`/`attack`/`release`/`reverb` 오버라이드를 사용합니다
-- 어쿠스틱 악기뿐 아니라 GM 전자음·패드·리드도 외부 SoundFont 샘플로 재생합니다
-- 프리셋이 요구하는 파일·bank·program이 없거나 손상됐으면 명확한 오류를 표시하며, 다른 악기로 몰래 대체하지 않습니다
+| 포맷 | 활성 엔진 | 담당 |
+|---|---|---|
+| SF2/DLS | [`spessasynth_core@4.3.16`](https://github.com/spessasus/spessasynth_core) | SoundFont의 스테레오 링크, 필터, LFO(저주파 진동기), 모듈레이터, 엔벌로프, bank/program, 벨로시티 레이어를 해석 |
+| SFZ | 고정 버전의 [`sfizz`](https://github.com/sfztools/sfizz) 로컬 사이드카 | SFZ의 샘플 매핑, 벨로시티 층, 라운드로빈(Round robin, 같은 음의 반복 샘플 순환), 키스위치·CC, 드럼 초크를 해석 |
+
+프리셋이 요구하는 파일·팩·bank·program·키·벨로시티 샘플이 없거나 손상됐으면 재생을 중단하고 원인을 표시합니다. 비슷한 악기나 무음으로 몰래 대체하지 않습니다.
+
+- **GM 경량 팩**: `~/.aria/soundfonts/default.sf2`의 [GeneralUser GS](https://github.com/mrbumpy409/GeneralUser-GS)를 기본적인 악기·전자음·패드·리드 선택지로 사용합니다
+- **Grand Piano(그랜드 피아노)**: `sf-piano-gm`은 경량 GM 피아노, `sf-piano`는 [Salamander Grand Piano](https://freepats.zenvoid.org/Piano/acoustic-grand-piano.html) SF2판의 Yamaha C5입니다. 둘은 서로 대신 재생되지 않습니다
+- **VSCO 2 CE 전체판(설치됨)**: [공식 저장소](https://github.com/sgossner/VSCO-2-CE)의 원래 SFZ 75개를 그대로 보존하고 보강 entry와 중복 alias를 정리해 462개 카탈로그 항목(음정 악기 78, 드럼·타악 킷 1, Recorded Clip 383)으로 노출합니다. 원본 WAV 3,168개 전부가 실제 재생 항목에 연결돼 있습니다. 키스위치(Key switch, 건반 밖의 제어 음으로 연주법 전환) 프리셋 8개는 UI와 MCP에서 실제 아티큘레이션을 고를 수 있습니다. 라이선스는 CC0-1.0입니다
+- **Philharmonia 전체 로컬 팩(설치됨)**: [공식 샘플](https://philharmonia.co.uk/resources/sound-samples/)을 음정 악기 184개, 무음정 one-shot 74개, Recorded Clip(녹음 클립) 1,307개, 합계 1,565개 항목으로 노출합니다. 공식 원본 13,683개 중 정상 파일 13,681개는 전부 재생 가능하고, 원본부터 비어 있던 0-byte 파일 2개는 결함으로 명시합니다. 녹음 클립은 음계 악기로 늘이지 않고 원형 그대로 한 번 재생합니다
+- **Salamander Drumkit v4 전체판(설치됨)**: [공식 아카이브](https://archive.org/details/SalamanderDrumkit)의 WAV 536개 전부를 9개 킷·모듈과 1개 미편집 원본 클립으로 노출합니다. 정상 킷은 535개 샘플을 쓰고 44초짜리 반복 킥 원본은 임의로 자르지 않고 별도 Recorded Clip으로 분리했습니다. MIDI key 42의 Hi-hat Closed(하이햇 닫힘)와 Semi-open 1–7(반열림 1–7)은 피스 이름을 고르면 CC64가 자동 설정됩니다
+
+현재 이 컴퓨터의 레지스트리는 **2,114/2,114개가 사용 가능**합니다. 음정 악기 333개와 드럼·타악 90개, 사용자·MCP에 공개된 Recorded Clip 1,691개이며, 드럼·타악과 클립을 합치면 1,781개입니다. 설치 상태는 바뀔 수 있으므로 실제 작업에서는 여전히 `list_presets` 결과를 기준으로 삼습니다.
+
+상단의 **음원 관리**에서 팩의 출처·라이선스·설치 용량·상태를 보고 설치할 수 있습니다. 악기 추가·교체 화면은 이름, 악기군, 출처, 주법으로 검색하며, 미설치 프리셋도 숨기지 않고 사용할 수 없는 이유를 보여 줍니다. 설치 여부와 전체 개수는 로컬 상태에 따라 달라지므로 MCP에서는 `list_presets`를 인자 없이 한 번 호출해 요약을 보고, 필요한 `query`·`family`·`source`와 `available_only`로 다시 검색합니다.
 
 노트 형식: `{bar: 8, beat: 1.5, pitch: "F#3", dur: 0.5, vel: 96}` — beat·dur는 4분음표 단위.
-드럼 트랙은 pitch 자리에 피스 이름: `kick snare rim clap hhc hho tom-l tom-m tom-h crash ride shaker`.
+드럼·타악과 Recorded Clip 트랙은 `pitch` 자리에 `list_presets`가 돌려준 정확한 피스 ID를 넣습니다. 공통 GM 킷의 예는 `kick snare rim clap hhc hho tom-l tom-m tom-h crash ride shaker`이고, 녹음 클립은 보통 `play`입니다.
 
-## 표현 파라미터
+## 사용자가 다루는 표현 파라미터
 
 프리셋에 박혀 있던 음색 상수를 트랙별로 덮어쓸 수 있습니다 (`add_track`·`set_track`).
 프리셋 기본값으로 되돌리는 건 `set_track`에 `null`을 줍니다.
+UI와 문서에서는 원래 음악·오디오 용어를 먼저 쓰고 바로 감각적인 한국어 설명을 붙여, 비음악인도 소리를 조절하면서 용어에 가까워질 수 있게 합니다.
 
 | 파라미터 | 범위 | 쓰임 |
 |---|---|---|
-| `velRange` | 0~1 (기본 0.65) | velocity가 음량에 미치는 폭. **기본 0.65는 vel 1~127이 약 9dB**라 악센트용이고, `1`로 올리면 **약 42dB**가 되어 크레셴도를 velocity만으로 만들 수 있습니다 |
-| `attack` | 0~2초 | 음이 최대 음량에 닿기까지. 0.1 이상이면 부드럽게 부풀어 오릅니다 |
-| `release` | 0~8초 | 음을 뗀 뒤 남는 여운. 아르페지오가 뚝뚝 끊기면 0.8~2로 올려 음끼리 겹치게 합니다 |
-| `reverb` | 0~1 | 리버브 센드 양. 프리셋 기본(0.03~0.5)을 덮어씁니다 |
+| `velRange` | 0~1 (공통 기본: 선율 0.65, 드럼 0.6; 프리셋별 기본값 우선) | 벨로시티 범위(Velocity range, 악보의 강약 전달 폭). `0`이면 모든 노트를 MIDI velocity 64로 보내고, `1`이면 악보 값을 그대로 보냅니다. 원본 프리셋의 강약 레이어와 음색 변화가 함께 반응하므로 고정 dB 폭으로 해석하지 않습니다 |
+| `reverb` | 0~1 | 리버브(Reverb, 공간에서 되돌아오는 잔향) 센드 양 |
+| `eqLow` | -12~12dB | 저역 EQ(Low EQ, 200Hz 부근의 무게와 웅웅거림) |
+| `eqMid` | -12~12dB | 중역 EQ(Mid EQ, 1kHz 부근의 박스톤과 존재감) |
+| `eqHigh` | -12~12dB | 고역 EQ(High EQ, 4kHz 부근의 밝기와 날카로움) |
+
+트랙 볼륨은 파트 전체의 크기, 팬(Pan, 좌우 위치)은 원본 스테레오를 유지한 채 좌우 균형을 조절합니다. 어택(Attack, 소리가 시작되는 성질), 릴리스(Release, 음을 놓은 뒤 남는 여운), 비브라토(Vibrato, 음높이의 주기적인 떨림), 앙상블(Ensemble, 여러 연주자가 함께 내는 편성)은 더 이상 트랙 효과로 노출하지 않습니다. 이런 차이가 필요하면 실제로 그 성질이나 주법이 녹음·프로그램된 샘플 프리셋을 선택합니다.
 
 **템포 변화** — `set_tempo({bpm, from_bar, ramp})`. `from_bar` 없이 부르면 기준 템포, 주면 그 마디부터 전환.
 `ramp:true`는 **직전 변화점부터** 선형으로 변합니다(rit./accel.). 끝 4마디만 늘어지게 하려면 앵커를 먼저 두세요:
@@ -83,10 +103,14 @@ set_tempo({bpm: 58, from_bar: 16, ramp: true})  # 13→16마디에서 서서히
 - 재생은 macOS(`afplay`) 전용 — 다른 OS는 `export`로 WAV를 뽑아 들어야 합니다
 - 루프 재생은 afplay 재스폰 방식이라 반복 사이 ~100ms 틈이 있음
 - 마스터에는 -0.3dBFS look-ahead 리미터와 소프트 클리퍼가 있지만 true-peak 납품 검사는 아닙니다. `play`의 리미터 감쇄·피크·LUFS 보고를 보고, 지속적으로 많이 눌리면 원래 트랙 밸런스를 고칩니다
-- 노트별 pan과 일반 MIDI CC는 없고, pitch bend는 노트별 단방향 선형 곡선, vibrato는 트랙별 고정 속도·지연에 깊이만 조절합니다
-- 현재 SoundFont 재생기는 linked stereo, SoundFont filter/LFO/modulator를 재현하지 못해 원본 음원의 표현과 공간감을 일부 잃습니다
+- 노트별 pan과 임의의 일반 MIDI CC 편집은 없습니다. 다만 프리셋이 선언한 키스위치·CC는 `articulation` 또는 드럼 피스 ID를 고르면 엔진이 실제 제어값으로 보냅니다. 피치 벤드(Pitch bend, 음이 울리는 동안 음높이를 미끄러뜨림)는 노트별 단방향 선형 곡선입니다
+- SF2/DLS는 비압축 PCM만 처리합니다. 압축 샘플을 담은 SF3는 명시적으로 지원하지 않습니다
+- SFZ용 sfizz는 현재 동기식 로컬 사이드카입니다. 대형 팩을 여러 트랙에서 동시에 부를 때 앱과 격리된 작업 프로세스로 옮기는 최적화는 아직 남았습니다
+- 큰 SF2는 필요한 preset/key/velocity만 남겨 렌더하지만, 처음 파일을 읽고 해석할 때 순간 메모리 사용량이 큽니다
+- 레가토(Legato, 음 사이를 실제 연주처럼 이어 주는 주법)는 단순 릴리스 효과가 아닙니다. 음원에 녹음된 전이 샘플과 그 매핑이 있어야 true legato(실제 전이 레가토)를 재현할 수 있습니다
 - WAV 렌더는 한 번에 10분까지 — 긴 곡은 `export({from_bar, to_bar})`로 나눠 뽑습니다
 - MIDI 내보내기는 멜로디 트랙 15개까지(채널 한계)
+- 사용 중인 트랙에 `articulation`을 명시해 녹음 주법·키스위치를 골랐다면 portable MIDI 내보내기를 중단합니다. 표준 MIDI의 GM 근사는 그 선택을 안전하게 보존하지 못하므로 현재 소리는 WAV로 내보내거나, `set_track({track:"트랙 이름", articulation:null})`로 기본 주법에 되돌린 뒤 MIDI를 내보냅니다. `articulation`을 생략한 기본 주법과 드럼 피스에 선언된 CC는 기존처럼 MIDI로 내보냅니다
 - 마디 안에서의 박자표 변경은 불가(곡 단위 고정)
 - GUI는 한 인스턴스만 사용하는 구조입니다. 포트 충돌 시 7788→7789…로 자동 이동하고 MCP도 같은 인스턴스를 따라갑니다
 
@@ -94,6 +118,7 @@ set_tempo({bpm: 58, from_bar: 16, ramp: true})  # 13→16마디에서 서서히
 
 ```bash
 npm test                     # 렌더 무결성·표현·템포·MCP 브리지·동적 포트 회귀 테스트
+node test/spessa-engine.js   # SpessaSynth SF2 어댑터의 스테레오·레이어·오류·fallback 차단 회귀 테스트
 node test/demo.js            # 시티팝 데모를 API로 작곡해 재생 (서버가 떠 있어야 함)
 node test/demo-expression.js # 표현 데모 — 5/4 변박 + velocity 크레셴도 + 리타르단도
 

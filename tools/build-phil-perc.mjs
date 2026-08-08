@@ -7,7 +7,8 @@ import os from "node:os";
 import { writeSf2 } from "./sf2write.mjs";
 import { DYN, convertAll, readWavMono, processSample } from "./phil-lib.mjs";
 
-const SC = "/private/tmp/claude-501/-Users-chenjing-dev-tmp-2026-08-03-new-chat-1/5473a906-75d2-4203-845d-3d8e8cf8d248/scratchpad";
+const SC = process.env.ARIA_LEGACY_SAMPLE_ROOT;
+if (!SC) throw new Error("ARIA_LEGACY_SAMPLE_ROOT가 필요합니다 — 이 도구는 기존 축소 SF2를 재현하는 legacy builder입니다. 전체 팩은 tools/prepare-philharmonia-sfz.mjs를 사용하세요");
 const SRC = path.join(SC, "phil/Percussion/Percussion");
 const TMP = path.join(SC, "phil/wav-perc");
 const OUT = path.join(os.homedir(), ".aria/soundfonts/phil-perc.sf2");
@@ -108,17 +109,21 @@ console.log(`\nphil-perc.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘�
 console.log(`피스: ${kitPieces.join(", ")}`);
 
 // ── 스윕: 전 키 × vel 3단 발음 확인 ──
-const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
-const sf = parseSf2(OUT);
+const { openSf2Checker } = await import("./sf2-check.mjs");
+const checker = openSf2Checker(OUT);
 let checked = 0, silent = 0, nan = 0;
 const keys = [...new Set(zones.map(z => z.keyLo))];
-for (const key of keys) {
-  for (const vel of [0.3, 0.7, 1.0]) {
-    const buf = renderSf2Voice(sf, 128, 0, key, vel, 0.3, 44100);
-    checked++;
-    let s = 0;
-    for (let i = 0; i < Math.min(buf.length, 22050); i++) { if (!Number.isFinite(buf[i])) nan++; s += buf[i] * buf[i]; }
-    if (Math.sqrt(s / 22050) < 1e-4) { silent++; console.log(`  ⚠ 무음 key ${key} vel${vel}`); }
+try {
+  for (const key of keys) {
+    for (const vel of [0.3, 0.7, 1.0]) {
+      const buf = checker.render({ bank: 128, program: 0, drum: true, key, velocity: vel });
+      checked++;
+      let s = 0;
+      for (let i = 0; i < Math.min(buf.length, 22050); i++) { if (!Number.isFinite(buf[i])) nan++; s += buf[i] * buf[i]; }
+      if (Math.sqrt(s / 22050) < 1e-4) { silent++; console.log(`  ⚠ 무음 key ${key} vel${vel}`); }
+    }
   }
+} finally {
+  checker.close();
 }
 console.log(`스윕 ${checked}건: 무음 ${silent}${nan ? ` · ⚠ NaN ${nan}` : ""}`);

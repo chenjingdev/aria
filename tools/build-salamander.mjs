@@ -7,7 +7,8 @@ import os from "node:os";
 import { writeSf2 } from "./sf2write.mjs";
 import { convertAll, readWavMono, processSample } from "./phil-lib.mjs";
 
-const SC = "/private/tmp/claude-501/-Users-chenjing-dev-tmp-2026-08-03-new-chat-1/5473a906-75d2-4203-845d-3d8e8cf8d248/scratchpad";
+const SC = process.env.ARIA_LEGACY_SAMPLE_ROOT;
+if (!SC) throw new Error("ARIA_LEGACY_SAMPLE_ROOT가 필요합니다 — 이 도구는 기존 축소 SF2를 재현하는 legacy builder입니다. 전체 팩은 tools/prepare-salamander-sfz.mjs를 사용하세요");
 const SRC = path.join(SC, "salamander-kit/OH");
 const TMP = path.join(SC, "phil/wav-sala");
 const OUT = path.join(os.homedir(), ".aria/soundfonts/salamander-kit.sf2");
@@ -87,16 +88,20 @@ const res = writeSf2({
 console.log(`\nsalamander-kit.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // 스윕
-const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
-const sf = parseSf2(OUT);
+const { openSf2Checker } = await import("./sf2-check.mjs");
+const checker = openSf2Checker(OUT);
 let checked = 0, silent = 0, nan = 0;
-for (const key of [...new Set(zones.map(z => z.keyLo))]) {
-  for (const vel of [0.2, 0.5, 0.8, 1.0]) {
-    const buf = renderSf2Voice(sf, 128, 0, key, vel, 0.3, 44100);
-    checked++;
-    let s = 0;
-    for (let i = 0; i < Math.min(buf.length, 22050); i++) { if (!Number.isFinite(buf[i])) nan++; s += buf[i] * buf[i]; }
-    if (Math.sqrt(s / 22050) < 1e-4) { silent++; console.log(`  ⚠ 무음 key ${key} vel${vel}`); }
+try {
+  for (const key of [...new Set(zones.map(z => z.keyLo))]) {
+    for (const vel of [0.2, 0.5, 0.8, 1.0]) {
+      const buf = checker.render({ bank: 128, program: 0, drum: true, key, velocity: vel });
+      checked++;
+      let s = 0;
+      for (let i = 0; i < Math.min(buf.length, 22050); i++) { if (!Number.isFinite(buf[i])) nan++; s += buf[i] * buf[i]; }
+      if (Math.sqrt(s / 22050) < 1e-4) { silent++; console.log(`  ⚠ 무음 key ${key} vel${vel}`); }
+    }
   }
+} finally {
+  checker.close();
 }
 console.log(`스윕 ${checked}건: 무음 ${silent}${nan ? ` · ⚠ NaN ${nan}` : ""}`);

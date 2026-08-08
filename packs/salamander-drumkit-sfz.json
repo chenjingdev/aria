@@ -1,0 +1,1401 @@
+{
+  "schemaVersion": 1,
+  "id": "salamander-drumkit-sfz",
+  "name": "Salamander Drumkit — complete official SFZ pack",
+  "format": "sfz",
+  "installDir": "salamander-drumkit-sfz",
+  "source": {
+    "type": "prepared-archive",
+    "repositoryUrl": "https://archive.org/details/SalamanderDrumkit",
+    "projectUrl": "https://archive.org/details/SalamanderDrumkit",
+    "branch": null,
+    "commit": "34e746ec1721bb530b1caf5b17443ae3cde45a2cce1a80e2637e4c11d6f1e3f5",
+    "tree": "052af2e1741e0ee0971b87edca4788f7b9c6318185b2c2e212c54944e0645dcf",
+    "archiveSha256": "34e746ec1721bb530b1caf5b17443ae3cde45a2cce1a80e2637e4c11d6f1e3f5",
+    "prepareScript": "tools/prepare-salamander-sfz.mjs",
+    "defaultArchive": "~/.aria/downloads/salamanderDrumkit.tar.bz2",
+    "downloadUrl": "https://archive.org/download/SalamanderDrumkit/salamanderDrumkit.tar.bz2"
+  },
+  "license": {
+    "spdx": "CC-BY-SA-3.0",
+    "name": "Creative Commons Attribution-ShareAlike 3.0 Unported",
+    "file": "official/REAMDE",
+    "url": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "sha256": "d260ca02713d1a6b5b272de5a57a0d1bf454ee8a281d41e7069eb8ba41482ce5"
+  },
+  "content": {
+    "checksumsFile": "catalog/checksums.json",
+    "entryFiles": [
+      "sfz/ALL-full.sfz",
+      "sfz/ALL.sfz",
+      "sfz/crashesFX.sfz",
+      "sfz/hihat.sfz",
+      "sfz/hitom.sfz",
+      "sfz/kick.sfz",
+      "sfz/lotom.sfz",
+      "sfz/ride.sfz",
+      "sfz/snare.sfz",
+      "sfz-clips/kick-oh-p-1-raw-take.sfz"
+    ],
+    "audioExtensions": [
+      ".wav"
+    ],
+    "expectedPayloadFiles": 559,
+    "expectedAudioFiles": 536
+  },
+  "catalogMetadata": {
+    "sourceSamples": 536,
+    "runtimeEntries": 10,
+    "drumKitEntries": 9,
+    "recordedClipEntries": 1,
+    "recommendedEntry": "salamander-all-full",
+    "mappedKeys": 30,
+    "selectablePieces": 112,
+    "hiHatOpennessControls": 8,
+    "missingRuntimeSamples": 0,
+    "allFullSampleCoverage": 535,
+    "runtimeSampleCoverage": 536,
+    "durationProbe": {
+      "allAudioFiles": 536,
+      "primaryMethod": "CoreAudio afinfo",
+      "ffprobeVerifiedFiles": 1
+    },
+    "sampleDurationSec": {
+      "min": 0.451729,
+      "p50": 1.755333,
+      "p90": 9.197563,
+      "p95": 10.301333,
+      "p99": 11.388917,
+      "max": 44.55625,
+      "mean": 3.251235
+    },
+    "longestSample": {
+      "file": "samples/OH/kick_OH_P_1.wav",
+      "durationSec": 44.55625,
+      "tailHintSec": 0.5,
+      "requiredRenderWindowFromNoteStartSec": 45.057
+    },
+    "longestKitSample": {
+      "file": "samples/OH/crash1_OH_FF_1.wav",
+      "durationSec": 11.502,
+      "tailHintSec": 0.5,
+      "requiredRenderWindowFromNoteStartSec": 12.002
+    },
+    "detachedRawTake": {
+      "catalogId": "salamander-kick-raw-take",
+      "sourceFile": "samples/OH/kick_OH_P_1.wav",
+      "durationSec": 44.55625,
+      "tailHintSec": 0.5,
+      "requiredRenderWindowFromNoteStartSec": 45.057,
+      "kitReferences": 0,
+      "clipReferences": 1,
+      "renderVerification": {
+        "engine": "sfizz",
+        "key": 60,
+        "requestedWindowSec": 46.057007,
+        "lastNonzeroSec": 44.5578,
+        "peak": 0.164794921875,
+        "nonzeroSamples": 503373,
+        "trimmedFrames": 118,
+        "complete": true
+      }
+    },
+    "exactRoundRobinAndChokeMap": true
+  },
+  "catalog": [
+    {
+      "id": "salamander-all-full",
+      "path": "sfz/ALL-full.sfz",
+      "name": "Complete Drum Kit",
+      "family": "Salamander Drumkit",
+      "articulation": "complete-mapped-kit",
+      "duration": "one-shot",
+      "label": "Complete Mapped Kit (전체 매핑 드럼킷) — 535개 완성된 원샷을 RR·초크로 사용하고 미편집 raw take는 별도 클립으로 제공",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-kit",
+      "recommended": true,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 11.502,
+      "durationSec": 11.502,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "kick-1",
+          "key": 35,
+          "name": "Kick 1",
+          "label": "Kick 1 (킥 1) — 첫 번째 베이스 드럼",
+          "sampleStem": "kick",
+          "durationSec": 0.484
+        },
+        {
+          "id": "kick-2",
+          "key": 36,
+          "name": "Kick 2",
+          "label": "Kick 2 (킥 2) — 두 번째 베이스 드럼",
+          "sampleStem": "kick2",
+          "durationSec": 0.484
+        },
+        {
+          "id": "snare-2-off",
+          "key": 37,
+          "name": "Snare 2, snares off",
+          "label": "Snare 2, snares off (스네어 2 오프) — 두 번째 스네어의 와이어를 끈 타격",
+          "sampleStem": "snare2OFF",
+          "durationSec": 1.723333
+        },
+        {
+          "id": "snare-2",
+          "key": 38,
+          "name": "Snare 2",
+          "label": "Snare 2 (스네어 2) — 두 번째 스네어의 일반·고스트 타격",
+          "sampleStem": "snare2",
+          "durationSec": 1.963188
+        },
+        {
+          "id": "snare-1-off",
+          "key": 39,
+          "name": "Snare 1, snares off",
+          "label": "Snare 1, snares off (스네어 1 오프) — 첫 번째 스네어의 와이어를 끈 타격",
+          "sampleStem": "snareOFF",
+          "durationSec": 1.341146
+        },
+        {
+          "id": "snare-1",
+          "key": 40,
+          "name": "Snare 1",
+          "label": "Snare 1 (스네어 1) — 첫 번째 스네어의 일반·고스트 타격",
+          "sampleStem": "snare",
+          "durationSec": 1.883208
+        },
+        {
+          "id": "snare-stick",
+          "key": 41,
+          "name": "Snare cross-stick",
+          "label": "Snare cross-stick (스네어 크로스 스틱) — 스틱을 림에 걸쳐 짧고 딱딱하게 타격",
+          "sampleStem": "snareStick",
+          "durationSec": 0.697313
+        },
+        {
+          "id": "hi-hat-closed",
+          "key": 42,
+          "name": "Hi-hat Closed",
+          "label": "Hi-hat Closed (하이햇 닫힘) — 두 심벌을 완전히 닫아 짧고 단단하게 타격",
+          "sampleStem": "hihatClosed",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 0
+            }
+          ],
+          "durationSec": 0.586313
+        },
+        {
+          "id": "hi-hat-semi-open-1",
+          "key": 42,
+          "name": "Hi-hat Semi-open 1",
+          "label": "Hi-hat Semi-open 1 (하이햇 반열림 1) — 거의 닫힌 상태로 아주 짧은 공명만 남김",
+          "sampleStem": "hihatSemiOpen1",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 10
+            }
+          ],
+          "durationSec": 1.082896
+        },
+        {
+          "id": "hi-hat-semi-open-2",
+          "key": 42,
+          "name": "Hi-hat Semi-open 2",
+          "label": "Hi-hat Semi-open 2 (하이햇 반열림 2) — 조금 열어 금속성 꼬리를 살짝 늘림",
+          "sampleStem": "hihatSemiOpen2",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 27
+            }
+          ],
+          "durationSec": 1.857479
+        },
+        {
+          "id": "hi-hat-semi-open-3",
+          "key": 42,
+          "name": "Hi-hat Semi-open 3",
+          "label": "Hi-hat Semi-open 3 (하이햇 반열림 3) — 중간보다 덜 열린 공명으로 리듬을 부드럽게 연결",
+          "sampleStem": "hihatSemiOpen3",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 45
+            }
+          ],
+          "durationSec": 2.107042
+        },
+        {
+          "id": "hi-hat-semi-open-4",
+          "key": 42,
+          "name": "Hi-hat Semi-open 4",
+          "label": "Hi-hat Semi-open 4 (하이햇 반열림 4) — 중간 개방도로 닫힌 소리와 열린 소리의 사이를 만듦",
+          "sampleStem": "hihatSemiOpen4",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 63
+            }
+          ],
+          "durationSec": 2.135146
+        },
+        {
+          "id": "hi-hat-semi-open-5",
+          "key": 42,
+          "name": "Hi-hat Semi-open 5",
+          "label": "Hi-hat Semi-open 5 (하이햇 반열림 5) — 더 길고 거친 금속성 울림을 남김",
+          "sampleStem": "hihatSemiOpen5",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 81
+            }
+          ],
+          "durationSec": 3.074625
+        },
+        {
+          "id": "hi-hat-semi-open-6",
+          "key": 42,
+          "name": "Hi-hat Semi-open 6",
+          "label": "Hi-hat Semi-open 6 (하이햇 반열림 6) — 거의 열린 상태의 넓고 긴 공명",
+          "sampleStem": "hihatSemiOpen6",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 99
+            }
+          ],
+          "durationSec": 4.6435
+        },
+        {
+          "id": "hi-hat-semi-open-7",
+          "key": 42,
+          "name": "Hi-hat Semi-open 7",
+          "label": "Hi-hat Semi-open 7 (하이햇 반열림 7) — 완전 오픈 직전의 가장 길고 거친 반열림",
+          "sampleStem": "hihatSemiOpen7",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 118
+            }
+          ],
+          "durationSec": 6.200479
+        },
+        {
+          "id": "low-tom",
+          "key": 43,
+          "name": "Low tom",
+          "label": "Low tom (로우 톰) — 낮은 톰의 강약·라운드로빈 타격",
+          "sampleStem": "loTom",
+          "durationSec": 2.413438
+        },
+        {
+          "id": "hi-hat-foot",
+          "key": 44,
+          "name": "Hi-hat foot / stomp",
+          "label": "Hi-hat foot / stomp (하이햇 풋·스톰프) — 페달로 닫거나 강하게 밟는 소리",
+          "sampleStem": "hihatFoot + hihatFootStomp",
+          "durationSec": 9.261521
+        },
+        {
+          "id": "high-tom",
+          "key": 45,
+          "name": "High tom",
+          "label": "High tom (하이 톰) — 높은 톰의 강약·라운드로빈 타격",
+          "sampleStem": "hiTom",
+          "durationSec": 3.079708
+        },
+        {
+          "id": "hi-hat-open",
+          "key": 46,
+          "name": "Open hi-hat",
+          "label": "Open hi-hat (오픈 하이햇) — 열린 하이햇의 긴 울림과 초크 연결",
+          "sampleStem": "hihatOpen",
+          "durationSec": 11.067146
+        },
+        {
+          "id": "cowbell",
+          "key": 47,
+          "name": "Cowbell",
+          "label": "Cowbell (카우벨) — 세 단계 강약의 카우벨 타격",
+          "sampleStem": "cowbell",
+          "durationSec": 1.142187
+        },
+        {
+          "id": "ride-2",
+          "key": 48,
+          "name": "Ride 2 bow",
+          "label": "Ride 2 bow (라이드 2 보우) — 두 번째 라이드의 표면 타격",
+          "sampleStem": "ride2",
+          "durationSec": 10.33425
+        },
+        {
+          "id": "ride-2-bell",
+          "key": 49,
+          "name": "Ride 2 bell",
+          "label": "Ride 2 bell (라이드 2 벨) — 두 번째 라이드의 벨 부분 타격",
+          "sampleStem": "ride2Bell",
+          "durationSec": 7.402
+        },
+        {
+          "id": "ride-2-crash",
+          "key": 50,
+          "name": "Ride 2 crash",
+          "label": "Ride 2 crash (라이드 2 크래시) — 두 번째 라이드를 크래시처럼 강하게 타격",
+          "sampleStem": "ride2Crash",
+          "durationSec": 11.404833
+        },
+        {
+          "id": "ride-2-crash-choke",
+          "key": 51,
+          "name": "Ride 2 crash choke",
+          "label": "Ride 2 crash choke (라이드 2 크래시 초크) — 울리는 라이드를 손으로 막는 소리",
+          "sampleStem": "ride2CrashChoke",
+          "durationSec": 2.166125
+        },
+        {
+          "id": "ride-1",
+          "key": 52,
+          "name": "Ride 1 bow",
+          "label": "Ride 1 bow (라이드 1 보우) — 첫 번째 라이드의 표면 타격",
+          "sampleStem": "ride1",
+          "durationSec": 11.436625
+        },
+        {
+          "id": "ride-1-bell",
+          "key": 53,
+          "name": "Ride 1 bell",
+          "label": "Ride 1 bell (라이드 1 벨) — 첫 번째 라이드의 벨 부분 타격",
+          "sampleStem": "ride1Bell",
+          "durationSec": 7.852708
+        },
+        {
+          "id": "crash-1-choke",
+          "key": 54,
+          "name": "Crash 1 choke",
+          "label": "Crash 1 choke (크래시 1 초크) — 첫 번째 크래시의 울림을 손으로 막아",
+          "sampleStem": "crash1Choke",
+          "durationSec": 1.96425
+        },
+        {
+          "id": "crash-1",
+          "key": 55,
+          "name": "Crash 1",
+          "label": "Crash 1 (크래시 1) — 첫 번째 크래시 심벌 타격",
+          "sampleStem": "crash1",
+          "durationSec": 11.502
+        },
+        {
+          "id": "crash-2-choke",
+          "key": 56,
+          "name": "Crash 2 choke",
+          "label": "Crash 2 choke (크래시 2 초크) — 두 번째 크래시의 울림을 손으로 막아",
+          "sampleStem": "crash2Choke",
+          "durationSec": 1.933354
+        },
+        {
+          "id": "crash-2",
+          "key": 57,
+          "name": "Crash 2",
+          "label": "Crash 2 (크래시 2) — 두 번째 크래시 심벌 타격",
+          "sampleStem": "crash2",
+          "durationSec": 10.921188
+        },
+        {
+          "id": "china-1-choke",
+          "key": 58,
+          "name": "China 1 choke",
+          "label": "China 1 choke (차이나 1 초크) — 첫 번째 차이나 심벌의 울림을 손으로 막아",
+          "sampleStem": "china1Choke",
+          "durationSec": 1.886437
+        },
+        {
+          "id": "china-1",
+          "key": 59,
+          "name": "China 1",
+          "label": "China 1 (차이나 1) — 첫 번째 차이나 심벌 타격",
+          "sampleStem": "china1",
+          "durationSec": 7.928937
+        },
+        {
+          "id": "china-2",
+          "key": 60,
+          "name": "China 2",
+          "label": "China 2 (차이나 2) — 두 번째 차이나 심벌 타격",
+          "sampleStem": "china2",
+          "durationSec": 7.857479
+        },
+        {
+          "id": "china-2-choke",
+          "key": 61,
+          "name": "China 2 choke",
+          "label": "China 2 choke (차이나 2 초크) — 두 번째 차이나 심벌의 울림을 손으로 막아",
+          "sampleStem": "china2Choke",
+          "durationSec": 1.782604
+        },
+        {
+          "id": "crash-3",
+          "key": 62,
+          "name": "Crash 3",
+          "label": "Crash 3 (크래시 3) — 세 번째 크래시 심벌 타격",
+          "sampleStem": "crash3",
+          "durationSec": 6.58675
+        },
+        {
+          "id": "splash-1",
+          "key": 63,
+          "name": "Splash 1",
+          "label": "Splash 1 (스플래시 1) — 짧고 밝은 스플래시 심벌 타격",
+          "sampleStem": "splash1",
+          "durationSec": 2.658458
+        },
+        {
+          "id": "bell-chime",
+          "key": 64,
+          "name": "Bell chime",
+          "label": "Bell chime (벨 차임) — 벨 차임의 금속성 타격",
+          "sampleStem": "bellchime",
+          "durationSec": 9.197563
+        }
+      ]
+    },
+    {
+      "id": "salamander-all-official",
+      "path": "sfz/ALL.sfz",
+      "name": "Official Drum Kit Map",
+      "family": "Salamander Drumkit",
+      "articulation": "official-mapped-kit",
+      "duration": "one-shot",
+      "label": "Official Map (공식 매핑) — 공식 532개 참조 중 미편집 raw take를 분리한 531개와 원래 키 구조를 보존",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-kit",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 11.502,
+      "durationSec": 11.502,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "kick-1",
+          "key": 35,
+          "name": "Kick 1",
+          "label": "Kick 1 (킥 1) — 첫 번째 베이스 드럼",
+          "sampleStem": "kick",
+          "durationSec": 0.484
+        },
+        {
+          "id": "kick-2",
+          "key": 36,
+          "name": "Kick 2",
+          "label": "Kick 2 (킥 2) — 두 번째 베이스 드럼",
+          "sampleStem": "kick2",
+          "durationSec": 0.484
+        },
+        {
+          "id": "snare-2-off",
+          "key": 37,
+          "name": "Snare 2, snares off",
+          "label": "Snare 2, snares off (스네어 2 오프) — 두 번째 스네어의 와이어를 끈 타격",
+          "sampleStem": "snare2OFF",
+          "durationSec": 1.723333
+        },
+        {
+          "id": "snare-2",
+          "key": 38,
+          "name": "Snare 2",
+          "label": "Snare 2 (스네어 2) — 두 번째 스네어의 일반·고스트 타격",
+          "sampleStem": "snare2",
+          "durationSec": 1.963188
+        },
+        {
+          "id": "snare-1-off",
+          "key": 39,
+          "name": "Snare 1, snares off",
+          "label": "Snare 1, snares off (스네어 1 오프) — 첫 번째 스네어의 와이어를 끈 타격",
+          "sampleStem": "snareOFF",
+          "durationSec": 1.341146
+        },
+        {
+          "id": "snare-1",
+          "key": 40,
+          "name": "Snare 1",
+          "label": "Snare 1 (스네어 1) — 첫 번째 스네어의 일반·고스트 타격",
+          "sampleStem": "snare",
+          "durationSec": 1.883208
+        },
+        {
+          "id": "snare-stick",
+          "key": 41,
+          "name": "Snare cross-stick",
+          "label": "Snare cross-stick (스네어 크로스 스틱) — 스틱을 림에 걸쳐 짧고 딱딱하게 타격",
+          "sampleStem": "snareStick",
+          "durationSec": 0.697313
+        },
+        {
+          "id": "hi-hat-closed",
+          "key": 42,
+          "name": "Hi-hat Closed",
+          "label": "Hi-hat Closed (하이햇 닫힘) — 두 심벌을 완전히 닫아 짧고 단단하게 타격",
+          "sampleStem": "hihatClosed",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 0
+            }
+          ],
+          "durationSec": 0.586313
+        },
+        {
+          "id": "hi-hat-semi-open-1",
+          "key": 42,
+          "name": "Hi-hat Semi-open 1",
+          "label": "Hi-hat Semi-open 1 (하이햇 반열림 1) — 거의 닫힌 상태로 아주 짧은 공명만 남김",
+          "sampleStem": "hihatSemiOpen1",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 10
+            }
+          ],
+          "durationSec": 1.082896
+        },
+        {
+          "id": "hi-hat-semi-open-2",
+          "key": 42,
+          "name": "Hi-hat Semi-open 2",
+          "label": "Hi-hat Semi-open 2 (하이햇 반열림 2) — 조금 열어 금속성 꼬리를 살짝 늘림",
+          "sampleStem": "hihatSemiOpen2",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 27
+            }
+          ],
+          "durationSec": 1.857479
+        },
+        {
+          "id": "hi-hat-semi-open-3",
+          "key": 42,
+          "name": "Hi-hat Semi-open 3",
+          "label": "Hi-hat Semi-open 3 (하이햇 반열림 3) — 중간보다 덜 열린 공명으로 리듬을 부드럽게 연결",
+          "sampleStem": "hihatSemiOpen3",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 45
+            }
+          ],
+          "durationSec": 2.107042
+        },
+        {
+          "id": "hi-hat-semi-open-4",
+          "key": 42,
+          "name": "Hi-hat Semi-open 4",
+          "label": "Hi-hat Semi-open 4 (하이햇 반열림 4) — 중간 개방도로 닫힌 소리와 열린 소리의 사이를 만듦",
+          "sampleStem": "hihatSemiOpen4",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 63
+            }
+          ],
+          "durationSec": 2.135146
+        },
+        {
+          "id": "hi-hat-semi-open-5",
+          "key": 42,
+          "name": "Hi-hat Semi-open 5",
+          "label": "Hi-hat Semi-open 5 (하이햇 반열림 5) — 더 길고 거친 금속성 울림을 남김",
+          "sampleStem": "hihatSemiOpen5",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 81
+            }
+          ],
+          "durationSec": 3.074625
+        },
+        {
+          "id": "hi-hat-semi-open-6",
+          "key": 42,
+          "name": "Hi-hat Semi-open 6",
+          "label": "Hi-hat Semi-open 6 (하이햇 반열림 6) — 거의 열린 상태의 넓고 긴 공명",
+          "sampleStem": "hihatSemiOpen6",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 99
+            }
+          ],
+          "durationSec": 4.6435
+        },
+        {
+          "id": "hi-hat-semi-open-7",
+          "key": 42,
+          "name": "Hi-hat Semi-open 7",
+          "label": "Hi-hat Semi-open 7 (하이햇 반열림 7) — 완전 오픈 직전의 가장 길고 거친 반열림",
+          "sampleStem": "hihatSemiOpen7",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 118
+            }
+          ],
+          "durationSec": 6.200479
+        },
+        {
+          "id": "low-tom",
+          "key": 43,
+          "name": "Low tom",
+          "label": "Low tom (로우 톰) — 낮은 톰의 강약·라운드로빈 타격",
+          "sampleStem": "loTom",
+          "durationSec": 2.413438
+        },
+        {
+          "id": "hi-hat-foot",
+          "key": 44,
+          "name": "Hi-hat foot / stomp",
+          "label": "Hi-hat foot / stomp (하이햇 풋·스톰프) — 페달로 닫거나 강하게 밟는 소리",
+          "sampleStem": "hihatFoot + hihatFootStomp",
+          "durationSec": 9.261521
+        },
+        {
+          "id": "high-tom",
+          "key": 45,
+          "name": "High tom",
+          "label": "High tom (하이 톰) — 높은 톰의 강약·라운드로빈 타격",
+          "sampleStem": "hiTom",
+          "durationSec": 3.079708
+        },
+        {
+          "id": "hi-hat-open",
+          "key": 46,
+          "name": "Open hi-hat",
+          "label": "Open hi-hat (오픈 하이햇) — 열린 하이햇의 긴 울림과 초크 연결",
+          "sampleStem": "hihatOpen",
+          "durationSec": 10.255208
+        },
+        {
+          "id": "cowbell",
+          "key": 47,
+          "name": "Cowbell",
+          "label": "Cowbell (카우벨) — 세 단계 강약의 카우벨 타격",
+          "sampleStem": "cowbell",
+          "durationSec": 1.142187
+        },
+        {
+          "id": "ride-2",
+          "key": 48,
+          "name": "Ride 2 bow",
+          "label": "Ride 2 bow (라이드 2 보우) — 두 번째 라이드의 표면 타격",
+          "sampleStem": "ride2",
+          "durationSec": 10.33425
+        },
+        {
+          "id": "ride-2-bell",
+          "key": 49,
+          "name": "Ride 2 bell",
+          "label": "Ride 2 bell (라이드 2 벨) — 두 번째 라이드의 벨 부분 타격",
+          "sampleStem": "ride2Bell",
+          "durationSec": 7.402
+        },
+        {
+          "id": "ride-2-crash",
+          "key": 50,
+          "name": "Ride 2 crash",
+          "label": "Ride 2 crash (라이드 2 크래시) — 두 번째 라이드를 크래시처럼 강하게 타격",
+          "sampleStem": "ride2Crash",
+          "durationSec": 11.404833
+        },
+        {
+          "id": "ride-2-crash-choke",
+          "key": 51,
+          "name": "Ride 2 crash choke",
+          "label": "Ride 2 crash choke (라이드 2 크래시 초크) — 울리는 라이드를 손으로 막는 소리",
+          "sampleStem": "ride2CrashChoke",
+          "durationSec": 2.166125
+        },
+        {
+          "id": "ride-1",
+          "key": 52,
+          "name": "Ride 1 bow",
+          "label": "Ride 1 bow (라이드 1 보우) — 첫 번째 라이드의 표면 타격",
+          "sampleStem": "ride1",
+          "durationSec": 11.436625
+        },
+        {
+          "id": "ride-1-bell",
+          "key": 53,
+          "name": "Ride 1 bell",
+          "label": "Ride 1 bell (라이드 1 벨) — 첫 번째 라이드의 벨 부분 타격",
+          "sampleStem": "ride1Bell",
+          "durationSec": 7.852708
+        },
+        {
+          "id": "crash-1-choke",
+          "key": 54,
+          "name": "Crash 1 choke",
+          "label": "Crash 1 choke (크래시 1 초크) — 첫 번째 크래시의 울림을 손으로 막아",
+          "sampleStem": "crash1Choke",
+          "durationSec": 1.96425
+        },
+        {
+          "id": "crash-1",
+          "key": 55,
+          "name": "Crash 1",
+          "label": "Crash 1 (크래시 1) — 첫 번째 크래시 심벌 타격",
+          "sampleStem": "crash1",
+          "durationSec": 11.502
+        },
+        {
+          "id": "crash-2-choke",
+          "key": 56,
+          "name": "Crash 2 choke",
+          "label": "Crash 2 choke (크래시 2 초크) — 두 번째 크래시의 울림을 손으로 막아",
+          "sampleStem": "crash2Choke",
+          "durationSec": 1.933354
+        },
+        {
+          "id": "crash-2",
+          "key": 57,
+          "name": "Crash 2",
+          "label": "Crash 2 (크래시 2) — 두 번째 크래시 심벌 타격",
+          "sampleStem": "crash2",
+          "durationSec": 10.921188
+        },
+        {
+          "id": "china-1-choke",
+          "key": 58,
+          "name": "China 1 choke",
+          "label": "China 1 choke (차이나 1 초크) — 첫 번째 차이나 심벌의 울림을 손으로 막아",
+          "sampleStem": "china1Choke",
+          "durationSec": 1.886437
+        },
+        {
+          "id": "china-1",
+          "key": 59,
+          "name": "China 1",
+          "label": "China 1 (차이나 1) — 첫 번째 차이나 심벌 타격",
+          "sampleStem": "china1",
+          "durationSec": 7.928937
+        },
+        {
+          "id": "china-2",
+          "key": 60,
+          "name": "China 2",
+          "label": "China 2 (차이나 2) — 두 번째 차이나 심벌 타격",
+          "sampleStem": "china2",
+          "durationSec": 7.857479
+        },
+        {
+          "id": "china-2-choke",
+          "key": 61,
+          "name": "China 2 choke",
+          "label": "China 2 choke (차이나 2 초크) — 두 번째 차이나 심벌의 울림을 손으로 막아",
+          "sampleStem": "china2Choke",
+          "durationSec": 1.782604
+        },
+        {
+          "id": "crash-3",
+          "key": 62,
+          "name": "Crash 3",
+          "label": "Crash 3 (크래시 3) — 세 번째 크래시 심벌 타격",
+          "sampleStem": "crash3",
+          "durationSec": 6.58675
+        },
+        {
+          "id": "splash-1",
+          "key": 63,
+          "name": "Splash 1",
+          "label": "Splash 1 (스플래시 1) — 짧고 밝은 스플래시 심벌 타격",
+          "sampleStem": "splash1",
+          "durationSec": 2.658458
+        },
+        {
+          "id": "bell-chime",
+          "key": 64,
+          "name": "Bell chime",
+          "label": "Bell chime (벨 차임) — 벨 차임의 금속성 타격",
+          "sampleStem": "bellchime",
+          "durationSec": 9.197563
+        }
+      ]
+    },
+    {
+      "id": "salamander-crashes-fx",
+      "path": "sfz/crashesFX.sfz",
+      "name": "Cymbals & Effects",
+      "family": "Salamander Drumkit",
+      "articulation": "cymbals-and-effects",
+      "duration": "one-shot",
+      "label": "Cymbals & Effects (심벌·효과) — 크래시·차이나·스플래시·카우벨과 초크",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 11.502,
+      "durationSec": 11.502,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "cowbell",
+          "key": 47,
+          "name": "Cowbell",
+          "label": "Cowbell (카우벨) — 세 단계 강약의 카우벨 타격",
+          "sampleStem": "cowbell",
+          "durationSec": 1.142187
+        },
+        {
+          "id": "crash-1-choke",
+          "key": 54,
+          "name": "Crash 1 choke",
+          "label": "Crash 1 choke (크래시 1 초크) — 첫 번째 크래시의 울림을 손으로 막아",
+          "sampleStem": "crash1Choke",
+          "durationSec": 1.96425
+        },
+        {
+          "id": "crash-1",
+          "key": 55,
+          "name": "Crash 1",
+          "label": "Crash 1 (크래시 1) — 첫 번째 크래시 심벌 타격",
+          "sampleStem": "crash1",
+          "durationSec": 11.502
+        },
+        {
+          "id": "crash-2-choke",
+          "key": 56,
+          "name": "Crash 2 choke",
+          "label": "Crash 2 choke (크래시 2 초크) — 두 번째 크래시의 울림을 손으로 막아",
+          "sampleStem": "crash2Choke",
+          "durationSec": 1.933354
+        },
+        {
+          "id": "crash-2",
+          "key": 57,
+          "name": "Crash 2",
+          "label": "Crash 2 (크래시 2) — 두 번째 크래시 심벌 타격",
+          "sampleStem": "crash2",
+          "durationSec": 10.921188
+        },
+        {
+          "id": "china-1-choke",
+          "key": 58,
+          "name": "China 1 choke",
+          "label": "China 1 choke (차이나 1 초크) — 첫 번째 차이나 심벌의 울림을 손으로 막아",
+          "sampleStem": "china1Choke",
+          "durationSec": 1.886437
+        },
+        {
+          "id": "china-1",
+          "key": 59,
+          "name": "China 1",
+          "label": "China 1 (차이나 1) — 첫 번째 차이나 심벌 타격",
+          "sampleStem": "china1",
+          "durationSec": 7.928937
+        },
+        {
+          "id": "china-2",
+          "key": 60,
+          "name": "China 2",
+          "label": "China 2 (차이나 2) — 두 번째 차이나 심벌 타격",
+          "sampleStem": "china2",
+          "durationSec": 7.857479
+        },
+        {
+          "id": "china-2-choke",
+          "key": 61,
+          "name": "China 2 choke",
+          "label": "China 2 choke (차이나 2 초크) — 두 번째 차이나 심벌의 울림을 손으로 막아",
+          "sampleStem": "china2Choke",
+          "durationSec": 1.782604
+        },
+        {
+          "id": "crash-3",
+          "key": 62,
+          "name": "Crash 3",
+          "label": "Crash 3 (크래시 3) — 세 번째 크래시 심벌 타격",
+          "sampleStem": "crash3",
+          "durationSec": 6.58675
+        },
+        {
+          "id": "splash-1",
+          "key": 63,
+          "name": "Splash 1",
+          "label": "Splash 1 (스플래시 1) — 짧고 밝은 스플래시 심벌 타격",
+          "sampleStem": "splash1",
+          "durationSec": 2.658458
+        },
+        {
+          "id": "bell-chime",
+          "key": 64,
+          "name": "Bell chime",
+          "label": "Bell chime (벨 차임) — 벨 차임의 금속성 타격",
+          "sampleStem": "bellchime",
+          "durationSec": 9.197563
+        }
+      ]
+    },
+    {
+      "id": "salamander-hi-hat",
+      "path": "sfz/hihat.sfz",
+      "name": "Hi-hat",
+      "family": "Salamander Drumkit",
+      "articulation": "hi-hat",
+      "duration": "one-shot",
+      "label": "Hi-hat (하이햇) — 닫힘·반열림·오픈·페달과 CC64 개방도",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 10.255208,
+      "durationSec": 10.255208,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "hi-hat-closed",
+          "key": 42,
+          "name": "Hi-hat Closed",
+          "label": "Hi-hat Closed (하이햇 닫힘) — 두 심벌을 완전히 닫아 짧고 단단하게 타격",
+          "sampleStem": "hihatClosed",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 0
+            }
+          ],
+          "durationSec": 0.586313
+        },
+        {
+          "id": "hi-hat-semi-open-1",
+          "key": 42,
+          "name": "Hi-hat Semi-open 1",
+          "label": "Hi-hat Semi-open 1 (하이햇 반열림 1) — 거의 닫힌 상태로 아주 짧은 공명만 남김",
+          "sampleStem": "hihatSemiOpen1",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 10
+            }
+          ],
+          "durationSec": 1.082896
+        },
+        {
+          "id": "hi-hat-semi-open-2",
+          "key": 42,
+          "name": "Hi-hat Semi-open 2",
+          "label": "Hi-hat Semi-open 2 (하이햇 반열림 2) — 조금 열어 금속성 꼬리를 살짝 늘림",
+          "sampleStem": "hihatSemiOpen2",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 27
+            }
+          ],
+          "durationSec": 1.857479
+        },
+        {
+          "id": "hi-hat-semi-open-3",
+          "key": 42,
+          "name": "Hi-hat Semi-open 3",
+          "label": "Hi-hat Semi-open 3 (하이햇 반열림 3) — 중간보다 덜 열린 공명으로 리듬을 부드럽게 연결",
+          "sampleStem": "hihatSemiOpen3",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 45
+            }
+          ],
+          "durationSec": 2.107042
+        },
+        {
+          "id": "hi-hat-semi-open-4",
+          "key": 42,
+          "name": "Hi-hat Semi-open 4",
+          "label": "Hi-hat Semi-open 4 (하이햇 반열림 4) — 중간 개방도로 닫힌 소리와 열린 소리의 사이를 만듦",
+          "sampleStem": "hihatSemiOpen4",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 63
+            }
+          ],
+          "durationSec": 2.135146
+        },
+        {
+          "id": "hi-hat-semi-open-5",
+          "key": 42,
+          "name": "Hi-hat Semi-open 5",
+          "label": "Hi-hat Semi-open 5 (하이햇 반열림 5) — 더 길고 거친 금속성 울림을 남김",
+          "sampleStem": "hihatSemiOpen5",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 81
+            }
+          ],
+          "durationSec": 3.074625
+        },
+        {
+          "id": "hi-hat-semi-open-6",
+          "key": 42,
+          "name": "Hi-hat Semi-open 6",
+          "label": "Hi-hat Semi-open 6 (하이햇 반열림 6) — 거의 열린 상태의 넓고 긴 공명",
+          "sampleStem": "hihatSemiOpen6",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 99
+            }
+          ],
+          "durationSec": 4.6435
+        },
+        {
+          "id": "hi-hat-semi-open-7",
+          "key": 42,
+          "name": "Hi-hat Semi-open 7",
+          "label": "Hi-hat Semi-open 7 (하이햇 반열림 7) — 완전 오픈 직전의 가장 길고 거친 반열림",
+          "sampleStem": "hihatSemiOpen7",
+          "cc": [
+            {
+              "controller": 64,
+              "value": 118
+            }
+          ],
+          "durationSec": 6.200479
+        },
+        {
+          "id": "hi-hat-foot",
+          "key": 44,
+          "name": "Hi-hat foot / stomp",
+          "label": "Hi-hat foot / stomp (하이햇 풋·스톰프) — 페달로 닫거나 강하게 밟는 소리",
+          "sampleStem": "hihatFoot + hihatFootStomp",
+          "durationSec": 9.261521
+        },
+        {
+          "id": "hi-hat-open",
+          "key": 46,
+          "name": "Open hi-hat",
+          "label": "Open hi-hat (오픈 하이햇) — 열린 하이햇의 긴 울림과 초크 연결",
+          "sampleStem": "hihatOpen",
+          "durationSec": 10.255208
+        }
+      ]
+    },
+    {
+      "id": "salamander-high-tom",
+      "path": "sfz/hitom.sfz",
+      "name": "High Tom",
+      "family": "Salamander Drumkit",
+      "articulation": "high-tom",
+      "duration": "one-shot",
+      "label": "High Tom (하이 톰) — 강약과 라운드로빈이 있는 높은 톰",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 3.079708,
+      "durationSec": 3.079708,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "high-tom",
+          "key": 45,
+          "name": "High tom",
+          "label": "High tom (하이 톰) — 높은 톰의 강약·라운드로빈 타격",
+          "sampleStem": "hiTom",
+          "durationSec": 3.079708
+        }
+      ]
+    },
+    {
+      "id": "salamander-kicks",
+      "path": "sfz/kick.sfz",
+      "name": "Kicks",
+      "family": "Salamander Drumkit",
+      "articulation": "kicks",
+      "duration": "one-shot",
+      "label": "Kicks (킥) — 서로 다른 두 베이스 드럼과 강약·랜덤 테이크",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 0.484,
+      "durationSec": 0.484,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "kick-1",
+          "key": 35,
+          "name": "Kick 1",
+          "label": "Kick 1 (킥 1) — 첫 번째 베이스 드럼",
+          "sampleStem": "kick",
+          "durationSec": 0.484
+        },
+        {
+          "id": "kick-2",
+          "key": 36,
+          "name": "Kick 2",
+          "label": "Kick 2 (킥 2) — 두 번째 베이스 드럼",
+          "sampleStem": "kick2",
+          "durationSec": 0.484
+        }
+      ]
+    },
+    {
+      "id": "salamander-low-tom",
+      "path": "sfz/lotom.sfz",
+      "name": "Low Tom",
+      "family": "Salamander Drumkit",
+      "articulation": "low-tom",
+      "duration": "one-shot",
+      "label": "Low Tom (로우 톰) — 강약과 라운드로빈이 있는 낮은 톰",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 2.413438,
+      "durationSec": 2.413438,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "low-tom",
+          "key": 43,
+          "name": "Low tom",
+          "label": "Low tom (로우 톰) — 낮은 톰의 강약·라운드로빈 타격",
+          "sampleStem": "loTom",
+          "durationSec": 2.413438
+        }
+      ]
+    },
+    {
+      "id": "salamander-rides",
+      "path": "sfz/ride.sfz",
+      "name": "Rides",
+      "family": "Salamander Drumkit",
+      "articulation": "rides",
+      "duration": "one-shot",
+      "label": "Rides (라이드) — 보우·벨·크래시와 손으로 막는 초크",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 11.436625,
+      "durationSec": 11.436625,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "ride-2",
+          "key": 48,
+          "name": "Ride 2 bow",
+          "label": "Ride 2 bow (라이드 2 보우) — 두 번째 라이드의 표면 타격",
+          "sampleStem": "ride2",
+          "durationSec": 10.33425
+        },
+        {
+          "id": "ride-2-bell",
+          "key": 49,
+          "name": "Ride 2 bell",
+          "label": "Ride 2 bell (라이드 2 벨) — 두 번째 라이드의 벨 부분 타격",
+          "sampleStem": "ride2Bell",
+          "durationSec": 7.402
+        },
+        {
+          "id": "ride-2-crash",
+          "key": 50,
+          "name": "Ride 2 crash",
+          "label": "Ride 2 crash (라이드 2 크래시) — 두 번째 라이드를 크래시처럼 강하게 타격",
+          "sampleStem": "ride2Crash",
+          "durationSec": 11.404833
+        },
+        {
+          "id": "ride-2-crash-choke",
+          "key": 51,
+          "name": "Ride 2 crash choke",
+          "label": "Ride 2 crash choke (라이드 2 크래시 초크) — 울리는 라이드를 손으로 막는 소리",
+          "sampleStem": "ride2CrashChoke",
+          "durationSec": 2.166125
+        },
+        {
+          "id": "ride-1",
+          "key": 52,
+          "name": "Ride 1 bow",
+          "label": "Ride 1 bow (라이드 1 보우) — 첫 번째 라이드의 표면 타격",
+          "sampleStem": "ride1",
+          "durationSec": 11.436625
+        },
+        {
+          "id": "ride-1-bell",
+          "key": 53,
+          "name": "Ride 1 bell",
+          "label": "Ride 1 bell (라이드 1 벨) — 첫 번째 라이드의 벨 부분 타격",
+          "sampleStem": "ride1Bell",
+          "durationSec": 7.852708
+        }
+      ]
+    },
+    {
+      "id": "salamander-snares",
+      "path": "sfz/snare.sfz",
+      "name": "Snares",
+      "family": "Salamander Drumkit",
+      "articulation": "snares",
+      "duration": "one-shot",
+      "label": "Snares (스네어) — 두 스네어·와이어 오프·크로스 스틱·고스트 노트",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "drum-module",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 1.963188,
+      "durationSec": 1.963188,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "snare-2-off",
+          "key": 37,
+          "name": "Snare 2, snares off",
+          "label": "Snare 2, snares off (스네어 2 오프) — 두 번째 스네어의 와이어를 끈 타격",
+          "sampleStem": "snare2OFF",
+          "durationSec": 1.723333
+        },
+        {
+          "id": "snare-2",
+          "key": 38,
+          "name": "Snare 2",
+          "label": "Snare 2 (스네어 2) — 두 번째 스네어의 일반·고스트 타격",
+          "sampleStem": "snare2",
+          "durationSec": 1.963188
+        },
+        {
+          "id": "snare-1-off",
+          "key": 39,
+          "name": "Snare 1, snares off",
+          "label": "Snare 1, snares off (스네어 1 오프) — 첫 번째 스네어의 와이어를 끈 타격",
+          "sampleStem": "snareOFF",
+          "durationSec": 1.341146
+        },
+        {
+          "id": "snare-1",
+          "key": 40,
+          "name": "Snare 1",
+          "label": "Snare 1 (스네어 1) — 첫 번째 스네어의 일반·고스트 타격",
+          "sampleStem": "snare",
+          "durationSec": 1.883208
+        },
+        {
+          "id": "snare-stick",
+          "key": 41,
+          "name": "Snare cross-stick",
+          "label": "Snare cross-stick (스네어 크로스 스틱) — 스틱을 림에 걸쳐 짧고 딱딱하게 타격",
+          "sampleStem": "snareStick",
+          "durationSec": 0.697313
+        }
+      ]
+    },
+    {
+      "id": "salamander-kick-raw-take",
+      "path": "sfz-clips/kick-oh-p-1-raw-take.sfz",
+      "name": "Untrimmed Repeated Kick Raw Take",
+      "family": "Salamander Drumkit",
+      "articulation": "recorded-raw-take",
+      "duration": "recorded-clip",
+      "label": "Recorded Clip (녹음 클립) — 미편집 킥 반복 원본을 자르지 않고 한 번 재생",
+      "source": "Salamander Drumkit by Alexander Holm",
+      "category": "Drums",
+      "kind": "clip",
+      "recommended": false,
+      "gm": {
+        "bank": 128,
+        "program": 0
+      },
+      "gmApproximation": "GM percussion channel with exact Salamander key map (GM 타악기 채널·Salamander 실제 키 유지)",
+      "drum": true,
+      "maxSampleDurationSec": 44.55625,
+      "durationSec": 44.55625,
+      "tailHintSec": 0.5,
+      "release": 0.3,
+      "pieces": [
+        {
+          "id": "play",
+          "key": 60,
+          "name": "Play",
+          "label": "Play (재생) — 미편집 킥 반복 원본을 한 번 재생",
+          "sampleStem": "kick_OH_P_1",
+          "durationSec": 44.55625
+        }
+      ],
+      "clip": {
+        "sourceFile": "samples/OH/kick_OH_P_1.wav",
+        "reason": "untrimmed-repeated-kick-raw-take"
+      }
+    }
+  ]
+}

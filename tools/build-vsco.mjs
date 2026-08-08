@@ -8,7 +8,8 @@ import os from "node:os";
 import { writeSf2 } from "./sf2write.mjs";
 import { convertAll, readWavMono, processSample } from "./phil-lib.mjs";
 
-const SC = "/private/tmp/claude-501/-Users-chenjing-dev-tmp-2026-08-03-new-chat-1/5473a906-75d2-4203-845d-3d8e8cf8d248/scratchpad";
+const SC = process.env.ARIA_LEGACY_SAMPLE_ROOT;
+if (!SC) throw new Error("ARIA_LEGACY_SAMPLE_ROOT가 필요합니다 — 이 도구는 기존 축소 SF2를 재현하는 legacy builder입니다. 전체 팩은 tools/install-pack.mjs를 사용하세요");
 const SRC = path.join(SC, "vsco/VSCO-2-CE-master");
 const TMP = path.join(SC, "phil/wav-vsco");
 const OUT = path.join(os.homedir(), ".aria/soundfonts/vsco.sf2");
@@ -151,19 +152,23 @@ const res = writeSf2({
 console.log(`\nvsco.sf2: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 ${res.samples}개 · ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 
 // ── 스윕: 전 녹음 음 × vel 3단 발음 확인 ──
-const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
-const sf = parseSf2(OUT);
-console.log(`파서: 프리셋 ${sf.presets.size}개, 샘플 ${sf.shdr.length}개`);
+const { openSf2Checker } = await import("./sf2-check.mjs");
+const checker = openSf2Checker(OUT);
+console.log(`검증 엔진: ${checker.info.id ?? checker.info.engine ?? "SpessaSynth"}`);
 let checked = 0, silent = 0, nan = 0;
-for (const inst of INSTRUMENTS) {
-  for (const midi of inst.midis ?? []) {
-    for (const vel of [0.3, 0.7, 1.0]) {
-      const buf = renderSf2Voice(sf, 0, inst.program, midi, vel, 0.4, 44100);
-      checked++;
-      let s = 0;
-      for (let i = 0; i < Math.min(buf.length, 22050); i++) { if (!Number.isFinite(buf[i])) nan++; s += buf[i] * buf[i]; }
-      if (Math.sqrt(s / 22050) < 1e-4) { silent++; console.log(`  ⚠ 무음 ${inst.short}-${midi} vel${vel}`); }
+try {
+  for (const inst of INSTRUMENTS) {
+    for (const midi of inst.midis ?? []) {
+      for (const vel of [0.3, 0.7, 1.0]) {
+        const buf = checker.render({ program: inst.program, key: midi, velocity: vel });
+        checked++;
+        let s = 0;
+        for (let i = 0; i < Math.min(buf.length, 22050); i++) { if (!Number.isFinite(buf[i])) nan++; s += buf[i] * buf[i]; }
+        if (Math.sqrt(s / 22050) < 1e-4) { silent++; console.log(`  ⚠ 무음 ${inst.short}-${midi} vel${vel}`); }
+      }
     }
   }
+} finally {
+  checker.close();
 }
 console.log(`스윕 ${checked}건: 무음 ${silent}${nan ? ` · ⚠ NaN ${nan}` : ""}`);

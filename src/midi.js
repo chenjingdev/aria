@@ -1,5 +1,5 @@
 // aria — 표준 MIDI 파일(SMF type 1) 내보내기, 순수 JS
-import { isDrumPreset, presetGm, drumPieces } from "./presets.js";
+import { isDrumPreset, presetGm, drumPieces, drumPieceControls } from "./presets.js";
 import { noteToMidi, beatsPerBar, noteStartBeat, tempoSegments, beatToSec, bpmAtBeat, totalBars } from "./song.js";
 
 const PPQ = 480;
@@ -82,6 +82,25 @@ function trackChunk(events) {
 }
 
 export function midiBuffer(song) {
+  // Aria의 track.articulation은 특정 SFZ에 녹음·매핑된 주법을 선택한다. 이를
+  // 일반 GM program만 남는 portable MIDI로 조용히 내보내면 사용자가 고른 소리가
+  // 사라진다. 기본 주법(키 생략/null)은 기존 GM 근사를 허용하되, 명시적 선택은
+  // WAV로 보존하거나 사용자가 직접 기본값으로 되돌리기 전까지 엄격하게 막는다.
+  const articulated = song.tracks.filter(track =>
+    Array.isArray(track.notes) && track.notes.length > 0 &&
+    typeof track.articulation === "string" && track.articulation.trim()
+  );
+  if (articulated.length) {
+    const details = articulated
+      .map(track => `"${track.name}" (${track.articulation})`)
+      .join(", ");
+    throw new Error(
+      `MIDI 내보내기를 중단했습니다 — 사용 중인 트랙에 명시적인 녹음 주법/키스위치가 있습니다: ${details}. ` +
+      "표준 MIDI의 GM 근사로는 이 아티큘레이션을 안전하게 보존할 수 없습니다. " +
+      "현재 소리를 보존하려면 WAV로 내보내거나, set_track({track:\"트랙 이름\", articulation:null})로 " +
+      "프리셋 기본 주법으로 되돌린 뒤 MIDI를 내보내세요."
+    );
+  }
   const melodicCount = song.tracks.filter(t => !isDrumPreset(t.preset)).length;
   if (melodicCount > 15)
     throw new Error(`멜로디 트랙이 ${melodicCount}개 — MIDI는 멜로디 트랙 15개(채널 한계)까지만 내보낼 수 있습니다`);
@@ -108,10 +127,19 @@ export function midiBuffer(song) {
     const vol7 = Math.round(track.volume * 127);
     events.push({ tick: 0, order: order++, bytes: [0xb0 | ch, 7, vol7] });
     events.push({ tick: 0, order: order++, bytes: [0xb0 | ch, 10, Math.round((track.pan + 1) * 63.5)] });
+    const pieces = drum ? drumPieces(track.preset) : null;
+    const controlsByPiece = drum ? drumPieceControls(track.preset) : null;
     for (const n of track.notes) {
-      const key = drum ? (drumPieces(track.preset)[n.pitch] ?? 38) : noteToMidi(n.pitch);
+      const key = drum ? pieces[n.pitch] : noteToMidi(n.pitch);
+      if (!Number.isInteger(key))
+        throw new Error(`트랙 "${track.name}"의 음 ${n.pitch}을 ${track.preset}에서 찾을 수 없습니다`);
       const on = Math.round(noteStartBeat(song, n) * PPQ);
       const off = Math.round((noteStartBeat(song, n) + n.dur) * PPQ);
+      // SFZ에서 같은 key를 controller 상태로 나눈 피스는 그 상태를 note-on보다 먼저
+      // 기록한다. 다른 피스나 GM key로 몰래 바꾸지 않으며, 같은 tick의 피스도 배열
+      // 순서대로 CC → note-on을 유지한다.
+      for (const control of controlsByPiece?.[n.pitch] ?? [])
+        events.push({ tick: on, order: order++, bytes: [0xb0 | ch, control.controller, control.value] });
       events.push({ tick: on, order: order++, bytes: [0x90 | ch, key, n.vel] });
       events.push({ tick: Math.max(on + 1, off), order: order++, bytes: [0x80 | ch, key, 0] });
     }

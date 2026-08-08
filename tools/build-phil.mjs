@@ -7,7 +7,8 @@ import os from "node:os";
 import { writeSf2 } from "./sf2write.mjs"; // tools/ 안에서 실행
 import { DYN, noteToMidi, convertAll, readWavMono, processSample } from "./phil-lib.mjs";
 
-const SC = "/private/tmp/claude-501/-Users-chenjing-dev-tmp-2026-08-03-new-chat-1/5473a906-75d2-4203-845d-3d8e8cf8d248/scratchpad";
+const SC = process.env.ARIA_LEGACY_SAMPLE_ROOT;
+if (!SC) throw new Error("ARIA_LEGACY_SAMPLE_ROOT가 필요합니다 — 이 도구는 기존 축소 SF2를 재현하는 legacy builder입니다. 전체 팩은 tools/prepare-philharmonia-sfz.mjs를 사용하세요");
 const TMP = path.join(SC, "phil/wav");
 
 // art: 파일명 접미(주법). oneShot: 루프 없이 자연 감쇠(피치카토 등) — 지속 검사도 면제.
@@ -158,15 +159,20 @@ console.log(`\n${fam.out}: ${(res.bytes / 1024 / 1024).toFixed(1)}MB · 샘플 $
 
 // ── 전수 스윕 검증: 모든 녹음 음 × vel 4단 — 무음 구멍·지속 끊김·펌핑 검사 ──
 // (이전의 4키×2vel 표본 검사는 리뷰에서 확정된 결함을 하나도 잡지 못했다)
-const { parseSf2, renderSf2Voice } = await import("../src/sf2.js");
-const sf = parseSf2(OUT);
-console.log(`파서: 프리셋 ${sf.presets.size}개, 샘플 ${sf.shdr.length}개`);
+const { openSf2Checker } = await import("./sf2-check.mjs");
+const checker = openSf2Checker(OUT);
+console.log(`검증 엔진: ${checker.info.id ?? checker.info.engine ?? "SpessaSynth"}`);
 let checked = 0, nan = 0, silent = 0, dropout = 0, pump = 0;
 const worst = [];
-for (const inst of INSTRUMENTS) {
-  for (const midi of inst.midis) {
-    for (const vel of [0.15, 0.45, 0.75, 1.0]) {
-      const buf = renderSf2Voice(sf, 0, inst.program, midi, vel, inst.oneShot ? 0.5 : 2.6, 44100);
+try {
+  for (const inst of INSTRUMENTS) {
+    for (const midi of inst.midis) {
+      for (const vel of [0.15, 0.45, 0.75, 1.0]) {
+        const buf = checker.render({
+          program: inst.program, key: midi, velocity: vel,
+          gateSec: inst.oneShot ? 0.5 : 2.6,
+          lengthSec: inst.oneShot ? 8 : 10
+        });
       checked++;
       if (inst.oneShot) {
         // 원샷: 자연 감쇠가 정상이므로 발음 여부·NaN만 검사
@@ -189,8 +195,11 @@ for (const inst of INSTRUMENTS) {
       const wins = [1.0, 1.3, 1.6, 1.9, 2.2].map(t => rmsAt(t));
       const swing = 20 * Math.log10(Math.max(...wins) / (Math.min(...wins) || 1e-9));
       if (swing > 6) { pump++; worst.push([`펌핑 ${inst.short}-${midi} vel${vel}`, swing]); }
+      }
     }
   }
+} finally {
+  checker.close();
 }
 console.log(`스윕 ${checked}건: 무음 ${silent} · 지속 끊김 ${dropout} · 펌핑(>6dB) ${pump}${nan ? ` · ⚠ NaN ${nan}` : ""}`);
 for (const [what, db] of worst.sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8))

@@ -9,6 +9,8 @@ Treat a user's sensory language as the brief. Keep technical decisions internal 
 
 Create an editable musical idea, not a genre stereotype. Use research as a set of probabilistic cues, genre references as conventions, and listening as the final judge.
 
+When explaining a musical or audio concept, put the original professional term first and immediately add a plain, sensory Korean explanation. Refer to people who do not make music as `비음악인`; they may still be expert listeners, critics, or experienced music lovers.
+
 ## Route the task
 
 Read only the references needed for the request:
@@ -33,7 +35,7 @@ Route vague sensory language twice: first interpret the phrase, then load the re
 ## Start safely
 
 1. Call `get_song` and `list_feedback` before any Aria edit, including a new-song request. `new_song` replaces the current live song.
-2. Call `list_presets` before creating a song or adding, replacing, or choosing instruments. Treat the returned list as current; do not assume a SoundFont preset is installed.
+2. Call `list_presets` before creating a song or adding, replacing, or choosing instruments. With no filters it returns a compact source/family summary, not every ID; follow it with `query`, `family`, or `source` and normally `available_only:true` to retrieve actual choices. Treat the result as current and do not assume an SF2/SFZ sample preset is installed.
 3. Preserve meaningful existing work before `new_song` or a broad rewrite with `save_song` or `ab_save`. Do not create a preservation copy of an empty throwaway song.
 4. Inspect `edit_history` before a risky revision. Prefer reversible, bounded edits over replacing the whole song.
 5. If a request is ambiguous but low-risk, choose a coherent interpretation and state it briefly. Ask only when alternatives would produce materially different songs.
@@ -93,7 +95,10 @@ Use `play` on the prototype. Listen when audio is available and also inspect the
 - Shape accents and phrases with note velocity first.
 - Use `set_velocity` ramps, `set_region_gain` ramps, track volume, arrangement density, and register as distinct dynamic controls. Do not treat any one control as the sole correct method.
 - Apply `swing`, `humanize`, or partial `quantize` only for a musical reason. Audition a straight version against the altered version when pocket matters.
-- Add bends or vibrato selectively to instruments that can plausibly sustain expressive pitch.
+- Add pitch bends selectively to instruments that can plausibly sustain expressive pitch. For vibrato, choose an installed sample preset that already contains that performed or programmed behavior.
+- When `list_presets` exposes `articulation` choices, pass the exact returned ID to `add_track` or `set_track`; do not type a translated label or imitate the technique with a generic effect. Declared key switches and CC values select the actual mapped samples.
+- Do not invent removed track controls: `attack` (어택, 소리가 시작되는 성질), `release` (릴리스, 음을 놓은 뒤 남는 여운), `vibrato` (비브라토, 음높이의 주기적인 떨림), or `ensemble` (앙상블, 여러 연주자가 함께 내는 편성). Choose a matching recorded/programmed preset, articulation, note duration, and arrangement instead.
+- Treat `Recorded Clip` entries as one-shot recordings, not pitched instruments. True legato (실제 전이 레가토) requires recorded transitions and a dedicated mapping; longer release or an isolated legato phrase does not create it.
 - Keep repeated humanization passes from accumulating accidentally.
 
 ### 5. Arrange for clarity
@@ -138,7 +143,7 @@ Never mark feedback resolved merely because it was read.
 - `beat` starts at 0 inside each bar. In 4/4, quarter-note onsets are `0, 1, 2, 3`.
 - `beat` and `dur` use quarter-note units: `0.25`=sixteenth, `0.5`=eighth, `1`=quarter, `4`=whole note.
 - Add simultaneous chord tones at the same `bar` and `beat`.
-- Use the drum-piece names returned by `list_presets`.
+- Use the exact drum, percussion, and Recorded Clip piece IDs returned by `list_presets`. A piece ID may select a MIDI CC internally even when several pieces share one key; do not replace it with the numeric key or a nearby generic name.
 - Remember that `add_notes` appends. Clear only the intended range when replacing material.
 
 ## Complete the work

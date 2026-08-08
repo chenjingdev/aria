@@ -56,7 +56,7 @@ jazz 요청에서는 swing-era, bebop, cool/modal, hard bop, fusion, vocal jazz,
 - 선택한 subdivision에서 backbeat, bass, chord attack이 같은 칸을 모두 차지하지 않게 한다.
 - neo-soul pocket을 random lateness로 만들지 않는다. grid와 구조화된 part delay를 A/B한다. [S20][S23][S24]
 - chord top note가 focal melody를 가리지 않게 voice leading을 먼저 고친다.
-- bend/vibrato는 vocal-like sustained focal에 선택적으로 쓴다.
+- 피치 벤드(Pitch bend, 음높이를 미끄러뜨림)는 vocal-like sustained focal에 선택적으로 쓴다. 비브라토(Vibrato, 음높이의 주기적인 떨림)는 그 표현이 들어 있는 프리셋을 고른다.
 
 ### 피할 것
 

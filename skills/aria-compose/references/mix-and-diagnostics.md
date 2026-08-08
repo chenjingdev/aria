@@ -9,7 +9,7 @@ Aria의 믹스 도구는 감각적으로 튀는 문제를 고치는 데 집중�
 3. **timing/duration**: onset과 tail이 겹치는가.
 4. **performance**: velocity와 accent가 의도와 맞는가.
 5. **balance**: track/region level이 맞는가.
-6. **tone**: attack, release, reverb, EQ가 문제인가.
+6. **tone**: 프리셋의 attack/release 성질, reverb, EQ가 문제인가.
 7. **master report**: limiter, peak, LUFS가 무엇을 알려 주는가.
 
 앞 단계에서 해결되면 뒤의 처리를 추가하지 않는다.
@@ -40,7 +40,7 @@ Aria의 믹스 도구는 감각적으로 튀는 문제를 고치는 데 집중�
 
 ### 음질이 탁하다
 
-- low-mid의 동시 sustain과 release를 줄인다.
+- low-mid의 동시 sustain과 note duration을 줄이거나, 릴리스(Release, 음을 놓은 뒤 남는 여운)가 짧은 프리셋을 고른다.
 - chord root/doubling 또는 한 support를 제거한다.
 - reverb send와 pad tail을 줄인다.
 - register를 옮긴 뒤에도 남으면 `eqLow`/`eqMid`를 작게 조절한다.
@@ -49,12 +49,12 @@ Aria의 믹스 도구는 감각적으로 튀는 문제를 고치는 데 집중�
 
 - high-register doubling, cymbal density, short bright transients를 줄인다.
 - focal과 support가 같은 high-mid에서 경쟁하는지 본다.
-- velocity, attack, `eqHigh`, reverb send와 tail overlap을 순서대로 확인한다. Early reflection energy는 현재 Aria에서 직접 조절할 수 없다.
+- velocity, 프리셋의 어택(Attack, 소리가 시작되는 성질), `eqHigh`, reverb send와 tail overlap을 순서대로 확인한다. Early reflection energy는 현재 Aria에서 직접 조절할 수 없다.
 
 ## velocity, gain, arrangement는 다르다
 
 - note velocity: 개별 accent, phrase shape, 샘플 layer/음색 반응.
-- `velRange`: velocity 차이가 실제 음량에 미치는 폭.
+- `velRange`: 벨로시티 범위(Velocity range, 악보의 강약 전달 폭). `0`이면 모든 노트를 MIDI velocity 64로, `1`이면 악보 값을 그대로 샘플 엔진에 보내며 원본의 강약 레이어와 음색 반응도 함께 달라진다.
 - track volume: 파트 전체의 기본 균형.
 - `set_region_gain`: 한 구간의 balance나 점층.
 - arrangement density: 실제로 울리는 에너지와 역할 수.
@@ -62,11 +62,12 @@ Aria의 믹스 도구는 감각적으로 튀는 문제를 고치는 데 집중�
 
 크레셴도에는 하나만 정답이 없다. 작은 velocity ramp + register 확장 + 한 트랙의 늦은 등장처럼 여러 축을 나눠 쓰면 리미터를 덜 밀면서 더 크게 느껴질 수 있다.
 
-## attack, release, reverb
+## 어택(Attack), 릴리스(Release), 리버브(Reverb)
 
-- attack이 느리면 note 데이터보다 지각 onset이 늦을 수 있다. 그루브가 밀리는 문제를 timing만으로 보지 않는다. [S60]
-- release가 길면 legato와 공간감이 생기지만 bass/low-mid overlap도 늘어난다.
-- reverb는 깊이와 결속을 주지만 articulation과 phrase boundary를 흐릴 수 있다.
+- 어택(Attack, 소리가 시작되는 성질)이 느리면 note 데이터보다 지각 onset이 늦을 수 있다. 그루브가 밀리는 문제를 timing만으로 보지 않는다. [S60]
+- 릴리스(Release, 음을 놓은 뒤 남는 여운)가 길면 음 사이의 빈틈이 덜 들리고 공간감이 늘 수 있지만 bass/low-mid overlap도 늘어난다. transition sample(전이 녹음)과 전용 매핑이 없으면 true legato(실제 전이 레가토)를 만들지는 못한다.
+- 리버브(Reverb, 공간에서 되돌아오는 잔향)는 깊이와 결속을 주지만 articulation과 phrase boundary를 흐릴 수 있다.
+- Aria는 attack/release를 트랙 효과로 바꾸지 않는다. 문제가 프리셋 자체의 시작·여운이라면 note duration과 편곡을 먼저 고치고, 필요한 경우 그 성질이 실제로 들어 있는 다른 프리셋·주법을 고른다.
 - 공간을 넓히려면 모든 트랙의 reverb를 크게 하지 말고 foreground는 더 건조하게, background는 더 젖게 만드는 대비를 고려한다.
 
 ## EQ
@@ -77,7 +78,7 @@ Aria의 EQ는 세 개의 제한된 톤 보정이다.
 - `eqMid`: 1kHz peaking. 박스톤/존재감.
 - `eqHigh`: 4kHz shelf. 밝기/날카로움/공기감.
 
-**[출발점]** EQ는 한 번에 ±1–3dB 정도의 작은 변화부터 A/B한다. 이는 보편 임계값이 아니다. 큰 EQ가 필요하면 프리셋·register·note density·release가 더 근본 원인인지 본다.
+**[출발점]** EQ는 한 번에 ±1–3dB 정도의 작은 변화부터 A/B한다. 이는 보편 임계값이 아니다. 큰 EQ가 필요하면 프리셋·register·note density·프리셋의 release 성질이 더 근본 원인인지 본다.
 
 ## 리미터와 레벨 보고서
 

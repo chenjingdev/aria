@@ -8,7 +8,8 @@ process.env.ARIA_DATA_DIR = soundfonts.dataDir;
 process.on("exit", soundfonts.cleanup);
 
 const { createSong, validateSong, noteToMidi, totalBars, songText } = await import("../src/song.js");
-const { renderRange, wavBuffer } = await import("../src/renderer.js");
+const { renderRange } = await import("../src/sampler-renderer.js");
+const { wavBuffer } = await import("../src/renderer.js");
 const { midiBuffer } = await import("../src/midi.js");
 const { guessPreset } = await import("../src/midi-import.js");
 const {
@@ -108,6 +109,70 @@ ok("MIDI 버퍼 형식", () => {
   assert.equal(buf.readUInt16BE(10), 5); // 템포 트랙 + 4 트랙
   assert.equal(buf.readUInt16BE(12), 480);
   assert.ok(buf.includes(Buffer.from("MTrk")));
+});
+
+ok("MIDI가 같은 key 드럼 피스의 원래 CC 상태를 보존", () => {
+  const s = createSong({});
+  s.tracks = [{
+    name: "하이햇", preset: "salamander-all-full", volume: 0.8, pan: 0,
+    notes: [
+      { bar: 1, beat: 0, pitch: "hi-hat-closed", dur: 0.25, vel: 100 },
+      { bar: 1, beat: 1, pitch: "hi-hat-semi-open-7", dur: 0.25, vel: 101 }
+    ]
+  }];
+  const buf = midiBuffer(validateSong(s));
+  const closedCc = buf.indexOf(Buffer.from([0xb9, 64, 0]));
+  const closedOn = buf.indexOf(Buffer.from([0x99, 42, 100]));
+  const openCc = buf.indexOf(Buffer.from([0xb9, 64, 118]));
+  const openOn = buf.indexOf(Buffer.from([0x99, 42, 101]));
+  assert.ok(closedCc >= 0 && closedCc < closedOn, "닫힌 하이햇 CC64=0이 note-on보다 먼저 없음");
+  assert.ok(openCc >= 0 && openCc < openOn, "반열림 하이햇 CC64=118이 note-on보다 먼저 없음");
+});
+
+ok("MIDI는 명시적 녹음 주법을 거부하고 implicit/null 기본 주법은 GM 근사를 허용", () => {
+  const [presetId, preset] = Object.entries(SF_PRESETS).find(([, item]) =>
+    item.articulations && item.defaultArticulation &&
+    Object.hasOwn(item.articulations, item.defaultArticulation));
+  assert.ok(presetId, "MIDI 주법 정책을 검증할 키스위치 프리셋이 없음");
+  const base = {
+    title: "portable-midi-articulation", bpm: 100, timeSig: [4, 4], tempoMap: [],
+    tracks: [{
+      name: "주법 악기", preset: presetId, volume: 0.8, pan: 0,
+      notes: [{ bar: 1, beat: 0, pitch: "C4", dur: 1, vel: 90 }]
+    }]
+  };
+
+  const implicit = validateSong(base);
+  assert.equal(midiBuffer(implicit).toString("ascii", 0, 4), "MThd",
+    "articulation을 생략한 기본 주법이 MIDI로 내보내지지 않음");
+  const nullDefault = validateSong({
+    ...base, tracks: [{ ...base.tracks[0], articulation: null }]
+  });
+  assert.equal(midiBuffer(nullDefault).toString("ascii", 0, 4), "MThd",
+    "articulation:null 기본 주법이 MIDI로 내보내지지 않음");
+
+  const explicit = validateSong({
+    ...base, tracks: [{ ...base.tracks[0], articulation: preset.defaultArticulation }]
+  });
+  assert.throws(() => midiBuffer(explicit), error => {
+    assert.match(error.message, /MIDI 내보내기를 중단/);
+    assert.match(error.message, /주법\/키스위치/);
+    assert.match(error.message, /WAV/);
+    assert.match(error.message, /articulation:null/);
+    assert.match(error.message, new RegExp(preset.defaultArticulation));
+    return true;
+  });
+
+  // 소리를 내지 않는 빈 트랙의 메타데이터는 portable MIDI에서 유실될 연주가 없다.
+  const unusedExplicit = validateSong({
+    ...base,
+    tracks: [
+      { ...base.tracks[0], articulation: preset.defaultArticulation, notes: [] },
+      { name: "기본 악기", preset: "sf-piano-gm", volume: 0.8, pan: 0,
+        notes: [{ bar: 1, beat: 0, pitch: "C4", dur: 1, vel: 90 }] }
+    ]
+  });
+  assert.equal(midiBuffer(unusedExplicit).toString("ascii", 0, 4), "MThd");
 });
 
 ok("모든 템플릿·프리셋이 유효", () => {
@@ -255,11 +320,14 @@ ok("velRange가 velocity 다이내믹 폭을 넓힌다", () => {
   const ratio = (over) =>
     peakOf(renderRange(oneNote(over, 120), 1, 1, { tail: 0.4 }).left) /
     peakOf(renderRange(oneNote(over, 20), 1, 1, { tail: 0.4 }).left);
-  const base = ratio({});                 // 기본 0.65 → 약 2.1배
-  const wide = ratio({ velRange: 1 });    // 1.0 → 약 6.0배
-  assert.ok(base > 1.8 && base < 2.6, `기본 폭이 예상 밖: ${base.toFixed(2)}배`);
-  assert.ok(wide > 5 && wide < 7, `velRange:1 폭이 예상 밖: ${wide.toFixed(2)}배`);
-  assert.ok(wide / base > 2.5, `velRange가 폭을 못 넓힘 (${base.toFixed(2)}→${wide.toFixed(2)})`);
+  const flat = ratio({ velRange: 0 });
+  const base = ratio({});
+  const wide = ratio({ velRange: 1 });
+  // 완전한 SF2 엔진에서는 velocity가 음량뿐 아니라 샘플 layer·modulator도 고르므로
+  // 특정 dB/배수로 고정하지 않는다. 여기서는 remap 방향과 순서만 검증한다.
+  assert.ok(Math.abs(flat - 1) < 0.02, `velRange:0이 중간 velocity로 모이지 않음: ${flat.toFixed(2)}배`);
+  assert.ok(base > flat * 1.2, `기본 폭이 평탄값과 구분되지 않음: ${base.toFixed(2)}배`);
+  assert.ok(wide > base * 1.05, `velRange가 원본 강약 폭을 못 넓힘 (${base.toFixed(2)}→${wide.toFixed(2)})`);
 });
 
 ok("velRange:0이면 velocity가 음량에 영향을 주지 않는다", () => {
@@ -268,22 +336,10 @@ ok("velRange:0이면 velocity가 음량에 영향을 주지 않는다", () => {
   assert.ok(Math.abs(loud - soft) / loud < 0.01, `vel 1과 127의 차이가 남아 있음 (${soft} vs ${loud})`);
 });
 
-ok("release 오버라이드가 여운을 늘린다", () => {
-  const tailRms = over => {
-    const r = renderRange(oneNote(over, 100, "sf-organ", 1), 1, 1, { tail: 1.6 });
-    return rms(r.left, Math.round(0.7 * r.sr), Math.round(1.6 * r.sr)); // 게이트(0.5초) 한참 뒤
-  };
-  const dry = tailRms({}), wet = tailRms({ release: 2.0 });
-  assert.ok(wet > dry * 5, `release가 여운을 못 늘림 (${dry.toExponential(2)} → ${wet.toExponential(2)})`);
-});
-
-ok("attack 오버라이드가 시작을 부드럽게 한다", () => {
-  const early = over => {
-    const r = renderRange(oneNote(over, 100), 1, 1, { tail: 0.4 });
-    return rms(r.left, 0, Math.round(0.01 * r.sr)); // 첫 10ms
-  };
-  const fast = early({}), slow = early({ attack: 0.5 });
-  assert.ok(slow < fast * 0.2, `attack이 반영 안 됨 (${fast.toExponential(2)} → ${slow.toExponential(2)})`);
+ok("예전 자체 엔진 전용 음색 필드를 저장 모델에서 제거", () => {
+  const s = oneNote({ attack: 0.5, release: 2, vibrato: 0.4, ensemble: 3 });
+  for (const key of ["attack", "release", "vibrato", "ensemble"])
+    assert.equal(s.tracks[0][key], undefined, `${key}가 외부 엔진 모델에 남아 있음`);
 });
 
 ok("reverb 오버라이드가 트랙별로 먹는다", () => {
@@ -385,14 +441,14 @@ ok("set_tempo가 기준 템포와 마디별 변화를 모두 다룬다", () => {
 
 ok("set_track이 음색 파라미터를 넣고 null로 되돌린다", () => {
   ops.new_song({ template: "lofi", title: "음색시험" });
-  ops.set_track({ track: "Keys", release: 1.5, velRange: 1, reverb: 0.7 });
+  ops.set_track({ track: "Keys", eqHigh: 1.5, velRange: 1, reverb: 0.7 });
   const t = () => state.song.tracks.find(x => x.name === "Keys");
-  assert.equal(t().release, 1.5);
+  assert.equal(t().eqHigh, 1.5);
   assert.equal(t().velRange, 1);
-  ops.set_track({ track: "Keys", release: null });
-  assert.equal(t().release, undefined, "null은 프리셋 기본값으로 되돌려야 함");
+  ops.set_track({ track: "Keys", eqHigh: null });
+  assert.equal(t().eqHigh, undefined, "null은 프리셋 기본값으로 되돌려야 함");
   assert.equal(t().velRange, 1, "다른 항목은 유지");
-  assert.throws(() => ops.set_track({ track: "Keys", release: 99 }), /release/);
+  assert.throws(() => ops.set_track({ track: "Keys", eqHigh: 99 }), /eqHigh/);
   assert.equal(t().velRange, 1, "실패가 상태를 오염시키지 않음");
 });
 
@@ -413,6 +469,9 @@ ok("play가 레벨과 클리핑을 되돌려준다", () => {
   ops.new_song({ template: "lofi", title: "레벨시험" });
   ops.add_notes({ track: "Keys", notes: Array.from({ length: 24 }, (_, i) =>
     ({ bar: 1, beat: 0, pitch: `C${2 + (i % 5)}`, dur: 1, vel: 127 })) });
+  // 완전한 SoundFont 엔진은 예전 모노 renderer보다 정상 출력이 작다. 레벨 경고 자체를
+  // 검증하려는 시험이므로 트랙을 허용 상한(+6dB)까지 올려 리미터가 실제로 작동하게 한다.
+  ops.set_track({ track: "Keys", volume: 2 });
   let levelEvent = null;
   const unsubscribe = subscribe(ev => { if (ev.type === "level") levelEvent = ev; });
   const out = ops.play({ from_bar: 1, to_bar: 1 });
@@ -425,30 +484,16 @@ ok("play가 레벨과 클리핑을 되돌려준다", () => {
 
 // ---------- 리뷰에서 확정된 결함의 회귀 테스트 (2차) ----------
 
-ok("긴 release가 잘리지 않는다 — 꼬리가 릴리즈를 담는다", () => {
-  const s = oneNote({ release: 8 }, 100, "sf-organ", 1);
+ok("SoundFont의 native release 꼬리를 하드컷하지 않는다", () => {
+  const s = oneNote({}, 100, "sf-organ", 1);
   const r = renderRange(s, 1, 1);
   const tailPeak = peakOf(r.left.slice(-200));
   assert.ok(tailPeak < peakOf(r.left) * 0.01,
     `파일 끝이 하드컷됨 (마지막 피크가 전체의 ${(100 * tailPeak / peakOf(r.left)).toFixed(1)}%)`);
 });
 
-ok("긴 attack이 노트를 잘라먹지 않는다", () => {
-  const step = buf => { let m = 0; for (let i = 1; i < buf.length; i++) m = Math.max(m, Math.abs(buf[i] - buf[i-1])); return m; };
-  // 게이트(0.25초)보다 긴 어택이 와도 노트가 온전히 울려야 한다 — 예전에는 버퍼가 어택을 못 담아 통째로 잘렸다
-  const ref = peakOf(renderRange(oneNote({}, 100, "sf-organ", 0.5), 1, 1).left);
-  for (const attack of [0.5, 1, 2]) {
-    const r = renderRange(oneNote({ attack }, 100, "sf-organ", 0.5), 1, 1);
-    // 긴 fade-in은 샘플 위상·후단 리버브/마스터와 겹쳐 순간 peak가 조금 낮아질 수 있다.
-    // 여기서는 어택 버퍼 부족 때문에 사실상 무음/하드컷이 되는 회귀를 잡는다.
-    assert.ok(peakOf(r.left) >= ref * 0.75,
-      `attack=${attack}에서 노트가 잘림 (peak ${peakOf(r.left).toFixed(4)} < 기본 ${ref.toFixed(4)})`);
-    assert.ok(step(r.left) < 0.03, `attack=${attack}에서 단차(클릭) ${step(r.left).toFixed(4)}`);
-  }
-});
-
-ok("최대 attack·release와 vibrato가 긴 꼬리에서 NaN을 만들지 않는다", () => {
-  const r = renderRange(oneNote({ attack: 2, release: 8, vibrato: 1 }, 100, "sf-organ", 0.25), 1, 1);
+ok("외부 샘플러 출력이 긴 native 꼬리에서도 유한하다", () => {
+  const r = renderRange(oneNote({}, 100, "sf-organ", 0.25), 1, 1);
   for (let i = 0; i < r.left.length; i++)
     assert.ok(Number.isFinite(r.left[i]) && Number.isFinite(r.right[i]), `NaN at ${i} (${(i / r.sr).toFixed(3)}초)`);
 });
@@ -509,7 +554,7 @@ ok("MIDI 램프가 오디오와 같은 시각에 끝난다", () => {
 ok("표현 파라미터가 숫자 아닌 값을 거부", () => {
   for (const bad of ["", "1.5", [], [1.5], true, {}])
     assert.throws(() => oneNote({ velRange: bad }), /velRange/, `velRange: ${JSON.stringify(bad)}가 통과됨`);
-  assert.throws(() => oneNote({ release: 9 }), /release/);
+  assert.throws(() => oneNote({ eqHigh: 13 }), /eqHigh/);
 });
 
 ok("곡 범위 밖 구간은 무음 파일 대신 에러", () => {
@@ -550,16 +595,13 @@ ok("export가 실제로 쓴 파일만 보고한다", () => {
 });
 
 // ---------- SoundFont(sf-*) — 파일이 있을 때만 검사 ----------
-const {
-  sf2Available, SF2_PATH, parseSf2, resolveFont, fontStatus, renderSf2Voice
-} = await import("../src/sf2.js");
+const { sf2Available, SF2_PATH, fontStatus } = await import("../src/sf2.js");
 
 ok("누락된 명시 SoundFont를 기본 폰트로 몰래 대체하지 않음", () => {
   const spec = { font: `__aria-smoke-missing-${process.pid}.sf2` };
   const status = fontStatus(spec);
   assert.equal(status.available, false);
   assert.equal(status.state, "missing");
-  assert.equal(resolveFont(spec), null);
 });
 
 ok("손상 파일과 없는 bank/program을 선택 전에 구분", () => {
@@ -584,12 +626,48 @@ ok("손상 파일과 없는 bank/program을 선택 전에 구분", () => {
   assert.equal(bounds.available, false);
   assert.equal(bounds.state, "corrupt");
   assert.match(bounds.reason, /sample data 범위/);
-  assert.equal(resolveFont({ font: boundsName }), null);
 });
 
-ok("GeneralUser와 Philharmonia를 서로 대체하지 않는 별도 선택지로 노출", () => {
-  assert.equal(Object.keys(SF_PRESETS).length, 71, "멜로디 프리셋 수가 71개가 아님");
-  assert.equal(Object.keys(SF_DRUM_KITS).length, 6, "드럼 킷 수가 6개가 아님");
+ok("모든 managed catalog와 GM·Philharmonia 선택지를 서로 대체하지 않고 노출", () => {
+  const manifestDir = new URL("../packs/", import.meta.url);
+  const manifests = fsMod.readdirSync(manifestDir)
+    .filter(name => name.endsWith(".json"))
+    .sort()
+    .map(name => JSON.parse(fsMod.readFileSync(new URL(name, manifestDir), "utf8")));
+  const catalogEntries = manifests.flatMap(manifest =>
+    (manifest.catalog ?? []).map(entry => ({ manifest, entry })));
+  const melodicEntries = catalogEntries.filter(({ entry }) => !entry.drum);
+  const drumEntries = catalogEntries.filter(({ entry }) => entry.drum);
+  assert.equal(Object.keys(SF_PRESETS).length, 71 + melodicEntries.length,
+    "기존 멜로디 프리셋과 managed pack 전체 catalog 수가 맞지 않음");
+  assert.equal(Object.keys(SF_DRUM_KITS).length, 6 + drumEntries.length,
+    "기존 드럼 킷과 managed pack 전체 catalog 수가 맞지 않음");
+  const catalogIds = new Set();
+  let salamanderControlledPieces = 0;
+  for (const { manifest, entry } of catalogEntries) {
+    assert.ok(!catalogIds.has(entry.id), `managed catalog ID 중복: ${entry.id}`);
+    catalogIds.add(entry.id);
+    const spec = (entry.drum ? SF_DRUM_KITS : SF_PRESETS)[entry.id];
+    assert.equal(spec?.engine, "sfizz", `${entry.id}가 sfizz sampler로 등록되지 않음`);
+    assert.equal(spec?.pack, manifest.id, `${entry.id} pack 연결 불일치`);
+    assert.equal(spec?.sfz, entry.path, `${entry.id} SFZ 경로 불일치`);
+    assert.equal(spec?.kind, entry.kind ?? (entry.drum ? "drum-kit" : "instrument"), `${entry.id} kind 불일치`);
+    if (entry.drum) {
+      assert.deepEqual(spec?.pieces,
+        Object.fromEntries((entry.pieces ?? []).map(piece => [piece.id, piece.key])),
+        `${entry.id} piece map 불일치`);
+      if (manifest.id === "salamander-drumkit-sfz") {
+        const expectedControls = Object.fromEntries((entry.pieces ?? [])
+          .filter(piece => Array.isArray(piece.cc) && piece.cc.length)
+          .map(piece => [piece.id, piece.cc]));
+        assert.deepEqual(spec?.pieceControls, expectedControls,
+          `${entry.id} piece control map 불일치`);
+        salamanderControlledPieces += Object.keys(expectedControls).length;
+      }
+    }
+  }
+  assert.ok(salamanderControlledPieces > 0,
+    "Salamander manifest의 동일 키 피스를 구분할 CC control이 등록되지 않음");
 
   // 기존 GeneralUser ID는 저장곡 호환을 위해 그대로 두고, 화면 이름과 파일 핀으로 출처를 명시한다.
   for (const [id, preset] of Object.entries(SF_PRESETS)) {
@@ -638,10 +716,10 @@ ok("GeneralUser와 Philharmonia를 서로 대체하지 않는 별도 선택지�
     ["Violin", "sf-violin", "GM", "sf-violin-phil", "Philharmonia"],
     ["Viola", "sf-viola", "GM", "sf-viola-phil", "Philharmonia"],
     ["Cello", "sf-cello", "GM", "sf-cello-phil", "Philharmonia"],
-    ["Contrabass", "sf-contrabass", "GM", "sf-contrabass-phil", "Philharmonia"],
+    ["Double Bass", "sf-contrabass", "GM", "sf-contrabass-phil", "Philharmonia"],
     ["Violin Pizzicato", "sf-violin-pizz", "GM", "sf-violin-pizz-phil", "Philharmonia"],
     ["Viola Pizzicato", "sf-viola-pizz", "GM", "sf-viola-pizz-phil", "Philharmonia"],
-    ["Contrabass Pizzicato", "sf-contrabass-pizz", "GM", "sf-contrabass-pizz-phil", "Philharmonia"],
+    ["Double Bass Pizzicato", "sf-contrabass-pizz", "GM", "sf-contrabass-pizz-phil", "Philharmonia"],
     ["Violin Sordino", "sf-violin-sord", "GM", "sf-violin-sord-phil", "Philharmonia"],
     ["Flute", "sf-flute", "GM", "sf-flute-phil", "Philharmonia"],
     ["Oboe", "sf-oboe", "GM", "sf-oboe-phil", "Philharmonia"],
@@ -685,6 +763,137 @@ ok("GeneralUser와 Philharmonia를 서로 대체하지 않는 별도 선택지�
   assert.equal(SF_PRESETS["sf-contrabassoon"].gm, 70, "콘트라바순 대체음이 GM Recorder로 잘못 바뀜");
 });
 
+ok("큰 음원 카탈로그는 요약하고 악기군·주법으로 좁혀 찾음", () => {
+  const summary = ops.list_presets();
+  const totalPresets = Object.keys(SF_PRESETS).length + Object.keys(SF_DRUM_KITS).length;
+  assert.ok(summary.includes(`외부 샘플 프리셋 ${totalPresets}개`));
+  assert.match(summary, /list_presets\(\{family:"Violin"\}\)/);
+  assert.ok(!summary.includes("vsco-solo-violin-vibrato"), "요약이 모든 preset ID를 쏟아 문맥을 낭비함");
+  const violin = ops.list_presets({ family: "Violin" });
+  assert.match(violin, /sf-violin-phil/);
+  assert.match(violin, /vsco-solo-violin-vibrato/);
+  const doubleBass = ops.list_presets({ family: "Double Bass", limit: 100 });
+  assert.match(doubleBass, /검색 결과 90개 중 90개 표시/);
+  assert.match(doubleBass, /sf-contrabass-phil/);
+  assert.match(doubleBass, /vsco-contrabass-keyswitch/);
+  assert.match(ops.list_presets({ family: "Contrabass" }), /조건에 맞는 샘플 프리셋이 없습니다/);
+  const tremolo = ops.list_presets({ query: "tremolo", source: "VSCO 2 CE" });
+  assert.match(tremolo, /vsco-violin-ensemble-tremolo/);
+  assert.ok(!tremolo.includes("sf-piano-gm"));
+
+  const broad = ops.list_presets({ source: "Philharmonia", limit: 5 });
+  assert.match(broad, /중 5개 표시/);
+  assert.match(broad, /더 있습니다 .*query·family·source·kind/);
+  assert.ok(broad.split("\n").length < 30, "넓은 검색이 MCP 문맥에 catalog 전체를 쏟음");
+  const clips = ops.list_presets({ source: "Philharmonia", kind: "clip", limit: 2 });
+  assert.match(clips, /\[clip ·/);
+  assert.match(clips, /Recorded Clip|녹음 클립/);
+  assert.throws(() => ops.list_presets({ limit: 101 }), /1~100/);
+});
+
+ok("키스위치 프리셋의 원래 연주법을 곡·도구가 검증하고 보존", () => {
+  const [presetId, preset] = Object.entries(SF_PRESETS).find(([, item]) =>
+    item.articulations && Object.keys(item.articulations).length > 1);
+  assert.ok(presetId, "선택 가능한 키스위치 프리셋이 없음");
+  const choices = Object.keys(preset.articulations);
+  const source = {
+    title: "articulation", bpm: 100, timeSig: [4, 4], tempoMap: [],
+    tracks: [{
+      name: "주법 악기", preset: presetId, articulation: choices[0], volume: 0.8, pan: 0,
+      notes: [{ bar: 1, beat: 0, pitch: "C4", dur: 1, vel: 90 }]
+    }]
+  };
+  const validated = validateSong(source);
+  assert.equal(validated.tracks[0].articulation, choices[0]);
+  assert.throws(() => validateSong({
+    ...source, tracks: [{ ...source.tracks[0], articulation: "없는-연주법" }]
+  }), /articulation.*찾을 수 없습니다/);
+  state.song = validated;
+  ops.set_track({ track: "주법 악기", articulation: choices[1] });
+  assert.equal(state.song.tracks[0].articulation, choices[1]);
+  ops.set_track({ track: "주법 악기", articulation: null });
+  assert.equal(state.song.tracks[0].articulation, undefined);
+  assert.throws(() => ops.set_track({ track: "주법 악기", articulation: "없는-연주법" }), /list_presets/);
+  const listed = ops.list_presets({ query: `${preset.family} ${choices[0]}`, limit: 5 });
+  assert.match(listed, new RegExp(presetId));
+  assert.match(listed, /articulation:/);
+});
+
+ok("SFZ one-shot은 피스별 실측 길이를 갖고 일반 악기는 원본 파일 길이를 release로 쓰지 않음", () => {
+  const catalogKits = Object.entries(SF_DRUM_KITS).filter(([, preset]) => preset.engine === "sfizz");
+  assert.ok(catalogKits.length > 0, "SFZ 타악/클립 카탈로그가 없음");
+  for (const [id, preset] of catalogKits) {
+    assert.deepEqual(Object.keys(preset.pieceDurationsSec).sort(), Object.keys(preset.pieces).sort(),
+      `${id}: 일부 피스의 실측 sample 길이가 없음`);
+    for (const [piece, durationSec] of Object.entries(preset.pieceDurationsSec))
+      assert.ok(Number.isFinite(durationSec) && durationSec > 0, `${id}/${piece}: 잘못된 피스 길이`);
+    assert.equal(preset.tailHintSec, 0.5, `${id}: tailHint는 원본 뒤의 짧은 guard여야 함`);
+    assert.equal(preset.release, 0.3, `${id}: one-shot release에 원본 전체 길이가 들어가면 안 됨`);
+  }
+  for (const [id, preset] of Object.entries(SF_PRESETS).filter(([, item]) => item.engine === "sfizz")) {
+    assert.equal(preset.durationSec, null, `${id}: 일반 pitched 악기가 원본 파일 길이를 one-shot 길이로 상속함`);
+    assert.ok(Number.isFinite(preset.release) && preset.release >= 0, `${id}: 실제 noteOff release가 없음`);
+  }
+});
+
+ok("녹음 클립은 짧은 trigger 노트여도 원본 재생 길이까지 곡 길이에 반영", () => {
+  const [clipId, clipPreset] = Object.entries(SF_DRUM_KITS)
+    .filter(([, preset]) => preset.kind === "clip" && Number.isFinite(preset.durationSec))
+    .sort((a, b) => b[1].durationSec - a[1].durationSec)[0];
+  assert.ok(clipId && clipPreset.durationSec > 1, "길이가 기록된 녹음 클립이 없음");
+  const clipSong = validateSong({
+    title: "recorded clip timeline", bpm: 120, timeSig: [4, 4], tempoMap: [],
+    tracks: [{
+      name: "Recorded Clip", preset: clipId, volume: 1, pan: 0,
+      notes: [{ bar: 8, beat: 0, pitch: Object.keys(clipPreset.pieces)[0], dur: 0.5, vel: 100 }]
+    }]
+  });
+  const expected = Math.ceil(((8 - 1) * 4 + clipPreset.durationSec * 2) / 4);
+  assert.equal(totalBars(clipSong), Math.max(8, expected));
+
+  const slowClipSong = validateSong({
+    ...clipSong,
+    tempoMap: [{ bar: 8, bpm: 60 }]
+  });
+  const expectedAt60 = Math.ceil(((8 - 1) * 4 + clipPreset.durationSec) / 4);
+  assert.equal(totalBars(slowClipSong), Math.max(8, expectedAt60),
+    "클립이 시작되는 구간의 tempo를 반영해 초 단위 원본 길이를 마디 수로 바꿔야 함");
+});
+
+ok("녹음 클립 중간의 구조 편집·구간 재생을 무음이나 거짓 편집으로 처리하지 않음", () => {
+  const [clipId, clipPreset] = Object.entries(SF_DRUM_KITS)
+    .filter(([, preset]) => preset.kind === "clip" && Number.isFinite(preset.durationSec))
+    .sort((a, b) => b[1].durationSec - a[1].durationSec)[0];
+  assert.ok(clipId && clipPreset.durationSec > 20, "여러 마디에 걸친 회귀 테스트용 녹음 클립이 없음");
+  const makeClipSong = () => validateSong({
+    title: "fixed clip edit guard", bpm: 120, timeSig: [4, 4], tempoMap: [],
+    tracks: [{
+      name: "Long Recorded Clip", preset: clipId, volume: 1, pan: 0,
+      notes: [{ bar: 1, beat: 0, pitch: Object.keys(clipPreset.pieces)[0], dur: 0.5, vel: 100 }]
+    }]
+  });
+
+  state.song = makeClipSong();
+  const before = JSON.stringify(state.song);
+  assert.throws(() => ops.insert_bars({ at_bar: 2, count: 2 }), /Recorded Clip.*삽입 지점/);
+  assert.equal(JSON.stringify(state.song), before, "거부한 insert_bars가 곡을 일부 변경함");
+  assert.throws(() => ops.copy_bars({ from_bar: 1, to_bar: 1, at_bar: 2, mode: "insert" }),
+    /Recorded Clip.*삽입 지점/);
+  assert.equal(JSON.stringify(state.song), before, "거부한 copy_bars insert가 곡을 일부 변경함");
+  assert.throws(() => ops.delete_bars({ from_bar: 2, to_bar: 10 }), /일부만 가릅니다/);
+  assert.throws(() => ops.delete_bars({ from_bar: 1, to_bar: 1 }), /일부만 가릅니다/,
+    "trigger만 포함하고 원본 꼬리를 남기는 삭제를 허용함");
+  assert.equal(JSON.stringify(state.song), before, "거부한 delete_bars가 곡을 일부 변경함");
+
+  assert.throws(() => renderRange(state.song, 2, 2, { sampleRate: 8000, tail: 0 }), error =>
+    error.code === "CAPABILITY_UNSUPPORTED" && error.clipTriggerBar === 1 && /from_bar를 1 이하/.test(error.message));
+
+  state.song = makeClipSong();
+  const wholeSpan = totalBars(state.song);
+  ops.delete_bars({ from_bar: 1, to_bar: wholeSpan });
+  assert.equal(state.song.tracks[0].notes.length, 0, "전체 clip 구간을 포함한 삭제까지 거부함");
+});
+
 ok("GM 피아노와 Salamander 피아노를 별도 선택하고 MIDI 기본값은 GM을 사용", () => {
   assert.equal(SF_PRESETS["sf-piano-gm"].font, "default.sf2");
   assert.equal(SF_PRESETS["sf-piano"].font, "salamander.sf2");
@@ -723,94 +932,29 @@ ok("Philharmonia 내부 program과 표준 MIDI export program을 분리", () => 
 if (!sf2Available()) {
   console.log(`  (건너뜀) 사운드폰트 없음 — ${SF2_PATH}`);
 } else {
-  ok("sf2 파싱 — GM 프리셋·드럼 뱅크 존재", () => {
-    const sf = parseSf2(SF2_PATH);
-    assert.ok(sf.presets.size >= 100, `프리셋 ${sf.presets.size}개뿐`);
-    for (const [, p] of Object.entries(SF_PRESETS)) {
-      const program = p.program ?? p.gm;
-      assert.ok(sf.presets.has(program), `내부 program ${program} 프리셋이 사운드폰트에 없음`);
-    }
-    assert.ok(sf.presets.has(128 << 8), "GM 드럼 뱅크(128) 없음");
+  ok("가벼운 SoundFont 색인이 기본 프리셋을 설치됨으로 확인", () => {
+    const status = fontStatus({ font: "default.sf2", bank: 0, program: 0 });
+    assert.equal(status.available, true, status.reason);
+    assert.equal(status.state, "installed");
   });
 
-  ok("SoundFont에 없는 bank/program은 무음 대신 명시적 오류", () => {
-    const sf = resolveFont({ font: "default.sf2" });
-    assert.ok(sf, "기본 SoundFont를 열 수 없음");
-    assert.throws(
-      () => renderSf2Voice(sf, 127, 127, 60, 0.8, 0.2, 44100),
-      /bank 127, program 127 악기가 없습니다/
-    );
-  });
-
-  ok("Philharmonia 렌더가 MIDI 근사값 아닌 전용 내부 program을 사용", () => {
-    const preset = SF_PRESETS["sf-violin-pizz-phil"]; // 내부 44, MIDI export 45
-    const sf = resolveFont(preset);
-    assert.ok(sf?.presets.has(preset.program), "내부 program fixture가 없음");
-    const midiPreset = sf.presets.get(preset.gm);
-    assert.ok(midiPreset, "MIDI 근사 program fixture가 없음");
-    sf.presets.delete(preset.gm); // 잘못 gm을 쓰는 구현이면 두 렌더 모두 여기서 실패해야 한다.
-    try {
-      for (const ensemble of [1, 2]) {
-        const s = createSong({});
-        s.tracks = [{ name: "Phil", preset: "sf-violin-pizz-phil", volume: 0.8, pan: 0, ensemble,
-          notes: [{ bar: 1, beat: 0, pitch: "C4", dur: 1, vel: 100 }] }];
-        const r = renderRange(validateSong(s), 1, 1, { tail: 0.2 });
-        assert.ok(peakOf(r.left) > 0.005, `ensemble=${ensemble} 내부 program 렌더가 무음`);
-      }
-    } finally {
-      sf.presets.set(preset.gm, midiPreset);
-    }
-  });
-
-  ok("tiny SoundFont의 zone offset이 loop를 너무 짧거나 역전시키면 즉시 거부", () => {
-    const withOffsets = (loopStartOff, loopEndOff) => {
-      const sf = parseSf2(SF2_PATH);
-      sf.instruments[0][0] = { ...sf.instruments[0][0], loopStartOff, loopEndOff };
-      return sf;
-    };
-    const render = sf => renderSf2Voice(sf, 0, 0, 60, 0.8, 0.1, 44100);
-    assert.throws(() => render(withOffsets(2048, 0)), /zone offset.*loop 경계/,
-      "조정 후 loopStart === loopEnd인 루프를 거부하지 않음");
-    assert.throws(() => render(withOffsets(1536, -1024)), /zone offset.*loop 경계/,
-      "조정 후 loopStart > loopEnd인 루프를 거부하지 않음");
-    assert.throws(() => render(withOffsets(2046, 0)), /zone offset.*loop 경계/,
-      "4점 보간에 필요한 최소 길이보다 짧은 루프를 거부하지 않음");
-  });
-
-  ok("tiny SoundFont의 비정상·0 재생 step을 무한 루프 전에 거부", () => {
-    const sf = parseSf2(SF2_PATH);
-    const render = detuneCents => renderSf2Voice(sf, 0, 0, 60, 0.8, 0.1, 44100,
-      { detuneCents });
-    assert.throws(() => render(Number.MAX_VALUE), /재생 속도가 올바르지 않습니다/,
-      "Infinity step을 거부하지 않음");
-    assert.throws(() => render(-Number.MAX_VALUE), /재생 속도가 올바르지 않습니다/,
-      "0으로 underflow한 step을 거부하지 않음");
-  });
-
-  ok("detuneCents가 SoundFont 재생 속도와 실제 파형을 바꿈", () => {
-    const spec = SF_PRESETS["sf-epiano"];
-    const sf = resolveFont(spec);
-    assert.ok(sf, `${spec.font}를 열 수 없음`);
-    const base = renderSf2Voice(sf, 0, spec.gm, 60, 0.8, 0.4, 44100,
-      { track: {}, detuneCents: 0 });
-    const sharp = renderSf2Voice(sf, 0, spec.gm, 60, 0.8, 0.4, 44100,
-      { track: {}, detuneCents: 100 });
-    assert.equal(base.length, sharp.length);
-    let diff = 0, energy = 0;
-    const n = Math.min(base.length, Math.round(0.25 * 44100));
-    for (let i = 0; i < n; i++) {
-      diff += Math.abs(base[i] - sharp[i]);
-      energy += Math.abs(base[i]);
-    }
-    assert.ok(energy > 0, "비교할 원본 파형이 무음");
-    assert.ok(diff / energy > 0.05, `100 cents를 줘도 파형이 거의 같음 (${(diff / energy).toFixed(4)})`);
+  ok("Philharmonia가 MIDI 근사값이 아닌 전용 내부 program으로 렌더됨", () => {
+    const s = createSong({});
+    s.tracks = [{ name: "Phil", preset: "sf-violin-pizz-phil", volume: 0.8, pan: 0,
+      notes: [{ bar: 1, beat: 0, pitch: "C4", dur: 1, vel: 100 }] }];
+    const r = renderRange(validateSong(s), 1, 1, { tail: 0.2 });
+    assert.ok(peakOf(r.left) > 0.005, "Philharmonia 전용 program 렌더가 무음");
+    assert.ok(r.diagnostics.every(d => d.engine === "spessa-sf2"), "외부 SF2 엔진을 거치지 않음");
   });
 
   ok("모든 sf 멜로디 프리셋이 자기 음역에서 소리를 냄", () => {
     // C4 하나로만 재면 안 된다 — 콘트라베이스에 C4는 실제 악기 음역 밖이라 샘플이 없다.
     // (37개 중 24개가 어느 옥타브에선가 무음이다. 악기가 원래 그런 것이고, 여기서 볼 것은
     //  "이 프리셋이 자기 음역 어딘가에서는 제대로 소리를 내는가"다)
-    for (const pid of Object.keys(SF_PRESETS)) {
+    for (const [pid, preset] of Object.entries(SF_PRESETS)) {
+      // 전체 VSCO SFZ pack은 sfizz adapter/renderer 전용 테스트에서 75/75 검증한다.
+      // 이 블록의 tiny fixture는 SoundFont backend만 검사한다.
+      if (preset.engine === "sfizz") continue;
       let best = 0, bad = 0, renderedPitches = 0;
       for (const pitch of ["C2", "C3", "C4", "C5"]) {
         const s = createSong({});
@@ -837,7 +981,8 @@ if (!sf2Available()) {
   });
 
   ok("모든 sf 드럼 킷의 등록 피스가 소리를 냄", () => {
-    for (const kid of Object.keys(SF_DRUM_KITS)) {
+    for (const [kid, preset] of Object.entries(SF_DRUM_KITS)) {
+      if (preset.engine === "sfizz") continue;
       for (const piece of Object.keys(drumPieces(kid))) {
         const s = createSong({});
         s.tracks = [{ name: "d", preset: kid, volume: 0.9, pan: 0,

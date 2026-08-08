@@ -74,6 +74,8 @@
   #detHead .nm { font-weight:700; }
   #detHead .meta { color:var(--dim); font-size:11px; }
   #detHead select { font-size:12px; padding:3px 8px; max-width:220px; }
+  #detHead .articulation-control { display:flex; align-items:center; gap:6px; min-width:0; color:var(--dim); font-size:10px; }
+  #detHead .articulation-control select { max-width:290px; min-height:30px; color:var(--text); background:var(--panel2); }
   #detHead .pen { padding:3px 10px; font-size:12px; }
   #detHead .pen.on { background:#3a3320; border-color:#ffd766; color:#ffd766; font-weight:700; }
   #detHead .tdel { padding:3px 8px; font-size:12px; margin-left:auto; }
@@ -100,7 +102,7 @@
   footer { border-top:1px solid var(--border); background:var(--panel); max-height:40vh; overflow:auto; }
   footer summary { padding:6px 14px; cursor:pointer; color:var(--dim); user-select:none; }
   footer pre { margin:0; padding:0 14px 12px; font-size:11px; color:#aeb6c4; }
-  #empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); text-align:center; padding:20px; z-index:6; }
+  #empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); text-align:center; padding:20px; z-index:6; pointer-events:none; }
   #empty[hidden] { display:none; }
   #empty .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px 32px; max-width:460px; }
   #empty b { color:var(--text); }
@@ -224,6 +226,133 @@
   .utility-panel .zoomctl .val { min-width:58px; align-self:center; text-align:left; }
   .menu-divider { height:1px; margin:6px 4px; background:var(--border); }
 
+  /* 음원 관리 — 다운로드 도구가 아니라, 지금 쓸 수 있는 실제 소리의 상태를 보여 주는 판. */
+  .pack-dialog { width:min(880px,calc(100vw - 24px)); max-height:min(760px,calc(100vh - 24px)); padding:0;
+    color:var(--text); border:1px solid #3a485b; border-radius:16px; background:#121923; box-shadow:0 28px 90px rgba(0,0,0,.68); }
+  .pack-dialog:not([open]) { display:none; }
+  .pack-dialog::backdrop { background:rgba(3,6,10,.74); backdrop-filter:blur(3px); }
+  .pack-dialog-shell { display:flex; flex-direction:column; max-height:min(760px,calc(100vh - 24px)); }
+  .pack-dialog-head { flex:none; display:flex; align-items:flex-start; gap:14px; padding:20px 20px 16px;
+    border-bottom:1px solid var(--border); background:linear-gradient(145deg,#172131 0%,#121923 68%); }
+  .pack-dialog-title { min-width:0; flex:1; }
+  .pack-dialog-title h2 { display:flex; align-items:center; gap:9px; margin:0; color:#edf3fc;
+    font:650 19px/1.25 "Avenir Next","Apple SD Gothic Neo",sans-serif; letter-spacing:-.01em; }
+  .pack-dialog-title h2 .icon { width:19px; height:19px; color:var(--accent); }
+  .pack-dialog-title h2 small { color:#77869a; font:500 10px/1 "SFMono-Regular",Menlo,monospace; letter-spacing:.02em; }
+  .pack-dialog-title p { max-width:650px; margin:7px 0 0; color:#8f9caf; font-size:11.5px; line-height:1.6; }
+  .pack-dialog-title p strong { color:#c5d0df; font-weight:600; }
+  .pack-dialog-actions { display:flex; gap:6px; }
+  .pack-refresh, .pack-dialog-close { height:34px; min-height:34px; color:#9ba8b9; background:#18212d; }
+  .pack-refresh { padding:0 10px; }
+  .pack-dialog-close { width:34px; min-width:34px; padding:0; }
+  .pack-dialog-body { min-height:180px; padding:18px 20px 22px; overflow:auto; }
+  .pack-overview { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:24px; margin-bottom:12px;
+    color:#748196; font-size:10.5px; }
+  .pack-overview strong { color:#aebbd0; font-weight:600; }
+  .pack-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr)); gap:12px; }
+  .pack-card { min-width:0; padding:16px; border:1px solid #2d3948; border-radius:13px; background:#171f2a;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.025); }
+  .pack-card.ready { border-color:#315c4d; background:linear-gradient(150deg,#172820 0%,#171f2a 54%); }
+  .pack-card.installing { border-color:#3e5d88; background:linear-gradient(150deg,#17243a 0%,#171f2a 54%); }
+  .pack-card.error, .pack-card.invalid { border-color:#70434b; }
+  .pack-card-head { display:flex; align-items:flex-start; gap:10px; }
+  .pack-card-name { min-width:0; flex:1; }
+  .pack-card-name h3 { margin:0; overflow-wrap:anywhere; color:#e2e9f3;
+    font:650 14px/1.35 "Avenir Next","Apple SD Gothic Neo",sans-serif; }
+  .pack-card-name .pack-id { margin-top:3px; color:#647186; font:9px/1.3 "SFMono-Regular",Menlo,monospace; }
+  .pack-state { flex:none; display:inline-flex; align-items:center; gap:6px; min-height:23px; padding:3px 8px;
+    border:1px solid #3a4656; border-radius:999px; color:#a4afbe; background:#121923; font-size:9.5px; white-space:nowrap; }
+  .pack-state::before { content:""; width:6px; height:6px; border-radius:50%; background:#697486; }
+  .pack-card.ready .pack-state { color:#a7dfc8; border-color:#315c4d; background:#13221c; }
+  .pack-card.ready .pack-state::before { background:var(--play); }
+  .pack-card.installing .pack-state { color:#b6ccf6; border-color:#405d86; background:#142139; }
+  .pack-card.installing .pack-state::before { border:1px solid #7da8ee; border-top-color:transparent; background:transparent;
+    animation:pack-spin .8s linear infinite; }
+  .pack-card.error .pack-state, .pack-card.invalid .pack-state { color:#f0aaaf; border-color:#70434b; background:#29191e; }
+  .pack-card.error .pack-state::before, .pack-card.invalid .pack-state::before { background:var(--danger); }
+  .pack-message { min-height:38px; margin:12px 0; color:#9ca8b8; font-size:11px; line-height:1.55; }
+  .pack-card.error .pack-message, .pack-card.invalid .pack-message { color:#d7a0a5; }
+  .pack-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; margin:0; }
+  .pack-fact { min-width:0; padding:8px 9px; border:1px solid #283442; border-radius:8px; background:#121923; }
+  .pack-fact dt { color:#657287; font-size:9px; line-height:1.3; }
+  .pack-fact dd { margin:3px 0 0; overflow:hidden; color:#bbc5d3; font-size:10.5px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+  .pack-card-foot { display:flex; align-items:center; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid #283341; }
+  .pack-links { min-width:0; flex:1; display:flex; flex-wrap:wrap; gap:5px 10px; }
+  .pack-links a { color:#88a9dc; font-size:10px; text-decoration:none; }
+  .pack-links a:hover { color:#b9d0f4; text-decoration:underline; }
+  .pack-links > span { color:#657286; font-size:10px; }
+  .pack-install { min-width:88px; height:32px; min-height:32px; padding:0 12px; }
+  .pack-install.primary { background:#76a2ef; color:#09111d; }
+  .pack-install.done { color:#8ecbb2; border-color:#315c4d; background:#14231d; }
+  .pack-empty { grid-column:1/-1; display:grid; place-items:center; min-height:190px; padding:24px; border:1px dashed #344153;
+    border-radius:12px; color:#7f8ca0; text-align:center; line-height:1.7; }
+  .pack-empty strong { color:#b4c0d0; }
+  .pack-empty.error { border-color:#674149; color:#d1979d; }
+  @keyframes pack-spin { to { transform:rotate(360deg); } }
+
+  /* 악기 선택기 — 수백·수천 개 프리셋을 native select에 담지 않고, 검색한 최대 200개만 그린다. */
+  .preset-dialog { width:min(920px,calc(100vw - 24px)); height:min(780px,calc(100vh - 24px)); max-height:calc(100vh - 24px); padding:0;
+    color:var(--text); border:1px solid #3a485b; border-radius:16px; background:#121923; box-shadow:0 28px 90px rgba(0,0,0,.68); }
+  .preset-dialog:not([open]) { display:none; }
+  .preset-dialog::backdrop { background:rgba(3,6,10,.74); backdrop-filter:blur(3px); }
+  .preset-dialog-shell { height:100%; min-height:0; display:flex; flex-direction:column; }
+  .preset-dialog-head { flex:none; display:flex; align-items:flex-start; gap:14px; padding:18px 20px 15px;
+    border-bottom:1px solid var(--border); background:linear-gradient(145deg,#172131 0%,#121923 68%); }
+  .preset-dialog-title { min-width:0; flex:1; }
+  .preset-dialog-title h2 { display:flex; align-items:center; gap:9px; margin:0; color:#edf3fc;
+    font:650 19px/1.25 "Avenir Next","Apple SD Gothic Neo",sans-serif; letter-spacing:-.01em; }
+  .preset-dialog-title h2 .icon { width:19px; height:19px; color:var(--accent); }
+  .preset-dialog-title p { max-width:700px; margin:6px 0 0; color:#8f9caf; font-size:11.5px; line-height:1.55; }
+  .preset-dialog-close { width:34px; min-width:34px; height:34px; min-height:34px; padding:0; color:#9ba8b9; background:#18212d; }
+  .preset-dialog-body { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+  .preset-controls { flex:none; display:grid; grid-template-columns:minmax(240px,1fr) auto; gap:10px 12px; padding:14px 18px 12px;
+    border-bottom:1px solid #27313e; background:#141c27; }
+  .preset-name-field { grid-column:1/-1; display:grid; grid-template-columns:92px minmax(0,360px); align-items:center; gap:9px; color:#8996a9; font-size:10.5px; }
+  .preset-name-field[hidden] { display:none; }
+  .preset-name-field input { width:100%; height:34px; }
+  .preset-search-field { position:relative; min-width:0; }
+  .preset-search-field .icon { position:absolute; left:10px; top:9px; width:16px; height:16px; color:#728096; pointer-events:none; }
+  .preset-search-field input { width:100%; height:36px; padding:6px 34px; background:#101722; border-color:#3a485a; }
+  .preset-search-field input::-webkit-search-cancel-button { cursor:pointer; }
+  .preset-filters { display:flex; align-items:center; gap:6px; }
+  .preset-filters label { display:flex; align-items:center; gap:5px; color:#748196; font-size:9.5px; white-space:nowrap; }
+  .preset-filters select { height:36px; max-width:150px; padding:5px 26px 5px 8px; color:#b4bfce; font-size:10.5px; }
+  .preset-summary { flex:none; min-height:31px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 18px;
+    color:#7b889b; border-bottom:1px solid #252f3c; background:#111822; font-size:10.5px; }
+  .preset-summary strong { color:#b7c3d3; font-weight:600; }
+  .preset-summary .refine { color:#d5b779; text-align:right; }
+  .preset-results { flex:1; min-height:180px; overflow:auto; padding:8px 10px 12px; background:#0f151e; }
+  .preset-result { width:100%; min-height:82px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:5px 14px; align-content:center;
+    margin:3px 0; padding:10px 12px; text-align:left; border-color:transparent; border-radius:10px; background:#161e29; }
+  .preset-result:hover { border-color:#3d4d62; background:#1a2431; }
+  .preset-result[aria-selected="true"] { border-color:#668ac1; background:#1a2940; box-shadow:inset 3px 0 0 var(--accent); }
+  .preset-result:disabled { opacity:1; cursor:not-allowed; border-color:#342e35; background:#171a21; }
+  .preset-result:disabled:hover { border-color:#342e35; background:#171a21; }
+  .preset-result-main { min-width:0; display:flex; align-items:baseline; gap:8px; }
+  .preset-result-main strong { min-width:0; overflow:hidden; color:#e2e9f3; font:650 13px/1.35 "Avenir Next","Apple SD Gothic Neo",sans-serif;
+    text-overflow:ellipsis; white-space:nowrap; }
+  .preset-result:disabled .preset-result-main strong { color:#a89ca4; }
+  .preset-current { flex:none; padding:2px 6px; color:#bcd1f5; border:1px solid #4a658d; border-radius:999px; font-size:8.5px; line-height:1.25; }
+  .preset-result-desc { min-width:0; grid-column:1; overflow:hidden; color:#929fb0; font-size:10.5px; line-height:1.45; text-overflow:ellipsis; white-space:nowrap; }
+  .preset-result-facts { min-width:0; grid-column:1; display:flex; flex-wrap:wrap; gap:3px 10px; color:#647287;
+    font:9px/1.4 "SFMono-Regular",Menlo,monospace; }
+  .preset-result-facts span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .preset-availability { grid-column:2; grid-row:1/4; align-self:center; max-width:250px; display:flex; flex-direction:column; align-items:flex-end;
+    gap:3px; color:#8dd0b3; font-size:9.5px; line-height:1.4; text-align:right; }
+  .preset-availability strong { font-weight:650; }
+  .preset-availability small { color:#657286; font:8.5px/1.35 "SFMono-Regular",Menlo,monospace; overflow-wrap:anywhere; }
+  .preset-availability.unavailable { color:#e4a0a7; }
+  .preset-empty { min-height:100%; display:grid; place-items:center; padding:26px; color:#7d899b; text-align:center; line-height:1.7; }
+  .preset-empty strong { color:#b5c0cf; }
+  .preset-dialog-foot { flex:none; min-height:62px; display:flex; align-items:center; gap:10px; padding:10px 18px;
+    border-top:1px solid #2a3543; background:#141b25; }
+  .preset-choice { min-width:0; flex:1; color:#7d8a9d; font-size:10.5px; }
+  .preset-choice strong { display:block; overflow:hidden; color:#c5d0df; font-size:11.5px; text-overflow:ellipsis; white-space:nowrap; }
+  .preset-dialog-foot button { min-width:74px; height:36px; }
+  .instrument-picker-open { max-width:190px; height:32px; min-height:32px; justify-content:flex-start; padding:4px 9px; color:#c1cbd8; }
+  .instrument-picker-open span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .instrument-picker-open .icon { width:13px; height:13px; margin-left:auto; color:#78879b; }
+
   .guidebar { flex:none; min-height:32px; padding:0 12px; display:flex; align-items:center; justify-content:space-between; gap:12px;
     color:#8794a8; background:#0f141c; border-bottom:1px solid #202936; font-size:11px; }
   .guide-copy { min-width:0; display:flex; align-items:center; gap:7px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -304,7 +433,6 @@
   .rename-track { width:25px; min-width:25px; height:25px; min-height:25px; padding:0; color:#7e8a9c;
     border-color:transparent; background:transparent; }
   .rename-track:hover, .rename-track:focus-visible { color:#bad0ff; border-color:#425675; background:#202a37; }
-  .det-identity select { max-width:170px; height:32px; padding:4px 24px 4px 8px; }
   .det-vibe { display:flex; align-items:center; gap:5px; padding-left:8px; border-left:1px solid var(--border); }
   #detHead .pen { min-height:32px; padding:4px 10px; color:#aab5c4; background:#202936; }
   #detHead .pen.tone, #detHead .pen.feel { border-color:#344255; }
@@ -356,7 +484,6 @@
     .guide-copy span:last-child { overflow:hidden; text-overflow:ellipsis; }
     .sound-status { max-width:150px; }
     #detHead { min-height:44px; }
-    .det-identity select { max-width:112px; }
     .det-meta { display:none; }
     #detHead .pen { width:34px; min-width:34px; padding:0; }
     #detHead .pen .label { display:none; }
@@ -382,7 +509,7 @@
     .det-identity { gap:4px; }
     .det-identity .swatch { display:none; }
     .det-identity .nm { max-width:48px; }
-    .det-identity select { display:block; width:86px; max-width:86px; min-width:0; padding-inline:6px 18px; }
+    .det-identity .instrument-picker-open { width:94px; max-width:94px; min-width:0; padding-inline:7px; }
     .det-vibe { margin-left:0; padding-left:5px; gap:3px; }
     #detHead .pen { width:auto; min-width:43px; padding:0 5px; }
     #detHead .pen .label { display:inline; font-size:0; }
@@ -409,6 +536,39 @@
     body.timeline-focus #corner strong::after { content:"악기색"; font-size:9px; }
     .precision-panel { position:fixed; right:4px; bottom:8px; max-height:70vh; overflow:auto; }
     #fbPop { max-width:calc(100vw - 8px); }
+    .pack-dialog { width:calc(100vw - 8px); max-height:calc(100vh - 8px); border-radius:12px; }
+    .pack-dialog-shell { max-height:calc(100vh - 8px); }
+    .pack-dialog-head { padding:15px 12px 12px; gap:8px; }
+    .pack-dialog-title h2 { font-size:17px; }
+    .pack-dialog-title p { font-size:10.5px; }
+    .pack-refresh { width:34px; min-width:34px; padding:0; }
+    .pack-refresh .label { display:none; }
+    .pack-dialog-body { padding:12px; }
+    .pack-overview { align-items:flex-start; flex-direction:column; gap:3px; }
+    .pack-card { padding:13px; }
+    .pack-card-head { flex-wrap:wrap; }
+    .pack-state { order:3; }
+    .pack-facts { grid-template-columns:1fr 1fr; }
+    .pack-card-foot { align-items:flex-end; }
+    .preset-dialog { width:calc(100vw - 8px); height:calc(100vh - 8px); max-height:calc(100vh - 8px); border-radius:12px; }
+    .preset-dialog-head { padding:14px 12px 11px; gap:8px; }
+    .preset-dialog-title h2 { font-size:17px; }
+    .preset-dialog-title p { font-size:10.5px; }
+    .preset-controls { grid-template-columns:1fr; padding:10px 10px 9px; gap:8px; }
+    .preset-name-field { grid-template-columns:1fr; gap:4px; }
+    .preset-name-field input { max-width:none; }
+    .preset-filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+    .preset-filters label { min-width:0; display:block; }
+    .preset-filters label > span { display:block; margin:0 0 3px 2px; }
+    .preset-filters select { width:100%; max-width:none; }
+    .preset-summary { align-items:flex-start; flex-direction:column; gap:2px; padding-inline:11px; }
+    .preset-summary .refine { text-align:left; }
+    .preset-results { padding:6px; }
+    .preset-result { min-height:94px; grid-template-columns:minmax(0,1fr); gap:4px; padding:9px; }
+    .preset-availability { grid-column:1; grid-row:auto; align-items:flex-start; max-width:none; text-align:left; }
+    .preset-result-desc { white-space:normal; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }
+    .preset-dialog-foot { min-height:58px; padding:8px 10px; }
+    .preset-dialog-foot button { min-width:66px; padding-inline:9px; }
   }
   @media (prefers-reduced-motion:reduce) {
     *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; }
@@ -432,6 +592,7 @@
   <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
   <symbol id="i-zoom-in" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
   <symbol id="i-zoom-out" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4M8 11h6"/></symbol>
   <symbol id="i-fit" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
@@ -477,6 +638,9 @@
         <button id="btnWav"><svg class="icon"><use href="#i-download"></use></svg><span class="label">오디오 파일</span></button>
         <button id="btnMidi"><svg class="icon"><use href="#i-file"></use></svg><span class="label">MIDI</span></button>
         <button id="btnStems" title="악기마다 오디오 파일을 따로 만듭니다"><svg class="icon"><use href="#i-layers"></use></svg><span class="label">악기별 오디오</span></button>
+        <div class="menu-divider"></div>
+        <div class="menu-heading">소리</div>
+        <button id="btnPacks"><svg class="icon"><use href="#i-headphones"></use></svg><span class="label">음원 관리</span></button>
         <div class="menu-divider"></div>
         <div class="menu-heading">보기</div>
         <button id="btnABMenu"><svg class="icon"><use href="#i-compare"></use></svg><span class="label">두 안 비교</span></button>
@@ -535,6 +699,60 @@
 <div id="activityScrim"></div>
 <div id="toast"></div>
 <div id="fbPop" hidden></div>
+<dialog id="packDialog" class="pack-dialog" aria-labelledby="packDialogTitle" aria-describedby="packDialogHelp">
+  <div class="pack-dialog-shell">
+    <header class="pack-dialog-head">
+      <div class="pack-dialog-title">
+        <h2 id="packDialogTitle"><svg class="icon" aria-hidden="true"><use href="#i-headphones"></use></svg>음원 팩 <small>(Sample pack)</small></h2>
+        <p id="packDialogHelp"><strong>악기의 실제 녹음과 연주법을 추가합니다.</strong> 필요한 팩만 한 번 설치하면 AI가 그 안의 악기와 주법을 곡에 사용할 수 있어요.</p>
+      </div>
+      <div class="pack-dialog-actions">
+        <button id="packRefresh" class="pack-refresh" type="button" title="설치 상태 새로 확인"><svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg><span class="label">새로 확인</span></button>
+        <button id="packDialogClose" class="pack-dialog-close" type="button" aria-label="음원 관리 닫기"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg></button>
+      </div>
+    </header>
+    <div class="pack-dialog-body">
+      <div id="packOverview" class="pack-overview" aria-live="polite"><span><strong>음원 정보를 불러오는 중입니다</strong></span></div>
+      <div id="packList" class="pack-list" aria-live="polite" aria-busy="true">
+        <div class="pack-empty"><span><strong>음원 목록을 확인하고 있어요.</strong><br>잠시만 기다려 주세요.</span></div>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="presetDialog" class="preset-dialog" aria-labelledby="presetDialogTitle" aria-describedby="presetDialogHelp">
+  <div class="preset-dialog-shell">
+    <header class="preset-dialog-head">
+      <div class="preset-dialog-title">
+        <h2 id="presetDialogTitle"><svg class="icon" aria-hidden="true"><use href="#i-headphones"></use></svg><span>악기 소리 고르기</span></h2>
+        <p id="presetDialogHelp">이름이나 악기군, 출처, 설명, 연주법으로 찾을 수 있습니다. 실제로 사용할 수 없는 소리도 이유와 함께 표시됩니다.</p>
+      </div>
+      <button id="presetDialogClose" class="preset-dialog-close" type="button" aria-label="악기 소리 선택 닫기"><svg class="icon" aria-hidden="true"><use href="#i-x"></use></svg></button>
+    </header>
+    <div class="preset-dialog-body">
+      <div class="preset-controls">
+        <label id="presetNameField" class="preset-name-field" hidden><span>새 트랙 이름</span><input id="presetTrackName" type="text" maxlength="80" autocomplete="off"></label>
+        <label class="preset-search-field">
+          <span class="sr-only">악기 소리 검색</span>
+          <svg class="icon" aria-hidden="true"><use href="#i-search"></use></svg>
+          <input id="presetSearch" type="search" autocomplete="off" spellcheck="false" placeholder="이름, ID, 설명, 악기군, 출처, 연주법 검색" aria-controls="presetResults" aria-describedby="presetSummary">
+        </label>
+        <div class="preset-filters" role="group" aria-label="악기 소리 필터">
+          <label><span>종류</span><select id="presetKindFilter"><option value="all">전체</option><option value="instrument">선율 악기</option><option value="percussion">드럼·타악</option><option value="clip">녹음 클립</option></select></label>
+          <label><span>악기군</span><select id="presetFamilyFilter"><option value="">모든 악기군</option></select></label>
+          <label><span>출처</span><select id="presetSourceFilter"><option value="">모든 출처</option></select></label>
+        </div>
+      </div>
+      <div id="presetSummary" class="preset-summary" aria-live="polite"></div>
+      <div id="presetResults" class="preset-results" role="listbox" aria-label="악기 소리 검색 결과" aria-busy="false"></div>
+      <footer class="preset-dialog-foot">
+        <div id="presetChoice" class="preset-choice" aria-live="polite">목록에서 사용할 소리를 고르세요.</div>
+        <button id="presetCancel" type="button">취소</button>
+        <button id="presetConfirm" class="primary" type="button" disabled>선택</button>
+      </footer>
+    </div>
+  </div>
+</dialog>
 
 <script>
 const $ = id => document.getElementById(id);
@@ -670,10 +888,21 @@ es.onmessage = ev => {
   else if (msg.type === "stop") { if (!live.playing) { playing = null; draw(); } }
 };
 
-fetch("/api/meta").then(r => r.json()).then(m => {
-  meta = m;
-  drumPieceOrder = m.drumPieces;
+async function refreshMeta() {
+  const response = await fetch("/api/meta", { headers:{ "Accept":"application/json" }, cache:"no-store" });
+  if (!response.ok) throw new Error(`악기 소리 목록 응답 ${response.status}`);
+  const next = await response.json();
+  meta = next;
+  drumPieceOrder = next.drumPieces;
   renderAll();
+  return next;
+}
+refreshMeta().catch(error => {
+  // 첫 bootstrap 실패도 설치 후 갱신 실패와 같은 복구 흐름에 태운다.
+  // 팩 창을 열지 않아도 /api/packs를 확인한 뒤 /api/meta를 다시 시도한다.
+  packMetaRefreshPending = true;
+  toast(`악기 소리 목록을 불러오지 못했습니다. 자동으로 다시 시도합니다: ${error.message}`, true);
+  loadPacks(true);
 });
 
 // ---------- 헤더 동작 ----------
@@ -687,6 +916,217 @@ $("btnActivityClose").onclick = () => setActivityOpen(false);
 $("activityScrim").onclick = () => setActivityOpen(false);
 $("utilityMenu").ontoggle = ev => { if (ev.currentTarget.open) hideFbPop(); };
 $("soundStatus").onclick = () => toast(soundStatusDetail || "곡을 재생하면 왜곡·음량 상태를 확인합니다");
+
+// ---------- 음원 팩 관리 ----------
+// 전문 형식명은 숨기지 않되, 바로 뒤에 실제로 무엇을 뜻하는지 함께 보여 준다.
+const packDialog = $("packDialog");
+let packPollTimer = null, packLoadRevision = 0, visiblePacks = [];
+// readyPackIds는 마지막으로 /api/meta까지 성공적으로 반영된 팩 집합이다.
+// meta 갱신이 한 번 실패하면 값을 앞당겨 소비하지 않고 다음 poll에서 다시 시도한다.
+let readyPackIds = null, packMetaRefreshPending = false;
+const locallyInstallingPacks = new Set();
+const packNumber = new Intl.NumberFormat("ko-KR");
+
+function packBytes(value) {
+  if (!Number.isFinite(value) || value < 0) return "설치 후 확인";
+  if (value < 1024) return `${value} B`;
+  const units = ["KiB", "MiB", "GiB", "TiB"];
+  let size = value, unit = -1;
+  do { size /= 1024; unit++; } while (size >= 1024 && unit < units.length - 1);
+  return `${size >= 10 ? size.toFixed(1) : size.toFixed(2)} ${units[unit]}`;
+}
+
+function packExternalUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch { return null; }
+}
+
+function packViewState(pack) {
+  const installing = Boolean(pack.installing || locallyInstallingPacks.has(pack.id));
+  if (installing) return { cls:"installing", label:"설치 중", action:"설치 중", disabled:true };
+  if (pack.installed || pack.state === "ready") return { cls:"ready", label:"사용 가능", action:"설치됨", disabled:true };
+  if (pack.state === "error") return { cls:"error", label:"설치 실패", action:"다시 설치", disabled:false };
+  if (pack.state === "invalid") return { cls:"invalid", label:"확인 필요", action:"다시 설치", disabled:false };
+  if (pack.state === "unmanaged") return { cls:"invalid", label:"전환 필요", action:"원본 확인 필요", disabled:true };
+  return { cls:"missing", label:"설치 필요", action:"설치", disabled:false };
+}
+
+function packLink(url, label) {
+  const safe = packExternalUrl(url);
+  return safe ? `<a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>` : "";
+}
+
+function packCard(pack) {
+  const view = packViewState(pack);
+  const name = String(pack.name || pack.id || "이름 없는 음원 팩");
+  const id = String(pack.id || "");
+  const format = String(pack.format || "알 수 없음").toUpperCase();
+  const formatHelp = format === "SFZ" ? "원본 녹음과 연주 규칙" : "외부 악기 음원 형식";
+  const entries = Number.isFinite(pack.entries) ? packNumber.format(pack.entries) : "—";
+  const audioFiles = Number.isFinite(pack.audioFiles) ? packNumber.format(pack.audioFiles) : "—";
+  const installedSize = pack.installed ? packBytes(pack.installedBytes) : "설치 전";
+  const progressMessages = {
+    starting:"설치를 준비하고 있습니다.",
+    "checking-cache":"이미 받은 파일이 안전한지 확인하고 있습니다.",
+    "cache-invalid":"기존 파일에 문제가 있어 새 파일을 준비하고 있습니다.",
+    fetching:"공식 출처에서 음원 파일을 받고 있습니다.",
+    "verifying-source":"빠진 녹음이나 사용 조건이 없는지 확인하고 있습니다.",
+    staging:"확인한 음원을 설치 위치에 준비하고 있습니다.",
+    publishing:"곡에서 사용할 수 있도록 마지막 정리를 하고 있습니다.",
+    adopting:"기존 원본을 다시 받지 않고 안전하게 전환하고 있습니다."
+  };
+  const progressState = pack.status?.state || pack.state;
+  let message = view.cls === "installing" ? progressMessages[progressState] || "다운로드한 파일을 확인하고 안전하게 설치하고 있습니다."
+    : view.cls === "ready" ? "검증을 마쳐 바로 곡에 사용할 수 있습니다."
+    : view.cls === "error" ? `설치를 마치지 못했습니다. 다시 설치해 보세요.${pack.message ? ` (${pack.message})` : ""}`
+    : view.cls === "invalid" ? "기존 설치 정보를 확인하지 못했습니다. 다시 설치하면 안전한 상태로 복구합니다."
+    : "설치하면 이 팩의 악기와 주법을 곡에서 선택할 수 있습니다.";
+  if (pack.state === "unmanaged")
+    message = "직접 받은 원본 폴더가 있습니다. 파일을 지우지 않고 Aria가 관리하는 음원으로 전환하는 확인이 필요합니다.";
+
+  const source = packLink(pack.sourceUrl, "공식 출처");
+  const release = pack.releaseUrl && pack.releaseUrl !== pack.sourceUrl ? packLink(pack.releaseUrl, "공식 배포판") : "";
+  const licenseName = pack.license?.spdx || pack.license?.name || "라이선스 정보";
+  const license = packLink(pack.license?.url, `사용 조건 · ${licenseName}`);
+  const links = [source, release, license].filter(Boolean).join("");
+  const disabled = view.disabled ? " disabled" : "";
+  const buttonClass = view.cls === "ready" ? "pack-install done" : `pack-install${view.disabled ? "" : " primary"}`;
+  return `<article class="pack-card ${view.cls}" data-pack-card="${escapeHtml(id)}">
+    <div class="pack-card-head">
+      <div class="pack-card-name"><h3>${escapeHtml(name)}</h3><div class="pack-id">${escapeHtml(id)}</div></div>
+      <span class="pack-state" role="status">${escapeHtml(view.label)}</span>
+    </div>
+    <p class="pack-message">${escapeHtml(String(message))}</p>
+    <dl class="pack-facts">
+      <div class="pack-fact"><dt>형식 (Format)</dt><dd title="${escapeHtml(formatHelp)}">${escapeHtml(format)} · ${escapeHtml(formatHelp)}</dd></div>
+      <div class="pack-fact"><dt>프리셋 (악기·주법)</dt><dd>${entries}개</dd></div>
+      <div class="pack-fact"><dt>샘플 (녹음 파일)</dt><dd>${audioFiles}개</dd></div>
+      <div class="pack-fact"><dt>설치 용량</dt><dd>${escapeHtml(installedSize)}</dd></div>
+    </dl>
+    <div class="pack-card-foot">
+      <div class="pack-links">${links || "<span>공식 정보 없음</span>"}</div>
+      <button class="${buttonClass}" type="button" data-pack-install="${escapeHtml(id)}" aria-label="${escapeHtml(name)} ${escapeHtml(view.action)}"${disabled}>${view.cls === "installing" ? uiIcon("activity") : view.cls === "ready" ? uiIcon("headphones") : uiIcon("download")}<span>${escapeHtml(view.action)}</span></button>
+    </div>
+  </article>`;
+}
+
+function renderPacks(packs) {
+  visiblePacks = Array.isArray(packs) ? packs : [];
+  const list = $("packList"), overview = $("packOverview");
+  list.setAttribute("aria-busy", "false");
+  if (!visiblePacks.length) {
+    overview.innerHTML = "<span><strong>등록된 음원 팩이 없습니다</strong></span>";
+    list.innerHTML = '<div class="pack-empty"><span><strong>아직 설치할 수 있는 음원 팩이 없어요.</strong><br>팩이 등록되면 이곳에서 설치 상태를 확인할 수 있습니다.</span></div>';
+    return;
+  }
+  const ready = visiblePacks.filter(pack => pack.installed || pack.state === "ready").length;
+  const installing = visiblePacks.filter(pack => pack.installing || locallyInstallingPacks.has(pack.id)).length;
+  const suffix = installing ? ` · <strong>${installing}개 설치 중</strong>` : "";
+  overview.innerHTML = `<span>등록 ${packNumber.format(visiblePacks.length)}개 · <strong>${packNumber.format(ready)}개 사용 가능</strong>${suffix}</span><span>설치 중에도 창을 닫고 곡 작업을 계속할 수 있습니다.</span>`;
+  list.innerHTML = visiblePacks.map(packCard).join("");
+}
+
+function stopPackPolling() {
+  clearTimeout(packPollTimer);
+  packPollTimer = null;
+}
+
+function schedulePackPolling(packs) {
+  stopPackPolling();
+  // 설치는 팩 창을 닫아도 계속된다. 창 표시 여부와 무관하게 완료까지 감시해야
+  // picker의 availability도 페이지 새로고침 없이 즉시 갱신된다.
+  if (packMetaRefreshPending || packs.some(pack => pack.installing || locallyInstallingPacks.has(pack.id)))
+    packPollTimer = setTimeout(() => loadPacks(true), 1200);
+}
+
+async function loadPacks(quiet = false) {
+  const revision = ++packLoadRevision;
+  if (!quiet) {
+    $("packList").setAttribute("aria-busy", "true");
+    $("packOverview").innerHTML = "<span><strong>음원 정보를 불러오는 중입니다</strong></span>";
+  }
+  try {
+    const response = await fetch("/api/packs", { headers:{ "Accept":"application/json" }, cache:"no-store" });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `서버 응답 ${response.status}`);
+    if (revision !== packLoadRevision) return;
+    const packs = Array.isArray(result.packs) ? result.packs : [];
+    for (const pack of packs) if (!pack.installing) locallyInstallingPacks.delete(pack.id);
+    renderPacks(packs);
+    const nextReady = new Set(packs.filter(pack => pack.installed || pack.state === "ready").map(pack => pack.id));
+    if (readyPackIds === null && !packMetaRefreshPending) {
+      readyPackIds = nextReady;
+    } else {
+      const readinessChanged = readyPackIds === null || nextReady.size !== readyPackIds.size ||
+        [...nextReady].some(id => !readyPackIds.has(id));
+      if (readinessChanged || packMetaRefreshPending) {
+        const recoveringBootstrap = readyPackIds === null;
+        try {
+          await refreshMeta();
+          readyPackIds = nextReady;
+          packMetaRefreshPending = false;
+          toast(recoveringBootstrap
+            ? "악기 소리 목록을 다시 불러왔습니다"
+            : "설치한 음원을 악기 소리 목록에 바로 반영했습니다");
+        } catch (error) {
+          packMetaRefreshPending = true;
+          toast(`악기 소리 목록 반영을 다시 시도합니다: ${error.message}`, true);
+        }
+      }
+    }
+    schedulePackPolling(packs);
+  } catch (error) {
+    if (revision !== packLoadRevision) return;
+    stopPackPolling();
+    $("packList").setAttribute("aria-busy", "false");
+    $("packOverview").innerHTML = "<span><strong>음원 정보를 가져오지 못했습니다</strong></span>";
+    $("packList").innerHTML = `<div class="pack-empty error"><span><strong>목록을 열 수 없어요.</strong><br>${escapeHtml(error.message)}<br><br><button type="button" data-pack-reload>다시 확인</button></span></div>`;
+    if (locallyInstallingPacks.size || packMetaRefreshPending)
+      packPollTimer = setTimeout(() => loadPacks(true), 1200);
+  }
+}
+
+async function installPack(id) {
+  if (!id || locallyInstallingPacks.has(id)) return;
+  locallyInstallingPacks.add(id);
+  renderPacks(visiblePacks);
+  schedulePackPolling(visiblePacks);
+  try {
+    const response = await fetch("/api/packs/install", {
+      method:"POST",
+      headers:{ "Accept":"application/json", "Content-Type":"application/json" },
+      body:JSON.stringify({ id })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok || !result.ok) throw new Error(result.error || `서버 응답 ${response.status}`);
+    toast(`${result.pack?.name || id} 설치를 시작했습니다 — 창을 닫아도 계속 진행됩니다`);
+  } catch (error) {
+    locallyInstallingPacks.delete(id);
+    toast(`음원 설치를 시작하지 못했습니다: ${error.message}`, true);
+  }
+  await loadPacks(true);
+}
+
+$("btnPacks").onclick = () => {
+  $("utilityMenu").open = false;
+  if (!packDialog.open) packDialog.showModal();
+  loadPacks();
+};
+$("packDialogClose").onclick = () => packDialog.close();
+$("packRefresh").onclick = () => loadPacks();
+$("packList").onclick = event => {
+  const install = event.target.closest("[data-pack-install]");
+  if (install && !install.disabled) { installPack(install.dataset.packInstall); return; }
+  if (event.target.closest("[data-pack-reload]")) loadPacks();
+};
+packDialog.addEventListener("click", event => { if (event.target === packDialog) packDialog.close(); });
+packDialog.addEventListener("close", () => {
+  schedulePackPolling(visiblePacks);
+  $("btnPacks").focus();
+});
+
 let mobileZoomBefore = 1;
 $("mobileViewToggle").onclick = ev => {
   const on = !document.body.classList.contains("timeline-focus");
@@ -838,9 +1278,8 @@ const anySolo = () => song.tracks.some(t => t.solo);
 // 솔로가 켜져 있으면 솔로 트랙만, 아니면 음소거 아닌 트랙만 들린다
 const liveGainOf = t => (anySolo() ? !!t.solo : !t.mute) ? t.volume : 0;
 const stemHash = (t, from, to) => JSON.stringify([
-  t.preset, t.notes, t.gains ?? null, t.pan, t.velRange ?? null, t.attack ?? null,
-  t.release ?? null, t.reverb ?? null, t.ensemble ?? null,
-  t.eqLow ?? null, t.eqMid ?? null, t.eqHigh ?? null, t.vibrato ?? null,
+  t.preset, t.articulation ?? null, t.notes, t.gains ?? null, t.pan, t.velRange ?? null, t.reverb ?? null,
+  t.eqLow ?? null, t.eqMid ?? null, t.eqHigh ?? null,
   song.bpm, song.timeSig, song.tempoMap ?? [], from, to]);
 
 async function ensureStems(from, to) {
@@ -987,6 +1426,10 @@ function pitchToMidi(p) {
 }
 const beatsPerBar = () => song.timeSig[0] * 4 / song.timeSig[1];
 const isDrumTrack = t => meta && Object.hasOwn(meta.drumKits, t.preset);
+const isClipTrack = t => {
+  const preset = meta?.presets?.[t?.preset] ?? meta?.drumKits?.[t?.preset];
+  return preset?.kind === "clip";
+};
 
 // 템포 맵 — src/song.js와 같은 계산. 재생 헤드가 rit./accel. 중에도 어긋나지 않게 한다.
 function tempoSegs() {
@@ -1035,11 +1478,22 @@ function secToBeat(segs, sec) {
   const k = (seg.bpm1 - seg.bpm0) / (seg.endBeat - seg.startBeat);
   return seg.startBeat + (seg.bpm0 * Math.expm1(k * d / 60)) / k;
 }
+function noteDisplayDur(t, n, segs = tempoSegs()) {
+  const preset = meta?.presets?.[t.preset] ?? meta?.drumKits?.[t.preset];
+  const seconds = preset?.kind === "clip" && Number.isFinite(preset.durationSec) && preset.durationSec > 0
+    ? preset.durationSec : null;
+  if (seconds === null) return n.dur;
+  const bpb = beatsPerBar();
+  const start = (n.bar - 1) * bpb + n.beat;
+  const recorded = secToBeat(segs, beatToSec(segs, start) + seconds) - start;
+  return Math.max(n.dur, recorded);
+}
 function totalBars() {
   const bpb = beatsPerBar();
+  const segs = tempoSegs();
   let max = 8;
   for (const t of song.tracks) for (const n of t.notes)
-    max = Math.max(max, Math.ceil(((n.bar-1)*bpb + n.beat + n.dur) / bpb));
+    max = Math.max(max, Math.ceil(((n.bar-1)*bpb + n.beat + noteDisplayDur(t, n, segs)) / bpb));
   return max;
 }
 // 비어 있으면 기존처럼 첫 마디부터 재생한다. 숫자가 있을 때만 고정 시작선을 보여 준다.
@@ -1085,31 +1539,321 @@ function volumeWord(v) {
 }
 function cleanInstrumentName(name) {
   // 일부 프리셋 이름의 내부 분류 기호는 일반 사용자에게 의미가 없어 화면에서만 숨긴다.
-  return String(name).replace(/\s*⬡\s*$/, "");
-}
-function presetOptionHtml(id, pr, selected = null) {
-  const unavailable = pr.available === false;
-  return `<option value="${escapeHtml(id)}" ${id === selected ? "selected" : ""} ${unavailable ? "disabled" : ""}`
-    + ` title="${escapeHtml(unavailable ? `${pr.issue}: ${pr.font}` : pr.font)}">${escapeHtml(cleanInstrumentName(pr.name))}</option>`;
-}
-// 같은 악기의 GM·Philharmonia·VSCO·Salamander 변형을 한 묶음에 둔다.
-// family가 없는 단독 악기는 기존 순서를 유지하고, 묶음은 첫 변형이 있던 위치에 한 번만 그린다.
-function presetOptionsHtml(items, selected = null) {
-  const entries = Object.entries(items ?? {}), emitted = new Set();
-  let html = "";
-  for (const [id, pr] of entries) {
-    if (!pr.family) { html += presetOptionHtml(id, pr, selected); continue; }
-    if (emitted.has(pr.family)) continue;
-    emitted.add(pr.family);
-    const variants = entries.filter(([, p]) => p.family === pr.family);
-    if (variants.length === 1) html += presetOptionHtml(variants[0][0], variants[0][1], selected);
-    else html += `<optgroup label="${escapeHtml(pr.family)}">${variants.map(([vid, vp]) => presetOptionHtml(vid, vp, selected)).join("")}</optgroup>`;
-  }
-  return html;
+  return String(name).replace(/\s*⬡(?:\s*·\s*미설치)?\s*$/, "");
 }
 function instrumentName(t) {
   return cleanInstrumentName(meta?.presets?.[t.preset]?.name ?? meta?.drumKits?.[t.preset]?.name ?? t.preset);
 }
+
+// ---------- 검색 가능한 악기 소리 선택기 ----------
+// 레지스트리가 1,700개를 넘어도 DOM에는 검색 결과의 앞 200개만 둔다. 현재 선택은 처음 열 때
+// 맨 위로 올려 보여 주되, 사용자가 확정하기 전에는 곡을 바꾸지 않는다.
+const PRESET_RESULT_LIMIT = 200;
+const presetDialog = $("presetDialog");
+let presetPickerState = null, presetRenderFrame = 0;
+
+function normalizePresetText(value) {
+  return String(value ?? "").normalize("NFKC").toLocaleLowerCase("ko-KR").replace(/\s+/g, " ").trim();
+}
+
+function presetCatalogEntries() {
+  let order = 0;
+  const collect = (items, fallbackKind) => Object.entries(items ?? {}).map(([id, preset]) => {
+    const name = cleanInstrumentName(preset.name ?? id);
+    const desc = String(preset.desc ?? "").trim();
+    const family = String(preset.family ?? "").trim();
+    const familyDetail = String(preset.familyDetail ?? family).trim();
+    const source = String(preset.source ?? "").trim();
+    const sourceDetail = String(preset.sourceDetail ?? source).trim();
+    const articulation = String(preset.articulation ?? "").trim();
+    const articulationOptions = Object.entries(preset.articulations ?? {})
+      .map(([articulationId, definition]) => `${articulationId} ${definition?.label ?? ""}`).join(" ");
+    const sourceEntry = String(preset.sourceEntry ?? "").trim();
+    const recordedNote = String(preset.recordedNote ?? "").trim();
+    const recordedDynamic = String(preset.recordedDynamic ?? "").trim();
+    const aliasSearch = String(preset.aliasSearch ?? "").trim();
+    const kind = preset.kind === "clip" ? "clip" : fallbackKind;
+    const kindLabel = kind === "clip" ? "녹음 클립" : kind === "percussion" ? "드럼·타악" : "선율 악기";
+    return {
+      id:String(id), preset, name, desc, family, familyDetail, source, sourceDetail,
+      articulation, sourceEntry, recordedNote, recordedDynamic, aliasSearch,
+      articulationOptions,
+      kind, kindLabel, order:order++,
+      search:normalizePresetText([
+        name, id, family, familyDetail, source, sourceDetail, desc, articulation,
+        articulationOptions,
+        sourceEntry, recordedNote, recordedDynamic, aliasSearch,
+        preset.category, preset.kind, kindLabel
+      ].join(" "))
+    };
+  });
+  return [
+    ...collect(meta?.presets, "instrument"),
+    ...collect(meta?.drumKits, "percussion")
+  ];
+}
+
+function presetFilterOptions(control, entries, key, allLabel) {
+  const values = [...new Set(entries.map(entry => entry[key]).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, "ko", { sensitivity:"base", numeric:true }));
+  control.innerHTML = `<option value="">${escapeHtml(allLabel)}</option>`
+    + values.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
+}
+
+function presetResultHtml(entry, position, total) {
+  const { preset } = entry;
+  const available = preset.available !== false;
+  const selectedChoice = presetPickerState?.chosenId === entry.id;
+  const current = presetPickerState?.mode === "change" && presetPickerState.currentId === entry.id;
+  const source = entry.source || "출처 미표기";
+  const description = entry.desc || "이 소리에 대한 쉬운 설명이 아직 등록되지 않았습니다.";
+  const asset = String(preset.asset ?? preset.font ?? "").trim();
+  const engine = String(preset.engine ?? "").trim();
+  const clipSource = entry.sourceEntry ? entry.sourceEntry.split("/").at(-1) : "";
+  const duration = entry.kind === "clip" && Number.isFinite(preset.durationSec)
+    ? `${preset.durationSec.toFixed(3)}초` : "";
+  const facts = [entry.id, entry.kindLabel, entry.family, entry.articulation,
+    entry.recordedNote, entry.recordedDynamic, duration, clipSource, engine].filter(Boolean);
+  const issue = String(preset.issue || "현재 사용할 수 없는 음원입니다.");
+  const disabled = !available || presetPickerState?.busy;
+  const availability = available
+    ? `<span class="preset-availability"><strong>사용 가능</strong><span>출처 · ${escapeHtml(source)}</span>${asset ? `<small>${escapeHtml(asset)}</small>` : ""}</span>`
+    : `<span class="preset-availability unavailable"><strong>사용 불가 · ${escapeHtml(issue)}</strong><span>출처 · ${escapeHtml(source)}</span>${asset ? `<small>${escapeHtml(asset)}</small>` : ""}</span>`;
+  return `<button class="preset-result" type="button" role="option" data-preset-id="${escapeHtml(entry.id)}"
+      aria-selected="${selectedChoice}" aria-posinset="${position}" aria-setsize="${total}"${disabled ? " disabled" : ""}
+      title="${escapeHtml(available ? `${entry.name} — 사용 가능` : `${entry.name} — ${issue}${asset ? `: ${asset}` : ""}`)}">
+    <span class="preset-result-main"><strong>${escapeHtml(entry.name)}</strong>${current ? '<span class="preset-current">현재 소리</span>' : ""}</span>
+    <span class="preset-result-desc">${escapeHtml(description)}</span>
+    <span class="preset-result-facts">${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join("")}</span>
+    ${availability}
+  </button>`;
+}
+
+function updatePresetPickerChoice() {
+  const state = presetPickerState;
+  if (!state) return;
+  const choice = $("presetChoice"), confirm = $("presetConfirm");
+  const entry = state.entries.find(item => item.id === state.chosenId);
+  const same = state.mode === "change" && state.chosenId === state.currentId;
+  confirm.textContent = state.mode === "add" ? "이 소리로 추가" : "이 소리로 바꾸기";
+  confirm.disabled = !entry || entry.preset.available === false || same || state.busy;
+  if (state.busy) {
+    choice.innerHTML = `<strong>${escapeHtml(entry?.name ?? "선택한 소리")}</strong>${state.mode === "add" ? "새 트랙을 추가하고 있습니다." : "악기 소리를 바꾸고 있습니다."}`;
+    confirm.textContent = state.mode === "add" ? "추가 중…" : "변경 중…";
+  } else if (!entry) {
+    choice.textContent = "목록에서 사용할 소리를 고르세요.";
+  } else if (same) {
+    choice.innerHTML = `<strong>${escapeHtml(entry.name)}</strong>현재 소리를 그대로 유지하고 있습니다.`;
+  } else {
+    const source = entry.source || "출처 미표기";
+    choice.innerHTML = `<strong>${escapeHtml(entry.name)}</strong>${escapeHtml(source)} · ${escapeHtml(entry.kindLabel)}`;
+  }
+}
+
+function matchingPresetEntries() {
+  const state = presetPickerState;
+  if (!state) return [];
+  const tokens = normalizePresetText($("presetSearch").value).split(" ").filter(Boolean);
+  const kind = $("presetKindFilter").value;
+  const family = $("presetFamilyFilter").value;
+  const source = $("presetSourceFilter").value;
+  return state.entries.filter(entry => {
+    if (kind !== "all" && entry.kind !== kind) return false;
+    if (family && entry.family !== family) return false;
+    if (source && entry.source !== source) return false;
+    return tokens.every(token => entry.search.includes(token));
+  }).sort((a, b) => {
+    // 현재 소리는 첫 화면에서 반드시 보인다. 검색 중에는 이름/ID가 앞에서 맞는 결과를 우선하고,
+    // 평상시에는 설치된 추천음→설치된 음원→미설치 음원 순서로 둔다.
+    if (a.id === state.currentId && b.id !== state.currentId) return -1;
+    if (b.id === state.currentId && a.id !== state.currentId) return 1;
+    const query = tokens.join(" ");
+    const rank = entry => {
+      const name = normalizePresetText(entry.name), id = normalizePresetText(entry.id);
+      if (name === query || id === query) return 0;
+      if (name.startsWith(query) || id.startsWith(query)) return 1;
+      if (name.includes(query) || id.includes(query)) return 2;
+      return 3;
+    };
+    if (tokens.length) {
+      const byMatch = rank(a) - rank(b);
+      if (byMatch) return byMatch;
+    }
+    const priority = entry => {
+      const available = entry.preset.available !== false;
+      if (available && entry.preset.recommended) return 0;
+      if (available) return 1;
+      if (entry.preset.recommended) return 2;
+      return 3;
+    };
+    return priority(a) - priority(b) || a.order - b.order;
+  });
+}
+
+function renderPresetPickerResults() {
+  presetRenderFrame = 0;
+  const state = presetPickerState;
+  if (!state || !presetDialog.open) return;
+  const matched = matchingPresetEntries();
+  const available = matched.filter(entry => entry.preset.available !== false).length;
+  const shown = matched.slice(0, PRESET_RESULT_LIMIT);
+  const summary = $("presetSummary"), results = $("presetResults");
+  const refine = matched.length > PRESET_RESULT_LIMIT
+    ? `<span class="refine">앞 ${PRESET_RESULT_LIMIT.toLocaleString("ko-KR")}개만 표시 중 · 검색어나 필터로 더 좁혀 주세요.</span>`
+    : `<span>${matched.length ? "결과를 선택한 뒤 아래 버튼으로 확정하세요." : "검색어나 필터를 바꿔 보세요."}</span>`;
+  summary.innerHTML = `<span><strong>${matched.length.toLocaleString("ko-KR")}개</strong> 찾음 · 사용 가능 ${available.toLocaleString("ko-KR")}개</span>${refine}`;
+  results.setAttribute("aria-busy", String(state.busy));
+  if (!shown.length) {
+    results.innerHTML = '<div class="preset-empty"><span><strong>조건에 맞는 소리가 없습니다.</strong><br>검색어를 줄이거나 악기군·출처·종류 필터를 초기화해 보세요.</span></div>';
+  } else {
+    results.innerHTML = shown.map((entry, index) => presetResultHtml(entry, index + 1, matched.length)).join("");
+  }
+  updatePresetPickerChoice();
+}
+
+function queuePresetPickerRender() {
+  cancelAnimationFrame(presetRenderFrame);
+  presetRenderFrame = requestAnimationFrame(renderPresetPickerResults);
+}
+
+function choosePreset(id) {
+  const state = presetPickerState;
+  const entry = state?.entries.find(item => item.id === id);
+  if (!entry || entry.preset.available === false || state.busy) return;
+  state.chosenId = id;
+  for (const button of $("presetResults").querySelectorAll("[data-preset-id]"))
+    button.setAttribute("aria-selected", String(button.dataset.presetId === id));
+  updatePresetPickerChoice();
+}
+
+function nextTrackName() {
+  const used = new Set((song?.tracks ?? []).map(track => track.name.toLocaleLowerCase("ko-KR")));
+  let number = (song?.tracks.length ?? 0) + 1;
+  while (used.has(`트랙 ${number}`.toLocaleLowerCase("ko-KR"))) number++;
+  return `트랙 ${number}`;
+}
+
+function openPresetPicker({ mode, track = null, returnFocus = null } = {}) {
+  if (!meta) { toast("악기 소리 목록을 아직 불러오는 중입니다", true); return; }
+  if (presetDialog.open) return;
+  const entries = presetCatalogEntries();
+  if (!entries.length) { toast("등록된 악기 소리가 없습니다", true); return; }
+  const currentId = mode === "change" ? String(track?.preset ?? "") : null;
+  const current = entries.find(entry => entry.id === currentId);
+  presetPickerState = {
+    mode, entries, currentId, chosenId:currentId, trackName:track?.name ?? null,
+    returnFocus:returnFocus || document.activeElement, busy:false
+  };
+  $("presetDialogTitle").innerHTML = `${uiIcon(mode === "add" ? "plus" : "headphones")}<span>${mode === "add" ? "새 악기 트랙" : "악기 소리 바꾸기"}</span>`;
+  $("presetDialogHelp").textContent = mode === "add"
+    ? "트랙 이름을 적고, 이름·ID·설명·악기군·출처·연주법으로 소리를 찾아 추가하세요."
+    : `'${track?.name ?? "선택한 트랙"}'의 현재 소리는 유지됩니다. 새 소리를 고르고 변경 버튼을 눌러야 적용됩니다.`;
+  $("presetNameField").hidden = mode !== "add";
+  $("presetTrackName").value = mode === "add" ? nextTrackName() : "";
+  $("presetSearch").value = "";
+  $("presetKindFilter").value = mode === "change" ? current?.kind ?? "all" : "all";
+  presetFilterOptions($("presetFamilyFilter"), entries, "family", "모든 악기군");
+  presetFilterOptions($("presetSourceFilter"), entries, "source", "모든 출처");
+  presetDialog.showModal();
+  renderPresetPickerResults();
+  requestAnimationFrame(() => {
+    if (mode === "add") { $("presetTrackName").focus(); $("presetTrackName").select(); }
+    else $("presetSearch").focus();
+  });
+}
+
+function setPresetPickerBusy(busy) {
+  if (!presetPickerState) return;
+  presetPickerState.busy = busy;
+  for (const control of [$("presetTrackName"), $("presetSearch"), $("presetKindFilter"), $("presetFamilyFilter"), $("presetSourceFilter")])
+    control.disabled = busy;
+  $("presetCancel").disabled = busy;
+  renderPresetPickerResults();
+}
+
+async function confirmPresetPicker() {
+  const state = presetPickerState;
+  if (!state || state.busy) return;
+  const entry = state.entries.find(item => item.id === state.chosenId);
+  if (!entry || entry.preset.available === false) return;
+  if (state.mode === "change" && state.chosenId === state.currentId) return;
+  if (state.mode === "change") {
+    if (!song?.tracks.some(track => track.name === state.trackName)) {
+      toast("대상 트랙이 더 이상 없어 소리를 바꿀 수 없습니다", true);
+      presetDialog.close();
+      return;
+    }
+    setPresetPickerBusy(true);
+    try {
+      await rpc("set_track", { track:state.trackName, preset:entry.id });
+      state.committed = true;
+      presetDialog.close();
+    } catch { setPresetPickerBusy(false); }
+    return;
+  }
+  const name = $("presetTrackName").value.trim();
+  if (!name) { $("presetTrackName").focus(); toast("새 트랙 이름을 적어 주세요", true); return; }
+  if (song?.tracks.some(track => track.name.toLocaleLowerCase("ko-KR") === name.toLocaleLowerCase("ko-KR"))) {
+    $("presetTrackName").focus(); $("presetTrackName").select();
+    toast(`'${name}' 트랙이 이미 있습니다`, true);
+    return;
+  }
+  setPresetPickerBusy(true);
+  try {
+    pendingSelectLast = true;
+    await rpc("add_track", { name, preset:entry.id });
+    state.committed = true;
+    presetDialog.close();
+  } catch {
+    pendingSelectLast = false;
+    setPresetPickerBusy(false);
+  }
+}
+
+for (const id of ["presetKindFilter", "presetFamilyFilter", "presetSourceFilter"])
+  $(id).addEventListener("change", queuePresetPickerRender);
+$("presetSearch").addEventListener("input", queuePresetPickerRender);
+$("presetSearch").addEventListener("keydown", event => {
+  if (event.key !== "ArrowDown") return;
+  const first = $("presetResults").querySelector("button.preset-result:not(:disabled)");
+  if (first) { event.preventDefault(); first.focus(); }
+});
+$("presetTrackName").addEventListener("keydown", event => {
+  if (event.key === "Enter") { event.preventDefault(); $("presetSearch").focus(); }
+});
+$("presetResults").addEventListener("click", event => {
+  const option = event.target.closest("[data-preset-id]");
+  if (option && !option.disabled) choosePreset(option.dataset.presetId);
+});
+$("presetResults").addEventListener("keydown", event => {
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  const options = [...$("presetResults").querySelectorAll("button.preset-result:not(:disabled)")];
+  if (!options.length) return;
+  const at = options.indexOf(document.activeElement);
+  let next = event.key === "Home" ? 0 : event.key === "End" ? options.length - 1
+    : event.key === "ArrowDown" ? Math.min(options.length - 1, at + 1) : Math.max(0, at - 1);
+  event.preventDefault();
+  options[next].focus();
+});
+$("presetConfirm").addEventListener("click", confirmPresetPicker);
+$("presetCancel").addEventListener("click", () => presetDialog.close());
+$("presetDialogClose").addEventListener("click", () => presetDialog.close());
+presetDialog.addEventListener("click", event => { if (event.target === presetDialog && !presetPickerState?.busy) presetDialog.close(); });
+presetDialog.addEventListener("cancel", event => { if (presetPickerState?.busy) event.preventDefault(); });
+presetDialog.addEventListener("close", () => {
+  cancelAnimationFrame(presetRenderFrame);
+  presetRenderFrame = 0;
+  const returnFocus = presetPickerState?.returnFocus;
+  const committed = presetPickerState?.committed;
+  presetPickerState = null;
+  for (const control of [$("presetTrackName"), $("presetSearch"), $("presetKindFilter"), $("presetFamilyFilter"), $("presetSourceFilter"), $("presetCancel")])
+    control.disabled = false;
+  // RPC 응답과 state 이벤트의 순서는 고정되어 있지 않다. 확정 직후 예전 트랙 헤더에 포커스를
+  // 돌리면 renderStrips의 조작 보호에 걸려 새 상태를 한 번 건너뛸 수 있으므로 안정된 상단으로 보낸다.
+  if (committed) $("btnPlay").focus();
+  else if (returnFocus && document.contains(returnFocus)) returnFocus.focus();
+  else document.querySelector(".instrument-picker-open")?.focus();
+});
 
 // 트랙 이름은 음악 데이터의 식별자이기도 하지만, 사람에게는 곡 속 역할을 적는 제목이다.
 // 목록·상세 양쪽에서 같은 작은 인라인 편집기를 써서 별도 설정창 없이 바로 고친다.
@@ -1239,37 +1983,16 @@ function renderStrips() {
   add.className = "addtrack";
   add.innerHTML = `${uiIcon("plus")}<span>악기 더하기</span>`;
   add.title = "새 악기 트랙을 추가합니다";
-  add.onclick = e => { e.currentTarget.blur(); showAddTrackPop(e.clientX, e.clientY); };
+  add.onclick = e => showAddTrackPop(e.currentTarget);
   box.appendChild(add);
 }
 
-// ＋ 트랙: 이름·프리셋을 골라 추가 — 추가되면 새 트랙이 바로 선택된다
+// ＋ 트랙: 검색 선택기에서 이름·프리셋을 고른다 — 추가되면 새 트랙이 바로 선택된다
 let pendingSelectLast = false;
-function showAddTrackPop(cx, cy) {
+function showAddTrackPop(returnFocus) {
   if (!song || !meta) return;
-  resetFbPop();
-  const p = $("fbPop");
-  p.innerHTML = `<div class="fbhead">새 트랙</div>
-    <div class="fbrow2"><input id="atName" type="text" style="flex:1;min-width:100px"></div>
-    <select id="atPreset">
-      <option disabled>── 선율 악기 ──</option>${presetOptionsHtml(meta.presets)}
-      <option disabled>── 드럼 킷 ──</option>${presetOptionsHtml(meta.drumKits)}
-    </select>
-    <div class="fbrow"><button id="atAdd" class="primary">추가</button><button id="atCancel">취소</button></div>`;
-  placeFbPop(cx, cy);
-  $("atName").value = `트랙 ${song.tracks.length + 1}`;
-  $("atName").focus(); $("atName").select();
-  $("atCancel").onclick = hideFbPop;
-  $("atName").onkeydown = ev => { if (ev.key === "Enter") $("atAdd").click(); };
-  $("atAdd").onclick = async () => {
-    const name = $("atName").value.trim();
-    if (!name) { $("atName").focus(); return; }
-    try {
-      pendingSelectLast = true;
-      await rpc("add_track", { name, preset: $("atPreset").value });
-      hideFbPop();
-    } catch { pendingSelectLast = false; }
-  };
+  hideFbPop();
+  openPresetPicker({ mode:"add", returnFocus });
 }
 
 // ---------- 상세롤 헤더 (선택 트랙 정보 + 프리셋) ----------
@@ -1283,33 +2006,55 @@ function keyNote(t) {
 let detToolsOpen = false;
 function renderDetHead() {
   const box = $("detHead");
-  if (box.contains(document.activeElement)) return; // 프리셋 셀렉트가 열려 있는 동안 파괴 금지
+  if (box.contains(document.activeElement)) return; // 상세 헤더 컨트롤을 조작하는 동안 파괴 금지
   const t = song?.tracks[selected];
   if (!t) { box.innerHTML = `<span class="meta">트랙이 없습니다 — AI에게 작곡을 부탁하면 여기에 채워집니다</span>`; return; }
-  const drum = isDrumTrack(t);
-  const opts = !meta ? "" : presetOptionsHtml(drum ? meta.drumKits : meta.presets, t.preset);
+  const fixedClip = isClipTrack(t);
+  const presetMeta = meta?.presets?.[t.preset] ?? meta?.drumKits?.[t.preset] ?? null;
+  const articulationEntries = Object.entries(presetMeta?.articulations ?? {});
+  const defaultArticulation = presetMeta?.defaultArticulation ?? null;
+  const articulationValue = t.articulation ?? "";
+  const defaultArticulationLabel = presetMeta?.articulations?.[defaultArticulation]?.label ?? "음원이 정한 기본 연주법";
+  const articulationControl = articulationEntries.length ? `
+    <label class="articulation-control" title="아티큘레이션 (Articulation) — 실제로 녹음된 연주법을 선택합니다. 효과로 비슷하게 흉내 내지 않습니다">
+      <span>Articulation (연주법)</span>
+      <select aria-label="${escapeHtml(t.name)} 아티큘레이션 연주법">
+        <option value=""${articulationValue ? "" : " selected"}>Default (기본) — ${escapeHtml(defaultArticulationLabel)}</option>
+        ${articulationEntries.map(([id, definition]) => `<option value="${escapeHtml(id)}"${articulationValue === id ? " selected" : ""}>${escapeHtml(definition?.label ?? id)}</option>`).join("")}
+      </select>
+    </label>` : "";
+  if (fixedClip) { splitMode = false; splitHover = null; }
   const gains = t.gains ? ` · 구간 음량 ${t.gains.length}곳` : "";
   // 기본값에서 벗어난 음색이 하나라도 있으면 버튼에 점을 찍어 알린다
   const toneOn = TONE_ROWS.some(r => toneChanged(t, r));
   box.innerHTML = `
     <div class="det-identity"><span class="swatch" style="background:${COLORS[selected % COLORS.length]}"></span><span class="nm" title="트랙 이름 — 두 번 클릭해서 수정">${escapeHtml(t.name)}</span>
       <button class="rename-track" title="트랙 이름 수정" aria-label="'${escapeHtml(t.name)}' 트랙 이름 수정">${uiIcon("pencil")}</button>
-      <select class="instrument-select" title="악기 소리 바꾸기">${opts}</select></div>
+      <button class="instrument-picker-open" type="button" title="현재 소리: ${escapeHtml(instrumentName(t))} · 검색해서 바꾸기" aria-label="${escapeHtml(t.name)} 악기 소리 바꾸기" aria-haspopup="dialog"><span>${escapeHtml(instrumentName(t))}</span>${uiIcon("search")}</button></div>
+    ${articulationControl}
     <div class="det-vibe">
       <button class="pen tone${toneOn ? " on" : ""}" title="소리 느낌 — 밝기·거리·여운을 귀로 맞춥니다">${uiIcon("sliders")}<span class="label" data-short="소리">소리 느낌${toneOn ? " •" : ""}</span></button>
       <button class="pen feel" title="연주 느낌 — 기계적인 박자를 풀거나 어긋난 박자를 정리합니다">${uiIcon("sparkles")}<span class="label" data-short="연주">연주 느낌</span></button>
     </div>
-    <span class="det-meta">노트 ${t.notes.length}개${gains}${t.mute ? " · 꺼짐" : ""}${keyNote(t)}</span>
+    <span class="det-meta">노트 ${t.notes.length}개${fixedClip ? " · 녹음 클립 원본 길이 고정" : ""}${gains}${t.mute ? " · 꺼짐" : ""}${keyNote(t)}</span>
     <details class="precision-tools"${detToolsOpen ? " open" : ""}>
       <summary title="음표를 직접 고치는 도구">${uiIcon("pencil")}<span class="label" data-short="직접">직접 고치기</span></summary>
       <div class="precision-panel">
         <button class="pen draw${penMode ? " on" : ""}" title="빈 곳을 클릭·드래그해 음을 그리고, 음을 클릭하면 지웁니다">${uiIcon("pencil")}<span class="label">음 그리기</span></button>
-        <button class="pen cutm${splitMode ? " on" : ""}" title="음을 클릭하면 격자 위치에서 둘로 가릅니다">${uiIcon("scissors")}<span class="label">음 자르기</span></button>
+        <button class="pen cutm${splitMode ? " on" : ""}"${fixedClip ? " disabled" : ""} title="${fixedClip ? "Recorded Clip(녹음 클립)은 원본 전체를 한 번 재생하므로 자를 수 없습니다" : "음을 클릭하면 격자 위치에서 둘로 가릅니다"}">${uiIcon("scissors")}<span class="label">음 자르기</span></button>
         <button class="pen full${detFull ? " on" : ""}" title="${detFull ? "쓰인 음역만 간단히 봅니다" : "전체 음역을 펼쳐 더 높거나 낮은 음을 그립니다"}">${uiIcon(detFull ? "shrink" : "expand")}<span class="label">${detFull ? "쓰는 음역만" : "전체 음역 보기"}</span></button>
         <button class="tdel" title="악기 '${escapeHtml(t.name)}' 삭제 (되돌리기 가능)">${uiIcon("trash")}<span class="label">이 악기 삭제</span></button>
       </div>
     </details>`;
-  box.querySelector("select.instrument-select").onchange = ev => { ev.target.blur(); rpc("set_track", { track: t.name, preset: ev.target.value }); };
+  box.querySelector(".instrument-picker-open").onclick = ev => {
+    openPresetPicker({ mode:"change", track:t, returnFocus:ev.currentTarget });
+  };
+  const articulationSelect = box.querySelector(".articulation-control select");
+  if (articulationSelect) articulationSelect.onchange = ev => {
+    const value = ev.currentTarget.value;
+    ev.currentTarget.blur();
+    rpc("set_track", { track:t.name, articulation:value || null }).catch(() => {});
+  };
   box.querySelector(".det-identity .nm").ondblclick = ev => {
     ev.preventDefault();
     beginTrackRename(ev.currentTarget, t);
@@ -1337,6 +2082,7 @@ function renderDetHead() {
   };
   box.querySelector(".cutm").onclick = ev => {
     ev.currentTarget.blur();
+    if (fixedClip) { toast("Recorded Clip(녹음 클립)은 원본 길이가 고정되어 자를 수 없습니다 — 시작 위치만 옮길 수 있습니다", true); return; }
     splitMode = !splitMode; if (splitMode) penMode = false;
     splitHover = null; setCursor(); renderDetHead(); draw();
   };
@@ -1480,9 +2226,11 @@ function drawArrange() {
   const PAD = 5;
   const soloOn = anySolo();
   const trackActivity = arrangeActivity(bpb);
+  const displayTempoSegs = tempoSegs();
   song.tracks.forEach((t, i) => {
     const y0 = i * LANE_H;
     const drum = isDrumTrack(t);
+    const clipTrack = isClipTrack(t);
     lanesCtx.fillStyle = COLORS[i % COLORS.length];
     let lo = 128, hi = -1, rows = null;
     if (drum) {
@@ -1511,7 +2259,7 @@ function drawArrange() {
     }
     for (const n of t.notes) {
       const x = ((n.bar - 1) * bpb + n.beat) / bpb * barW;
-      const w = Math.max(2, n.dur / bpb * barW - 1);
+      const w = Math.max(2, noteDisplayDur(t, n, displayTempoSegs) / bpb * barW - 1);
       const strength = Math.min(1, Math.max(0.08, (n.vel ?? 96) / 127));
       let fy; // 레인 안 세로 위치(0=위)
       if (drum) {
@@ -1526,7 +2274,7 @@ function drawArrange() {
       const y = y0 + PAD + fy * (LANE_H - PAD * 2 - 3);
       const nh = 1.8 + strength * 2.4;
       lanesCtx.globalAlpha = (quiet ? 0.11 : 0.38) + strength * (quiet ? 0.08 : 0.58);
-      lanesCtx.fillRect(x, y - nh / 2, drum ? Math.min(w, barW / bpb * 0.4) : w, nh);
+      lanesCtx.fillRect(x, y - nh / 2, drum && !clipTrack ? Math.min(w, barW / bpb * 0.4) : w, nh);
     }
     lanesCtx.globalAlpha = 1;
     // 구간 게인 — 해당 트랙 레인에만 표시 (파랑=감쇠, 빨강=증폭)
@@ -1644,10 +2392,12 @@ function drawArrange() {
 
 // 드럼 트랙의 상세 행: 실제 쓰인 피스만 (기본 순서 우선, 킷 고유 피스는 뒤에)
 function drumRows(t) {
+  const kit = meta?.drumKits?.[t.preset];
+  const baseOrder = Array.isArray(kit?.pieces) && kit.pieces.length ? kit.pieces : drumPieceOrder;
   const used = new Set(t.notes.map(n => n.pitch));
-  const rows = drumPieceOrder.filter(p => used.has(p));
+  const rows = baseOrder.filter(p => used.has(p));
   for (const p of used) if (!rows.includes(p)) rows.push(p);
-  return rows.length ? rows : drumPieceOrder;
+  return rows.length ? rows : baseOrder;
 }
 
 // ---------- 상세 피아노롤 (선택 트랙) ----------
@@ -1691,8 +2441,10 @@ function drawDetail() {
   const t = song.tracks[selected];
   if (!t) { setupCanvas(detC, detCtx, 10, 10); return; }
   const bpb = beatsPerBar();
+  const displayTempoSegs = tempoSegs();
   const wrap = $("detWrap");
   const drum = isDrumTrack(t);
+  const clipTrack = isClipTrack(t);
   // 오른쪽에도 거터 한 칸을 남겨, 맞춤 상태에서 버튼으로 확대할 때 곡 중앙 앵커가
   // 스크롤 끝에 막혀 미끄러지지 않게 한다.
   const W = Math.max(wrap.clientWidth, DET_GUTTER + totalB * barW + DET_GUTTER);
@@ -1784,12 +2536,12 @@ function drawDetail() {
   for (const n of t.notes) {
     detCtx.globalAlpha = velAlpha(n.vel);
     const x = DET_GUTTER + ((n.bar - 1) * bpb + n.beat) / bpb * barW;
-    const w = Math.max(3, n.dur / bpb * barW - 1);
+    const w = Math.max(3, noteDisplayDur(t, n, displayTempoSegs) / bpb * barW - 1);
     if (drum) {
       const pi = rows.indexOf(n.pitch);
       if (pi < 0) continue;
       const y = DET_RULER + pi * rowH;
-      const w2 = Math.min(w, barW / bpb * 0.5);
+      const w2 = clipTrack ? w : Math.min(w, barW / bpb * 0.5);
       detCtx.fillRect(x, y + 2, w2, rowH - 4);
       detNoteRects.push({ x, y: y + 2, w: w2, h: rowH - 4, note: n });
     } else {
@@ -1925,19 +2677,25 @@ function drawDetail() {
     detCtx.lineWidth = 1;
   }
   // 맨 마지막 — 건반 눈금과 마디 번호는 다른 것들 위에 뜬 채 스크롤을 따라다닌다
-  drawDetGutter(W, H, { drum, rows, lo, hi, rowH, step, sx: wrap.scrollLeft, sy: wrap.scrollTop });
+  drawDetGutter(W, H, {
+    drum, rows, lo, hi, rowH, step, sx: wrap.scrollLeft, sy: wrap.scrollTop,
+    pieceLabels: drum ? (meta?.drumKits?.[t.preset]?.pieceLabels ?? {}) : {}
+  });
 }
 
 // 왼쪽 건반 눈금(음이름)과 위쪽 마디 번호띠.
 // 캔버스에 붙박이로 그리면 확대해서 옆으로 밀었을 때 통째로 화면 밖으로 밀려나,
 // 정작 가까이 봐야 할 때 "이 줄이 무슨 음인지"를 잃는다. 그래서 스크롤 양만큼 되밀어 그린다.
-function drawDetGutter(W, H, { drum, rows, lo, hi, rowH, step, sx, sy }) {
+function drawDetGutter(W, H, { drum, rows, lo, hi, rowH, step, sx, sy, pieceLabels }) {
   const g = DET_GUTTER, keyW = g - 4;
   detCtx.fillStyle = "#12151a";
   detCtx.fillRect(sx, 0, g, H);
   if (drum) {
     detCtx.fillStyle = "#69707e"; detCtx.font = "9px sans-serif";
-    rows.forEach((p, i) => detCtx.fillText(p, sx + 6, DET_RULER + i * rowH + rowH / 2 + 3));
+    rows.forEach((p, i) => {
+      const label = String(pieceLabels?.[p] ?? p).split(/\s+[—·]\s+/)[0];
+      detCtx.fillText(label, sx + 6, DET_RULER + i * rowH + rowH / 2 + 3, keyW - 8);
+    });
   } else {
     // 한 줄 = 건반 하나(반음) — 어느 줄이 무슨 음인지 바로 보인다
     for (let m = lo; m <= hi; m++) {
@@ -2391,7 +3149,8 @@ const detHit = (x, y) => [...detNoteRects].reverse().find(r =>
   x >= r.x - 1 && x <= r.x + Math.max(r.w, 4) + 1 && y >= r.y - 2 && y <= r.y + r.h + 2);
 // 노트 오른쪽 가장자리(길이 조절 핸들) — 좁은 노트는 이동이 우선
 const detEdgeHit = (x, y) => [...detNoteRects].reverse().find(r =>
-  r.w >= 10 && Math.abs(x - (r.x + r.w)) <= 4 && y >= r.y - 2 && y <= r.y + r.h + 2);
+  !isClipTrack(song?.tracks?.[selected]) && r.w >= 10 &&
+  Math.abs(x - (r.x + r.w)) <= 4 && y >= r.y - 2 && y <= r.y + r.h + 2);
 // 건반 거터와 마디 번호띠는 스크롤 위치에 다시 그려 화면에 고정해 둔다.
 // 캔버스 좌표만 보면 스크롤 뒤에는 이 영역도 본문처럼 보여, 뒤에 가려진 노트가 클릭될 수 있다.
 function detFloatingChromeAt(e) {
@@ -2670,49 +3429,30 @@ window.addEventListener("keydown", e => {
 
 // ---------- 트랙 음색 판 ----------
 // 귀로 바로 판단할 수 있는 값만 모아, 숫자 대신 반대말 라벨 사이의 손잡이로 연다.
-// 손잡이 위치→값 변환은 귀에 선형이 되도록 잡았다: 시간(어택·여운)은 배수로 늘어나야
-// 고르게 들려 지수, 자리·잔향·기복은 그대로 선형.
+// 전문 용어를 먼저 쓰고 곧바로 감각적인 설명을 붙여, 비음악인도 조절하면서 용어에 익숙해지게 한다.
 const rd = (v, n) => +v.toFixed(n);
-// 소수 4자리 — 3자리로 자르면 왼쪽 끝(2ms 부근)에서 여러 눈금이 같은 값으로 뭉개져
-// 손잡이를 놓는 순간 왼쪽 끝으로 튀어 돌아간다
-const expMap = (lo, mult) => ({
-  to: p => rd(lo * Math.pow(mult, p), 4),
-  from: v => Math.min(1, Math.max(0, Math.log(Math.max(v, lo) / lo) / Math.log(mult)))
-});
 // own  — 트랙이 늘 들고 있는 고유 필드(비울 수 없다). 되돌리기는 기본값을 다시 써 넣는다.
 //        나머지는 선택적 오버라이드라 null로 지우면 프리셋 값으로 돌아간다.
 // dflt — 프리셋 정보에 없는 기본값. 없으면 /api/meta의 프리셋 기본값을 쓴다.
 const TONE_ROWS = [
   { key: "pan", left: "왼쪽", right: "오른쪽", own: true, dflt: 0,
-    tip: "이 악기가 스테레오에서 놓이는 자리 — 여러 악기를 좌우로 벌리면 서로 덜 겹칩니다",
+    tip: "팬 (Pan) — 이 악기가 스테레오의 어느 쪽에 놓일지 정합니다. 여러 악기를 좌우로 벌리면 서로 덜 겹칩니다",
     to: p => rd(p * 2 - 1, 2), from: v => (v + 1) / 2 },
   { key: "reverb", left: "가까이", right: "멀리",
-    tip: "잔향 — 오른쪽일수록 넓은 공간의 뒤편에서 들립니다",
+    tip: "리버브 (Reverb) — 공간에서 되돌아오는 잔향입니다. 오른쪽일수록 넓은 공간의 뒤편에서 들립니다",
     to: p => rd(p, 2), from: v => v },
-  { key: "attack", left: "또렷하게", right: "부드럽게", needs: "shape",
-    tip: "음이 시작하는 순간 — 왼쪽은 딱 치고 들어오고, 오른쪽은 서서히 차오릅니다",
-    ...expMap(0.002, 750) },
-  { key: "release", left: "짧게", right: "길게", needs: "shape",
-    tip: "음을 뗀 뒤 남는 여운의 길이",
-    ...expMap(0.05, 120) },
   { key: "velRange", left: "고르게", right: "기복 있게",
-    tip: "세게 친 음과 여리게 친 음의 음량 차가 얼마나 벌어지는지",
+    tip: "벨로시티 범위 (Velocity range) — 악보의 강약을 원본 음원의 강약 레이어와 음색 변화에 얼마나 그대로 전달할지 정합니다",
     to: p => rd(p, 2), from: v => v },
   { key: "eqLow", left: "가볍게", right: "묵직하게", dflt: 0, min: -12, max: 12, step: 0.5,
-    tip: "낮은 음역 — 웅웅거리고 답답하면 왼쪽으로, 힘이 없으면 오른쪽으로",
+    tip: "저역 EQ (Low EQ) — 낮은 음역이 웅웅거리고 답답하면 왼쪽으로, 힘이 없으면 오른쪽으로 움직입니다",
     to: p => rd(p, 1), from: v => v },
   { key: "eqMid", left: "물러나게", right: "앞으로", dflt: 0, min: -12, max: 12, step: 0.5,
-    tip: "가운데 음역 — 이 악기를 뒤로 물리거나 앞으로 끌어냅니다. 여러 악기가 뭉칠 때 하나만 물리면 정리됩니다",
+    tip: "중역 EQ (Mid EQ) — 이 악기를 뒤로 물리거나 앞으로 끌어냅니다. 여러 악기가 뭉칠 때 하나만 물리면 정리됩니다",
     to: p => rd(p, 1), from: v => v },
   { key: "eqHigh", left: "어둡게", right: "밝게", dflt: 0, min: -12, max: 12, step: 0.5,
-    tip: "높은 음역 — 쨍하고 따가우면 왼쪽으로, 답답하고 먹먹하면 오른쪽으로",
-    to: p => rd(p, 1), from: v => v },
-  { key: "vibrato", left: "곧게", right: "떨리게", dflt: 0,
-    tip: "떨림(비브라토) — 음을 조금 뒤부터 서서히 흔듭니다. 현·관·목소리에 어울리고 피아노·기타에는 안 씁니다",
-    to: p => rd(p, 2), from: v => v },
-  { key: "ensemble", left: "혼자", right: "여럿", needs: "ensemble", max: 3, step: 1, dflt: 1,
-    tip: "독주 샘플을 미세하게 어긋난 여러 명이 함께 켜는 것처럼 겹칩니다",
-    to: p => 1 + p, from: v => v - 1 }
+    tip: "고역 EQ (High EQ) — 쨍하고 따가우면 왼쪽으로, 답답하고 먹먹하면 오른쪽으로",
+    to: p => rd(p, 1), from: v => v }
 ];
 // 이 슬라이더에 되돌릴 것이 있는가 — 고유 필드는 기본값에서 벗어났는지로,
 // 오버라이드는 값이 얹혀 있는지로 판단한다(pan은 늘 존재해서 "있음"으로는 못 가린다)
@@ -2735,7 +3475,7 @@ function showTonePop(cx, cy) {
       <input type="range" min="${r.min ?? 0}" max="${r.max ?? 1}" step="${r.step ?? 0.01}" value="${r.from(valOf(r))}">
       <span class="tr">${r.right}</span>
       <button class="rst" title="기본값으로 되돌리기" aria-label="기본값으로 되돌리기">${uiIcon("undo")}</button></div>`).join("")}
-    <div class="tonenote">손잡이를 놓으면 그 악기만 다시 만들어집니다 — 바로 듣기로 재생 중이면 듣던 자리에서 이어집니다${def.approx ? "<br>시작·여운의 기본 위치는 샘플에 따라 조금씩 다릅니다" : ""}</div>
+    <div class="tonenote">손잡이를 놓으면 그 악기만 다시 만들어집니다 — 바로 듣기로 재생 중이면 듣던 자리에서 이어집니다<br>레가토·스타카토 같은 연주법은 효과로 흉내 내지 않고 해당 주법이 든 음원을 선택합니다</div>
     <div class="fbrow"><button id="tnAll">전부 기본값으로</button><button id="tnClose">닫기</button></div>`;
   placeFbPop(cx, cy);
   $("tnClose").onclick = hideFbPop;

@@ -1,0 +1,56 @@
+{
+  "id": "sfizz",
+  "purpose": "Pinned local SFZ renderer used by Aria through an isolated CLI sidecar",
+  "source": "https://github.com/sfztools/sfizz.git",
+  "commit": "f5c6e29f23b8057867c08e88f5f6ac6738baa30b",
+  "license": "BSD-2-Clause",
+  "archivedUpstream": true,
+  "binaryRelativePath": "bin/sfizz_render",
+  "submodules": [
+    "external/abseil-cpp",
+    "external/filesystem",
+    "external/invoke.hpp",
+    "external/simde",
+    "external/st_audiofile/thirdparty/dr_libs",
+    "external/st_audiofile/thirdparty/libaiff",
+    "external/st_audiofile/thirdparty/wavpack"
+  ],
+  "patches": [
+    {
+      "file": "patches/sfizz-appleclang21-atomic-queue.patch",
+      "sha256": "0804d9635d93aa42882bfada4da8c57861d4301444cf1fb3cb73905ceb1edd71",
+      "reason": "Remove four obsolete dependent-template qualifiers rejected by AppleClang 21"
+    }
+  ],
+  "licenseFiles": [
+    { "component": "sfizz", "source": "LICENSE", "target": "sfizz-LICENSE.txt" },
+    { "component": "sfizz contributors", "source": "AUTHORS.md", "target": "sfizz-AUTHORS.md" },
+    { "component": "sfizz dependency overview", "source": "README.md", "target": "sfizz-README.md" },
+    { "component": "Abseil", "source": "external/abseil-cpp/LICENSE", "target": "abseil-cpp-LICENSE.txt" },
+    { "component": "atomic_queue", "source": "external/atomic_queue/LICENSE", "target": "atomic_queue-LICENSE.txt" },
+    { "component": "Cephes", "source": "external/cephes/LICENSE.txt", "target": "cephes-LICENSE.txt" },
+    { "component": "cxxopts", "source": "external/cxxopts/LICENSE", "target": "cxxopts-LICENSE.txt" },
+    { "component": "ghc::filesystem", "source": "external/filesystem/LICENSE", "target": "ghc-filesystem-LICENSE.txt" },
+    { "component": "fmidi", "source": "external/fmidi/LICENSE.md", "target": "fmidi-LICENSE.md" },
+    { "component": "invoke.hpp", "source": "external/invoke.hpp/LICENSE.md", "target": "invoke-hpp-LICENSE.md" },
+    { "component": "jsl", "source": "external/jsl/LICENSE.md", "target": "jsl-LICENSE.md" },
+    { "component": "SIMDe", "source": "external/simde/COPYING", "target": "simde-COPYING.txt" },
+    { "component": "st_audiofile", "source": "external/st_audiofile/LICENSE.md", "target": "st-audiofile-LICENSE.md" },
+    { "component": "dr_libs", "source": "external/st_audiofile/thirdparty/dr_libs/LICENSE", "target": "dr-libs-LICENSE.txt" },
+    { "component": "libaiff", "source": "external/st_audiofile/thirdparty/libaiff/LICENSE", "target": "libaiff-LICENSE.txt" },
+    { "component": "stb_vorbis", "source": "external/st_audiofile/thirdparty/stb_vorbis/LICENSE", "target": "stb-vorbis-LICENSE.txt" },
+    { "component": "WavPack", "source": "external/st_audiofile/thirdparty/wavpack/COPYING", "target": "wavpack-COPYING.txt" },
+    { "component": "cpuid", "source": "src/external/cpuid/LICENSE.rst", "target": "cpuid-LICENSE.rst" },
+    { "component": "cpuid platform", "source": "src/external/cpuid/platform/LICENSE.rst", "target": "cpuid-platform-LICENSE.rst" },
+    { "component": "hiir", "source": "src/external/hiir/license.txt", "target": "hiir-LICENSE.txt" },
+    { "component": "Kiss FFT", "source": "src/external/kiss_fft/COPYING", "target": "kiss-fft-COPYING.txt" },
+    { "component": "pugixml", "source": "src/external/pugixml/LICENSE.md", "target": "pugixml-LICENSE.md" },
+    { "component": "spline", "source": "src/external/spline/LICENSE", "target": "spline-LICENSE.txt" },
+    { "component": "Surge tuning library", "source": "src/external/tunings/LICENSE.md", "target": "surge-tunings-LICENSE.md" },
+    { "component": "Faust RBJ filters", "source": "src/sfizz/dsp/filters/rbj_filters.dsp", "target": "faust-rbj-filters-LICENSE-NOTICE.dsp" },
+    { "component": "Faust Sallen-Key filters", "source": "src/sfizz/dsp/filters/sallenkey_modulable.dsp", "target": "faust-sallenkey-LICENSE-NOTICE.dsp" },
+    { "component": "sfizz Faust filters", "source": "src/sfizz/dsp/filters/filters_modulable.dsp", "target": "sfizz-faust-filters-LICENSE-NOTICE.dsp" },
+    { "component": "sfizz Faust filter bank", "source": "src/sfizz/dsp/filters/sfz_filters.dsp", "target": "sfizz-faust-filter-bank-LICENSE-NOTICE.dsp" },
+    { "component": "sfizz Faust reverb", "source": "src/sfizz/effects/dsp/fverb.dsp", "target": "sfizz-faust-reverb-LICENSE-NOTICE.dsp" }
+  ]
+}

@@ -111,7 +111,7 @@ rock 코퍼스에서는 IV, ♭VII, loop syntax, root motion 등 고전 공통�
 3. `play`로 top-line 충돌과 저역 overlap을 확인한다.
 4. `check_key`로 의도치 않은 조성 밖 pitch 후보를 찾는다. 이 도구는 C#과 D♭ 같은 enharmonic spelling을 교정하지 않는다.
 5. `move_note`, `resize_note`, `delete_note`로 국소 수정한다.
-6. phrase dynamics는 `set_velocity`; 지속음 표현은 선택적으로 bend/vibrato를 쓴다.
+6. phrase dynamics는 `set_velocity`, 지속음의 피치 이동은 `set_bend`를 선택적으로 쓴다. 비브라토(Vibrato, 음높이의 주기적인 떨림)가 필요하면 그 표현이 실제로 녹음·프로그램된 프리셋을 선택한다.
 7. 큰 화성 재배치는 `get_song`→보존→`set_song`보다 가능한 한 bar/notes 도구로 좁게 한다.
 
 ## 빠른 진단

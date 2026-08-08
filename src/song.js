@@ -1,5 +1,8 @@
 // aria — 곡 모델: 생성·검증·피치/시간 계산
-import { DRUM_PIECES, TEMPLATES, isDrumPreset, presetExists, presetLabel, drumPieces } from "./presets.js";
+import {
+  DRUM_PIECES, TEMPLATES, isDrumPreset, presetExists, presetLabel, presetDurationSec, drumPieces,
+  presetArticulations
+} from "./presets.js";
 
 const NOTE_RE = /^([A-Ga-g])([#b]?)(-?\d)$/;
 const SEMIS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -76,6 +79,32 @@ export function beatToSec(segs, beat) {
   return seg.startSec + segmentSeconds(seg, Math.min(beat, seg.endBeat) - seg.startBeat);
 }
 
+// beatToSec의 역함수. 녹음 클립처럼 길이가 초 단위로 정해진 음원을
+// 템포 변화가 있는 악보 위에 정확한 박 길이로 표시할 때 사용한다.
+export function secToBeat(segs, sec) {
+  if (sec <= 0) return 0;
+  let lo = 0, hi = segs.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (segs[mid].startSec <= sec) lo = mid; else hi = mid - 1;
+  }
+  const seg = segs[lo];
+  const d = sec - seg.startSec;
+  if (seg.bpm1 === seg.bpm0 || !Number.isFinite(seg.endBeat))
+    return seg.startBeat + seg.bpm0 * d / 60;
+  const k = (seg.bpm1 - seg.bpm0) / (seg.endBeat - seg.startBeat);
+  return seg.startBeat + (seg.bpm0 * Math.expm1(k * d / 60)) / k;
+}
+
+export function notePlaybackEndBeat(song, track, note, segs = tempoSegments(song)) {
+  const startBeat = noteStartBeat(song, note);
+  const writtenEnd = startBeat + note.dur;
+  const durationSec = presetDurationSec(track.preset);
+  if (durationSec === null) return writtenEnd;
+  const recordedEnd = secToBeat(segs, beatToSec(segs, startBeat) + durationSec);
+  return Math.max(writtenEnd, recordedEnd);
+}
+
 // 해당 박에서 실제로 울리고 있는 bpm (MIDI 내보내기·표시용)
 export function bpmAtBeat(segs, beat) {
   let lo = 0, hi = segs.length - 1;
@@ -93,10 +122,11 @@ export function hasTempoChanges(song) { return (song.tempoMap ?? []).length > 0;
 
 export function totalBars(song) {
   const bpb = beatsPerBar(song);
+  const segs = tempoSegments(song);
   let max = 8;
   for (const t of song.tracks)
     for (const n of t.notes) {
-      const endBeat = noteStartBeat(song, n) + n.dur;
+      const endBeat = notePlaybackEndBeat(song, t, n, segs);
       max = Math.max(max, Math.ceil(endBeat / bpb));
     }
   return max;
@@ -119,15 +149,11 @@ const err = m => { throw new Error(m); };
 
 // 트랙이 프리셋 값을 덮어쓸 수 있는 항목: [키, 최소, 최대, 설명]
 export const TRACK_OVERRIDES = [
-  ["velRange", 0, 1, "velocity가 음량에 미치는 폭 — 1이면 약 42dB, 기본 0.65면 약 9dB"],
-  ["attack", 0, 2, "음이 최대 음량에 닿기까지의 초"],
-  ["release", 0, 8, "건반을 뗀 뒤 남는 여운의 초"],
+  ["velRange", 0, 1, "벨로시티 범위 — 0이면 모든 노트를 중간 세기로, 1이면 악보의 velocity를 그대로 SoundFont 엔진에 보낸다"],
   ["reverb", 0, 1, "리버브 센드 양"],
   ["eqLow", -12, 12, "저역 셸빙(200Hz) dB — 답답하면 내리고 얇으면 올린다"],
   ["eqMid", -12, 12, "중역 피킹(1kHz, Q 0.9) dB — 박스톤·비음을 깎거나 존재감을 올린다"],
-  ["eqHigh", -12, 12, "고역 셸빙(4kHz) dB — 쨍하면 내리고 답답하면 올린다"],
-  ["vibrato", 0, 1, "떨림(비브라토) 깊이 0~1 — 음을 조금 늦게부터 서서히 흔든다. 현·관·목소리에 어울리고 0이면 안 흔든다"],
-  ["ensemble", 1, 4, "합주 스태킹 — 독주 샘플(sf-*)을 미세 디튠·지연으로 겹쳐 N명이 켜는 것처럼 (독주 바이올린→바이올린 파트)"]
+  ["eqHigh", -12, 12, "고역 셸빙(4kHz) dB — 쨍하면 내리고 답답하면 올린다"]
 ];
 
 // tempoMap 검증 — 마디 오름차순, 마디 중복 없음, 1마디 항목의 ramp는 의미가 없어 무시
@@ -198,6 +224,15 @@ export function validateSong(raw) {
     if (!Number.isFinite(track.pan) || track.pan < -1 || track.pan > 1) err(`트랙 "${name}"의 pan은 -1~1`);
     if (rt.mute === true) track.mute = true; // 음소거 — 렌더(재생·내보내기)에서 제외
     if (rt.solo === true) track.solo = true; // 솔로 — 하나라도 켜져 있으면 그 트랙들만 들린다(음소거보다 우선)
+    if (rt.articulation !== undefined && rt.articulation !== null) {
+      const articulation = typeof rt.articulation === "string" ? rt.articulation.trim() : "";
+      const definitions = presetArticulations(rt.preset);
+      if (!articulation || !definitions || !Object.hasOwn(definitions, articulation)) {
+        const choices = definitions ? Object.keys(definitions).join(", ") : "(이 프리셋은 별도 연주법 선택 없음)";
+        err(`트랙 "${name}"의 articulation ${JSON.stringify(rt.articulation)}을 ${rt.preset}에서 찾을 수 없습니다 — 선택 가능: ${choices}`);
+      }
+      track.articulation = articulation;
+    }
     // 프리셋 상수를 덮어쓰는 선택적 음색 파라미터 — 값이 없으면 키 자체를 남기지 않는다
     for (const [key, lo, hi, label] of TRACK_OVERRIDES) {
       if (rt[key] === undefined || rt[key] === null) continue;

@@ -32,7 +32,7 @@
 
 - register를 띄운다.
 - rhythm과 onset을 엇갈린다.
-- attack/decay 또는 timbre를 대비한다.
+- 어택/디케이(Attack/Decay, 소리가 시작되고 줄어드는 성질) 또는 timbre를 대비한다.
 - contour 방향을 다르게 한다.
 - level/pan/공간을 보조 단서로 쓴다.
 
@@ -47,7 +47,7 @@ EQ부터 만지지 말고 다음 순서로 가장 작은 해결을 찾는다.
 1. 불필요한 음/트랙 제거.
 2. octave/register 이동.
 3. onset과 rhythm 분리.
-4. note duration/release 단축.
+4. note duration을 줄이거나 릴리스(Release, 음을 놓은 뒤 남는 여운)가 짧은 프리셋·주법 선택.
 5. articulation/timbre 대비.
 6. section별 gain과 track level.
 7. pan과 reverb.
@@ -95,7 +95,7 @@ verse→chorus 대비를 만들 때 이 중 2–3개만 명확히 바꾸고 나�
 - bass와 strong beat arrival를 정렬.
 - register span을 넓힘.
 - 새로운 countermelody보다 harmonic support/transition color를 우선.
-- ensemble, velocity range, region gain을 단계적으로 사용.
+- 편성 규모, `velRange`(악보 강약의 샘플 엔진 전달 폭), region gain을 단계적으로 사용.
 
 ## 악기 선택
 
@@ -103,20 +103,24 @@ verse→chorus 대비를 만들 때 이 중 2–3개만 명확히 바꾸고 나�
 
 | 기능 | 찾을 특성 | Aria 조절 후보 |
 |---|---|---|
-| intimate focal | 명확한 중역, 작은 ensemble, 낮은 reverb | solo sample, 낮은 ensemble, 짧은 공간 |
-| warm support | 부드러운 attack, 중저역 body, 긴 sustain | attack/release, reverb, high EQ 절제 |
-| rhythmic support | 빠른 attack, 짧은 decay, 빈칸 | pluck/pizz/keys, duration, low release |
-| wide lift | 넓은 register, layered sustain, 선명한 top | ensemble, pan 분산, register doubling |
-| dark tension | 낮은 register, 느린 변화, 제한된 brightness | low winds/strings/synth, attack, high EQ 절제 |
+| intimate focal | 명확한 중역, 작은 ensemble, 낮은 reverb | 독주·소편성 프리셋, 낮은 reverb, 짧은 공간 |
+| warm support | 부드러운 attack, 중저역 body, 긴 sustain | 느린 attack·긴 release가 녹음/프로그램된 프리셋, reverb, high EQ 절제 |
+| rhythmic support | 빠른 attack, 짧은 decay, 빈칸 | pluck/pizz/keys 프리셋, 짧은 duration |
+| wide lift | 넓은 register, layered sustain, 선명한 top | ensemble/section 프리셋, pan 분산, register doubling |
+| dark tension | 낮은 register, 느린 변화, 제한된 brightness | low winds/strings/synth 중 느린 attack 프리셋, high EQ 절제 |
 | sparkle | 짧은 고역 transient, 드문 배치 | glock/mallet/cymbal, 낮은 density |
 
 음색도 감정 단서지만 악기=감정의 고정 사전으로 쓰지 않는다. [S09]
+
+같은 VSCO 프리셋에 여러 아티큘레이션(Articulation, 실제로 다르게 연주해 녹음한 주법)이 있으면 `list_presets`가 돌려준 정확한 ID를 `add_track` 또는 `set_track`에 준다. 현재 키스위치 프리셋 8개는 이 선택이 실제 제어 음과 다른 샘플 층으로 이어진다. 이름만 주법처럼 붙이는 장식이 아니다.
+
+Recorded Clip(녹음 클립)은 프레이즈·글리산도·효과·롤의 원형을 한 번 재생하는 자산이다. 음정 악기나 임의 길이의 지속음 역할로 배치하지 않는다. Legato(레가토, 앞 음에서 다음 음으로 실제 연주가 이어지는 주법)는 transition sample(전이 녹음)과 전용 매핑이 없으면 생성되지 않으므로, 긴 릴리스나 단일 레가토 프레이즈 클립을 true legato(실제 전이 레가토)라고 부르지 않는다.
 
 ## 오케스트라/시네마틱
 
 - family별 역할을 나눈다: strings=지속·운동·서정, winds=색·독주·내성, brass=중량·선명한 도착, percussion=형식 신호·질량.
 - 전체 family가 늘 같이 연주하지 않게 한다.
-- 독주와 ensemble을 구분한다. Aria의 `ensemble`은 지원 샘플의 두께를 늘리지만 실제 divisi/다중 아티큘레이션을 대체하지 않는다.
+- 독주와 앙상블(Ensemble, 여러 연주자가 함께 내는 편성)을 구분한다. 독주 샘플을 효과로 겹쳐 합주처럼 근사하지 말고, 실제 ensemble/section이 녹음된 프리셋이 있을 때 그것을 선택한다. 실제 divisi나 여러 아티큘레이션을 자동으로 만들지는 못한다.
 - 긴 attack 악기는 목표 onset보다 앞에 데이터가 있어야 할 수 있다. 숫자 격자보다 지각 onset을 듣는다. [S60]
 - cresc.에서 volume만 올리지 말고 register, bow/attack 느낌, doubling, harmonic rhythm, percussion을 단계적으로 추가한다.
 - climax 직전 silence 또는 단일 family 축소는 대비를 크게 할 수 있다.

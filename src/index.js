@@ -44,10 +44,15 @@ try {
 }
 console.error(`[aria] 피아노롤 GUI: ${url}${restored ? " (이전 곡 복원됨)" : ""}`);
 
-const { sf2Info, SF2_PATH } = await import("./sf2.js");
-console.error(sf2Info()
-  ? `[aria] 사운드폰트 로드: ${sf2Info()} — 샘플 프리셋(sf-*) 사용 가능`
-  : `[aria] 사운드폰트 없음 (${SF2_PATH}) — 필요한 음원을 설치해야 악기를 재생할 수 있음`);
+const { samplerAssetStatus, samplerAssetName } = await import("./sampler-assets.js");
+const { SF_PRESETS, SF_DRUM_KITS } = await import("./presets.js");
+const specs = [...Object.values(SF_PRESETS), ...Object.values(SF_DRUM_KITS)];
+const statuses = specs.map((spec, index) => ({ spec, status: samplerAssetStatus(spec, { shallow: true }), index }));
+const available = statuses.filter(item => item.status.available).length;
+const unavailableAssets = new Set(statuses.filter(item => !item.status.available)
+  .map(item => samplerAssetName(item.spec, item.status)));
+console.error(`[aria] 오픈소스 샘플 엔진: SpessaSynth(SoundFont) + sfizz(SFZ) — 사용 가능 ${available}/${specs.length}`
+  + (unavailableAssets.size ? `, 설치·수정 필요 ${[...unavailableAssets].join(", ")}` : ""));
 
 let closing = false;
 async function shutdown() {

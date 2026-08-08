@@ -1,6 +1,6 @@
 # 근거 자료 원장
 
-최종 확인일: 2026-08-07. DOI, 학술지 원문, 대학출판부, 표준기관, Aria 소스·테스트를 우선했다.
+최종 확인일: 2026-08-09. DOI, 학술지 원문, 대학출판부, 표준기관, Aria 소스·테스트를 우선했다.
 
 - **A**: 공식 표준·규격 또는 현재 Aria 구현.
 - **B**: 동료심사 실험·코퍼스·분석 연구.
@@ -96,8 +96,8 @@
 
 ## Aria 구현 원문
 
-- **[S69] A** Aria [`src/mcp.js`](../../../src/mcp.js), [`src/core.js`](../../../src/core.js), [`src/master.js`](../../../src/master.js), [`src/renderer.js`](../../../src/renderer.js), [`src/sf2.js`](../../../src/sf2.js), [`src/midi.js`](../../../src/midi.js), [`src/presets.js`](../../../src/presets.js). 도구 의미, limiter, LUFS, pitch bend/vibrato, 외부 SoundFont rendering, MIDI, preset의 현재 source of truth다.
-- **[S70] A** Aria [`test/smoke.js`](../../../test/smoke.js), [`test/mcp-bridge.js`](../../../test/mcp-bridge.js). 구현 제약과 MCP–GUI shared-state behavior를 검증하는 현재 회귀 테스트다.
+- **[S69] A** Aria [`src/mcp.js`](../../../src/mcp.js), [`src/core.js`](../../../src/core.js), [`src/sampler-renderer.js`](../../../src/sampler-renderer.js), [`src/spessa-engine.js`](../../../src/spessa-engine.js), [`src/sfizz-engine.js`](../../../src/sfizz-engine.js), [`src/sampler-assets.js`](../../../src/sampler-assets.js), [`src/packs.js`](../../../src/packs.js), [`src/master.js`](../../../src/master.js), [`src/renderer.js`](../../../src/renderer.js), [`src/sf2.js`](../../../src/sf2.js), [`src/midi.js`](../../../src/midi.js), [`src/presets.js`](../../../src/presets.js), [`docs/ENGINE_BACKENDS.md`](../../../docs/ENGINE_BACKENDS.md), [`engines/sfizz.json`](../../../engines/sfizz.json), [`packs/vsco2-ce.json`](../../../packs/vsco2-ce.json), [`packs/philharmonia-all-sfz.json`](../../../packs/philharmonia-all-sfz.json), [`packs/salamander-drumkit-sfz.json`](../../../packs/salamander-drumkit-sfz.json). 현재 노출된 트랙 조절값, SpessaSynth SF2와 sfizz SFZ 재생, strict no-fallback, 전체 pack 카탈로그와 설치 상태, limiter/LUFS, articulation, pitch bend와 MIDI/preset 동작의 source of truth다.
+- **[S70] A** Aria [`test/smoke.js`](../../../test/smoke.js), [`test/mcp-bridge.js`](../../../test/mcp-bridge.js), [`test/http-api.js`](../../../test/http-api.js), [`test/spessa-engine.js`](../../../test/spessa-engine.js), [`test/sfizz-engine.js`](../../../test/sfizz-engine.js), [`test/sampler-renderer.js`](../../../test/sampler-renderer.js), [`test/sfizz-sampler-renderer.js`](../../../test/sfizz-sampler-renderer.js), [`test/pack-installer.js`](../../../test/pack-installer.js), [`test/prepared-pack-installer.js`](../../../test/prepared-pack-installer.js), [`test/prepare-vsco2-ce-sfz.js`](../../../test/prepare-vsco2-ce-sfz.js), [`test/prepare-philharmonia-sfz.js`](../../../test/prepare-philharmonia-sfz.js), [`test/prepare-salamander-sfz.js`](../../../test/prepare-salamander-sfz.js). 구현 제약, MCP–GUI shared-state, SF2/SFZ의 스테레오·벨로시티·라운드로빈·키스위치/CC·엄격한 preset/asset 선택, 전수 sample coverage와 설치 검증을 다루는 현재 회귀 테스트다.
 
 ## 확장 교재·역사·보완 연구
 

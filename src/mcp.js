@@ -16,23 +16,15 @@ const noteSchema = z.object({
 // 트랙이 프리셋 상수를 덮어쓰는 음색 파라미터 — add_track/set_track이 공유한다
 const toneShape = {
   velRange: z.number().min(0).max(1).optional()
-    .describe("velocity가 음량에 미치는 폭. 기본 0.65는 vel 1~127이 약 9dB라 악센트용이고, 1로 올리면 약 42dB가 되어 크레셴도를 velocity만으로 만들 수 있다"),
-  attack: z.number().min(0).max(2).optional()
-    .describe("음이 최대 음량에 닿기까지의 초. 프리셋 기본은 대개 0.002~0.4. 0.1 이상이면 부드럽게 부풀어 오른다"),
-  release: z.number().min(0).max(8).optional()
-    .describe("음을 뗀 뒤 남는 여운의 초. 프리셋 기본은 0.06~1.3. 아르페지오가 뚝뚝 끊기면 여기를 0.8~2로 올려 음끼리 겹치게 한다"),
+    .describe("벨로시티 범위(Velocity range) 0~1 — 0이면 모든 노트를 중간 세기로 보내고, 1이면 악보의 velocity를 그대로 SoundFont 엔진에 보낸다. 음량뿐 아니라 원본 음원의 강약 레이어와 음색도 달라질 수 있다"),
   reverb: z.number().min(0).max(1).optional()
-    .describe("리버브 센드 양 0~1. 프리셋 기본(0.03~0.5)을 덮어쓴다. 공간을 넓히려면 0.5~0.8"),
-  ensemble: z.number().min(1).max(4).optional()
-    .describe("합주 스태킹 1~4 — 독주 샘플(sf-바이올린 등)을 미세 디튠·지연으로 겹쳐 그 인원이 함께 켜는 것처럼. 오케스트라 파트를 두껍게 할 때. 드럼에는 효과 없음"),
+    .describe("리버브(Reverb) 센드 양 0~1 — 원음을 가상의 공간 잔향으로 얼마나 보낼지 정한다"),
   eqLow: z.number().min(-12).max(12).optional()
-    .describe("저역 EQ dB (200Hz 셸빙) — 답답하고 웅웅거리면 내리고(-3~-6), 얇으면 올린다"),
+    .describe("저역 EQ(Low EQ) dB, 200Hz 셸빙 — 답답하고 웅웅거리면 내리고, 얇으면 올린다"),
   eqMid: z.number().min(-12).max(12).optional()
-    .describe("중역 EQ dB (1kHz 피킹) — 박스톤·비음을 깎거나(-3) 존재감을 앞으로 낸다(+3)"),
+    .describe("중역 EQ(Mid EQ) dB, 1kHz 피킹 — 박스톤·비음을 깎거나 존재감을 앞으로 낸다"),
   eqHigh: z.number().min(-12).max(12).optional()
-    .describe("고역 EQ dB (4kHz 셸빙) — 쨍하면 내리고, 답답하거나 공기감이 필요하면 올린다"),
-  vibrato: z.number().min(0).max(1).optional()
-    .describe("지연되어 시작하는 비브라토 깊이 0~1. 지속 가능한 현·관·목소리 계열에서 작은 값부터 듣고 정하며, 피아노·타악기처럼 음높이를 지속 제어하지 않는 소리에는 보통 쓰지 않는다")
+    .describe("고역 EQ(High EQ) dB, 4kHz 셸빙 — 쨍하면 내리고, 답답하거나 공기감이 필요하면 올린다")
 };
 
 // [이름, 설명, 입력 스키마 shape]
@@ -48,12 +40,22 @@ const TOOLS = [
   ["set_song", "곡 전체를 JSON으로 통째로 교체한다. 대규모 수정(조옮김, 구조 재배치)은 get_song으로 받아 고친 뒤 이걸로 되돌려 넣는 게 빠르다.", {
     song_json: z.string().describe("곡 전체 JSON 문자열 — get_song이 돌려주는 형식과 동일")
   }],
-  ["list_presets", "사용 가능한 멜로디 프리셋·드럼 킷(과 피스 이름)·new_song 템플릿 목록을 설명과 함께 돌려준다.", {}],
+  ["list_presets", "외부 샘플 악기·주법·타악·녹음 클립을 찾는다. 인자 없이 호출하면 출처·악기군 요약을, 필터를 주면 실제 프리셋 ID와 피스 이름을 최대 limit개 돌려준다.", {
+    query: z.string().optional().describe("이름·ID·설명·주법에서 찾을 말. 예: violin, 레가토, timpani"),
+    family: z.string().optional().describe("정확한 악기군 필터. 예: Violin, Cello. 타악 전체는 family가 아니라 kind:'percussion'을 사용"),
+    source: z.string().optional().describe("음원 출처 필터. 예: VSCO 2 CE, Philharmonia, GM"),
+    kind: z.enum(["instrument", "percussion", "clip"]).optional()
+      .describe("종류 필터: 선율 악기 instrument, 드럼·타악 percussion, 원래 연주 전체를 재생하는 녹음 클립 clip"),
+    available_only: z.boolean().optional().describe("true면 현재 설치되어 실제 재생 가능한 항목만"),
+    limit: z.number().int().min(1).max(100).optional()
+      .describe("상세 결과 최대 개수. 기본 30, 최대 100. 결과가 많으면 query/family/source/kind를 먼저 좁힌다")
+  }],
   ["add_track", "트랙을 추가한다.", {
     name: z.string().describe("트랙 이름(고유)"),
     preset: z.string().describe("프리셋 id — list_presets 참고"),
     volume: z.number().min(0).max(2).optional().describe("볼륨 0~2 (기본 0.8). 1.0이 원래 크기(0dB), 2.0이 약 +6dB. 음량에 선형으로 작용하는 축이다"),
     pan: z.number().min(-1).max(1).optional().describe("팬 -1(왼쪽)~1(오른쪽)"),
+    articulation: z.string().optional().describe("아티큘레이션(Articulation, 연주법) ID — 이 프리셋에 list_presets가 표시한 정확한 ID. 생략하면 음원의 기본 연주법"),
     ...toneShape
   }],
   ["remove_track", "트랙을 삭제한다.", { track: z.string().describe("트랙 이름") }],
@@ -61,17 +63,14 @@ const TOOLS = [
     track: z.string().describe("대상 트랙 이름"),
     preset: z.string().optional(), volume: z.number().min(0).max(2).optional(),
     pan: z.number().min(-1).max(1).optional(), new_name: z.string().optional(),
+    articulation: z.string().nullable().optional().describe("아티큘레이션(Articulation, 연주법) ID. null이면 프리셋 기본 연주법으로 되돌림"),
     mute: z.boolean().optional().describe("true면 재생·WAV 완성본에서 이 트랙을 제외(노트는 유지). 현재 MIDI 내보내기는 mute/solo와 무관하게 모든 트랙을 기록한다"),
     solo: z.boolean().optional().describe("true면 이 트랙만 들린다. 솔로가 하나라도 켜져 있으면 켜진 트랙들만 재생되며 음소거보다 우선한다"),
     velRange: z.number().min(0).max(1).nullable().optional().describe(toneShape.velRange.description),
-    attack: z.number().min(0).max(2).nullable().optional().describe(toneShape.attack.description),
-    release: z.number().min(0).max(8).nullable().optional().describe(toneShape.release.description),
     reverb: z.number().min(0).max(1).nullable().optional().describe(toneShape.reverb.description),
-    ensemble: z.number().min(1).max(4).nullable().optional().describe(toneShape.ensemble.description),
     eqLow: z.number().min(-12).max(12).nullable().optional().describe(toneShape.eqLow.description),
     eqMid: z.number().min(-12).max(12).nullable().optional().describe(toneShape.eqMid.description),
-    eqHigh: z.number().min(-12).max(12).nullable().optional().describe(toneShape.eqHigh.description),
-    vibrato: z.number().min(0).max(1).nullable().optional().describe(toneShape.vibrato.description)
+    eqHigh: z.number().min(-12).max(12).nullable().optional().describe(toneShape.eqHigh.description)
   }],
   ["set_tempo", "템포를 바꾼다. from_bar 없이 부르면 곡의 기준 템포를 바꾸고, from_bar를 주면 그 마디부터 템포가 바뀐다. ramp:true면 직전 템포에서 그 마디까지 서서히 변한다(rit./accel.).", {
     bpm: z.number().min(20).max(300).describe("목표 템포"),
@@ -272,17 +271,17 @@ const INSTRUCTIONS = `aria는 작곡 앱이다. 사용자가 곡을 만들어 �
 6. 사용자는 GUI 피아노롤에서 구간을 드래그해 피드백을 남길 수 있다 — 수정 요청을 받으면 list_feedback부터 확인하고, 반영한 항목은 resolve_feedback으로 닫는다
 
 작곡 요령:
-- 모든 프리셋은 외부 SoundFont 샘플이다. list_presets에서 각 프리셋의 필수 음원 파일이 설치됐는지 확인하고, 미설치 음원은 다른 악기로 자동 대체하지 않는다
+- 모든 프리셋은 외부 SoundFont 또는 SFZ 샘플이다. list_presets에서 각 프리셋의 필수 음원 파일·팩이 설치됐는지 확인하고, 미설치 음원은 다른 악기로 자동 대체하지 않는다
 - 코드(화음)는 구성음을 같은 bar/beat에 여러 노트로 쌓는다 (Fmaj7 = F3+A3+C4+E4)
 - beat·dur는 4분음표 단위: beat 0~3.999(4/4), dur 0.25=16분음표. 오프비트(2.5, 3.5)와 vel 변화(60~110)를 쓰면 리듬이 살아난다
 - 드럼 트랙은 pitch에 피스 이름: kick snare rim clap hhc hho tom-l/m/h crash ride shaker
 - 재생은 사용자 스피커로 즉시 나온다. 만들면 꼭 들려주고, 피아노롤 GUI 주소(get_song에 포함)를 알려줘라
 
 다이내믹·표현 (여기를 모르면 곡이 밋밋해진다):
-- velocity의 기본 폭은 좁다(vel 1~127이 약 9dB). 더 넓은 표현 폭이 실제 음색에 맞을 때만 velRange를 늘리고, 크레셴도는 velocity·구간 gain·편성·음역·음색 중 필요한 축을 나눠 쓴다
+- velRange는 악보 velocity를 원본 샘플 음원의 강약 레이어와 변조에 얼마나 그대로 보낼지 정한다. 0이면 모두 중간 세기, 1이면 악보 값을 그대로 보낸다. 크레셴도는 velocity·구간 gain·편성·음역·음색 중 필요한 축을 나눠 쓴다
 - 트랙 volume은 음량에 선형이라 파트 간 밸런스용으로 쓴다. 1.0이 0dB이고 2.0까지 올릴 수 있다
 - 특정 구간만 음량을 바꾸려면 set_region_gain — "하이라이트 전까지 심벌 -8dB", "브리지에서 패드 -4dB"처럼 구간 믹싱에 쓴다. 사용자도 GUI에서 구간을 드래그해 직접 조절할 수 있다
-- 아르페지오·패드가 뚝뚝 끊겨 들리면 release를 0.8~2로 올려 음끼리 겹치게 하라. 어택이 딱딱하면 attack을 0.1~0.3으로
+- 레가토(Legato)·스타카토(Staccato)·피치카토(Pizzicato) 같은 주법은 해당 주법을 녹음한 음원·프리셋으로 선택한다. 단순한 여운 효과로 실제 주법인 것처럼 숨기지 않는다
 - 리버브는 트랙마다 reverb로 조절한다(0.5~0.8이면 넓은 공간)
 - rit./accel.은 set_tempo(bpm, from_bar, ramp:true). 램프는 "직전 변화점부터" 걸리므로 끝 4마디만 늘어지게 하려면 앵커를 먼저 둔다:
   set_tempo({bpm:92, from_bar:13}) → set_tempo({bpm:58, from_bar:16, ramp:true})  (13마디까지는 92, 13→16마디에서 58로)

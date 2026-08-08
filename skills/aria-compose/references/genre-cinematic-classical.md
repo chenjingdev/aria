@@ -33,7 +33,7 @@
 
 - Hollywood-orchestral 방향일 때만 soft piano/solo instrument, strings, low support, optional brass/percussion/choir를 한 palette 후보로 둔다. Electronic, documentary, diegetic, experimental cue에는 자동 적용하지 않는다.
 - 식별 가능한 짧은 pitch/rhythm motif를 만든 뒤 여러 section에서 변형한다. 특정 음 개수를 보편 규칙으로 두지 않는다.
-- 큰 climax는 velocity, register, ensemble, family entry, harmonic rhythm, percussion을 나눠 올린다.
+- 큰 climax는 velocity, register, 편성 규모, family entry, harmonic rhythm, percussion을 나눠 올린다.
 - `set_section`에 장면 기능을 적고 전환 lead-in을 함께 재생한다.
 - long attack과 release 때문에 실제 도착이 늦거나 tail이 겹치는지 듣는다.
 
@@ -61,7 +61,7 @@
 - `list_presets`에서 실제 사용 가능한 solo/ensemble/perc를 확인한다.
 - 동질 음색·동시 onset의 내성이 실제로 구분되는지 듣는다. 특정 조건에서 3→4성부의 식별이 크게 떨어진 실험은 inner-line 진단 단서이지 오케스트라 전체의 voice ceiling이 아니다. [S59]
 - blend는 onset/articulation을 맞추고 stream은 register/timbre/rhythm을 나눈다. [S40][S58]
-- `ensemble`을 써도 실제 section divisi나 articulation change가 생긴다고 말하지 않는다.
+- 앙상블(Ensemble, 여러 연주자가 함께 내는 편성)은 실제 ensemble/section이 녹음된 프리셋으로 고른다. 독주 음원을 겹치는 트랙 효과는 없으며, 프리셋을 바꿔도 실제 section divisi나 articulation change가 자동으로 생긴다고 말하지 않는다.
 - 극단 음역의 샘플 품질과 loudness를 재생으로 확인한다.
 
 ## Classical-form-inspired
@@ -101,7 +101,7 @@ ambient는 “느리고 reverb가 많음”보다 attention, environment, textur
 ### Aria 출발점
 
 - 2–4개의 sustain/gesture 역할로 시작한다.
-- long attack/release를 쓰되 tail overlap과 10분 렌더 제한을 고려한다.
+- 어택/릴리스(Attack/Release, 소리가 시작되고 음을 놓은 뒤 여운이 남는 성질)가 긴 프리셋을 고를 수 있다. note duration과 tail overlap, 10분 렌더 제한을 함께 고려한다.
 - `set_region_gain` ramp, register migration, sparse motif, section별 track entry로 변화를 만든다.
 - 모든 트랙 reverb를 0.8로 두지 말고 depth 층을 만든다.
 - 집중용 ambient와 긴장 ambient의 tension 목표를 분리한다.

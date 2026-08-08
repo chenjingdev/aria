@@ -1,5 +1,115 @@
-// aria — 외부 SoundFont 악기·드럼 킷·선택적 출발 템플릿 정의.
-// Aria는 자체 파형 합성기를 포함하지 않는다. 모든 프리셋은 설치된 샘플 음원으로 렌더한다.
+// aria — 외부 샘플 악기·드럼 킷·선택적 출발 템플릿 정의.
+// Aria는 자체 파형 합성기를 포함하지 않는다. 모든 프리셋은 설치된 SoundFont/SFZ 음원으로 렌더한다.
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
+// 앱에 노출하는 managed pack catalog. 원본 오디오는 저장소에 넣지 않고 각 manifest가
+// 정확한 공식 출처·체크섬·설치 위치와 선택 가능한 SFZ entry를 정의한다.
+const CATALOG_MANIFEST_FILES = [
+  "vsco2-ce.json",
+  "philharmonia-all-sfz.json",
+  "salamander-drumkit-sfz.json"
+];
+const CATALOG_MANIFESTS = CATALOG_MANIFEST_FILES.map(name => JSON.parse(fs.readFileSync(
+  fileURLToPath(new URL(`../packs/${name}`, import.meta.url)), "utf8"
+)));
+
+function catalogSource(manifest, entry) {
+  if (manifest.id === "philharmonia-all-sfz") return "Philharmonia";
+  if (manifest.id === "salamander-drumkit-sfz") return "Salamander";
+  if (manifest.id === "vsco2-ce") return "VSCO 2 CE";
+  return entry.source ?? manifest.name ?? manifest.id;
+}
+
+function catalogRelease(entry) {
+  // release는 noteOff 뒤의 실제 여운이다. 원본 파일의 전체 길이(durationSec,
+  // maxSampleDurationSec)와 섞으면 짧은 노트 하나에도 수십 초 빈 꼬리가 붙는다.
+  if (Number.isFinite(entry.release) && entry.release >= 0) return entry.release;
+  if (entry.kind !== "pitched-instrument" &&
+      Number.isFinite(entry.tailHintSec) && entry.tailHintSec >= 0) return entry.tailHintSec;
+  const articulation = entry.articulation ?? "";
+  if (/staccato|spiccato|pizzicato/.test(articulation)) return 0.55;
+  if (/roll|tremolo|keyswitch/.test(articulation)) return 1.8;
+  if (entry.drum || /percussion|mapped-kit|one-shot|clip/.test(`${entry.kind ?? ""} ${articulation}`)) return 6;
+  return 1.1;
+}
+
+function catalogFamily(entry) {
+  const raw = String(entry.family ?? "").trim();
+  const text = `${entry.name ?? ""} ${entry.path ?? ""}`;
+  if (raw === "Contrabass") return "Double Bass";
+  if (raw === "Tenor Trombone") return "Trombone";
+  if (raw === "Snare") return "Snare Drum";
+  if (["Temp", "Misc 2", "Other"].includes(raw)) {
+    if (/glock/i.test(text)) return "Glockenspiel";
+    if (/nepalese.?bells?/i.test(text)) return "Nepalese Bells";
+    if (/triangle/i.test(text)) return "Triangle";
+    if (/timp/i.test(text)) return "Timpani";
+    if (/tumba|conga/i.test(text)) return "Congas";
+    if (/bongo/i.test(text)) return "Bongos";
+    if (/vibra.?ring/i.test(text)) return "Vibra Ring";
+    return "Sound Effects";
+  }
+  return raw || entry.category || "Other";
+}
+
+function catalogSpec(manifest, entry) {
+  const articulation = entry.articulation ?? "sustain";
+  const term = String(entry.label ?? articulation).split(/\s+[—·]\s+/)[0].trim();
+  const source = catalogSource(manifest, entry);
+  const family = catalogFamily(entry);
+  const sourceEntry = entry.sourceEntry ?? entry.clip?.sourceEntry ?? null;
+  const clipIdentity = entry.kind === "clip"
+    ? [entry.recordedNote, entry.recordedDynamic,
+      Number.isFinite(entry.durationSec) ? `${entry.durationSec.toFixed(3)}초` : null]
+      .filter(Boolean).join(" · ") : "";
+  const aliases = Array.isArray(entry.aliases) ? entry.aliases : [];
+  const common = {
+    engine: "sfizz",
+    pack: manifest.id,
+    sfz: entry.path,
+    name: term && !String(entry.name).includes(term) ? `${entry.name} · ${term}` : entry.name,
+    desc: `${source} 원본 SFZ · ${entry.label ?? articulation}${clipIdentity ? ` · ${clipIdentity}` : ""}`,
+    family,
+    familyDetail: entry.family ?? family,
+    source,
+    sourceDetail: entry.source ?? source,
+    articulation,
+    articulations: entry.articulations ?? null,
+    defaultArticulation: entry.defaultArticulation ?? null,
+    duration: entry.duration ?? null,
+    durationSec: Number.isFinite(entry.durationSec) ? entry.durationSec : null,
+    maxSampleDurationSec: Number.isFinite(entry.maxSampleDurationSec) ? entry.maxSampleDurationSec : null,
+    tailHintSec: Number.isFinite(entry.tailHintSec) ? entry.tailHintSec : null,
+    kind: entry.kind ?? (entry.drum ? "drum-kit" : "instrument"),
+    category: entry.category ?? null,
+    sourceEntry,
+    recordedNote: entry.recordedNote ?? null,
+    recordedDynamic: entry.recordedDynamic ?? null,
+    aliasSearch: aliases.map(alias => [alias.id, alias.name, alias.path, ...(alias.sourcePaths ?? [])]
+      .filter(Boolean).join(" ")).join(" ") || null,
+    recommended: entry.recommended === true,
+    bank: entry.gm?.bank ?? 0,
+    gm: entry.gm?.program ?? 0,
+    gain: 1,
+    reverb: entry.drum ? 0.22 : 0.3,
+    release: catalogRelease(entry)
+  };
+  if (!entry.drum) return common;
+  return {
+    ...common,
+    drum: true,
+    program: entry.gm?.program ?? 0,
+    pieces: Object.fromEntries((entry.pieces ?? []).map(piece => [piece.id, piece.key])),
+    pieceLabels: Object.fromEntries((entry.pieces ?? []).map(piece => [piece.id, piece.label])),
+    pieceDurationsSec: Object.fromEntries((entry.pieces ?? [])
+      .filter(piece => Number.isFinite(piece.durationSec) && piece.durationSec > 0)
+      .map(piece => [piece.id, piece.durationSec])),
+    pieceControls: Object.fromEntries((entry.pieces ?? [])
+      .filter(piece => Array.isArray(piece.cc) && piece.cc.length)
+      .map(piece => [piece.id, piece.cc]))
+  };
+}
 
 // 드럼 킷의 공통 피스 이름 → General MIDI 퍼커션 노트(채널 10)
 export const DRUM_PIECES = {
@@ -146,6 +256,14 @@ export const SF_PRESETS = {
   "sf-bandoneon": { name: "Tango Accordion (GM)", desc: "GeneralUser GM 탱고 아코디언 샘플", gm: 23, gain: 0.95, reverb: 0.25, release: 0.2, font: "default.sf2" }
 };
 
+// 공식/준비된 catalog의 모든 선율·주법 entry를 부분 선별하지 않고 등록한다.
+for (const manifest of CATALOG_MANIFESTS) for (const entry of manifest.catalog ?? []) {
+  if (entry.drum) continue;
+  if (!entry.id || !entry.path || Object.hasOwn(SF_PRESETS, entry.id))
+    throw new Error(`${manifest.id} catalog melodic entry가 올바르지 않습니다: ${entry?.id ?? "(id 없음)"}`);
+  SF_PRESETS[entry.id] = catalogSpec(manifest, entry);
+}
+
 // 같은 악기의 음원 출처만 다른 선택지를 UI에서 한 그룹으로 보여주기 위한 표시 메타데이터.
 // family는 사용자에게 보일 악기군 이름, source는 해당 샘플 라이브러리 이름이다.
 const SOURCE_VARIANT_FAMILIES = [
@@ -158,10 +276,10 @@ const SOURCE_VARIANT_FAMILIES = [
   ["Violin", [["sf-violin", "GM"], ["sf-violin-phil", "Philharmonia"]]],
   ["Viola", [["sf-viola", "GM"], ["sf-viola-phil", "Philharmonia"]]],
   ["Cello", [["sf-cello", "GM"], ["sf-cello-phil", "Philharmonia"]]],
-  ["Contrabass", [["sf-contrabass", "GM"], ["sf-contrabass-phil", "Philharmonia"]]],
+  ["Double Bass", [["sf-contrabass", "GM"], ["sf-contrabass-phil", "Philharmonia"]]],
   ["Violin Pizzicato", [["sf-violin-pizz", "GM"], ["sf-violin-pizz-phil", "Philharmonia"]]],
   ["Viola Pizzicato", [["sf-viola-pizz", "GM"], ["sf-viola-pizz-phil", "Philharmonia"]]],
-  ["Contrabass Pizzicato", [["sf-contrabass-pizz", "GM"], ["sf-contrabass-pizz-phil", "Philharmonia"]]],
+  ["Double Bass Pizzicato", [["sf-contrabass-pizz", "GM"], ["sf-contrabass-pizz-phil", "Philharmonia"]]],
   ["Violin Sordino", [["sf-violin-sord", "GM"], ["sf-violin-sord-phil", "Philharmonia"]]],
   ["Flute", [["sf-flute", "GM"], ["sf-flute-phil", "Philharmonia"]]],
   ["Oboe", [["sf-oboe", "GM"], ["sf-oboe-phil", "Philharmonia"]]],
@@ -178,6 +296,18 @@ const SOURCE_VARIANT_FAMILIES = [
 ];
 for (const [family, variants] of SOURCE_VARIANT_FAMILIES)
   for (const [id, source] of variants) Object.assign(SF_PRESETS[id], { family, source });
+
+// 단독으로만 등록된 경량 SoundFont 프리셋도 출처·악기군을 빠뜨리지 않는다.
+// 이름에서 괄호 안의 출처 표기를 걷어낸 값은 검색용 family의 안전한 기본값이다.
+const staticSource = preset => preset.font === "default.sf2" ? "GM"
+  : preset.font?.startsWith("salamander") ? "Salamander"
+  : preset.font?.startsWith("vsco") ? "VSCO"
+  : preset.font?.startsWith("phil") ? "Philharmonia" : "SoundFont";
+const staticFamily = preset => String(preset.name).replace(/\s*\([^)]*\)\s*$/, "").trim();
+for (const preset of Object.values(SF_PRESETS)) {
+  if (!preset.source) preset.source = staticSource(preset);
+  if (!preset.family) preset.family = staticFamily(preset);
+}
 
 // GM 확장 타악 피스 — sf-orch-kit의 기존 곡 호환용 이름을 유지한다.
 export const ORCH_PIECES = {
@@ -206,13 +336,48 @@ export const SF_DRUM_KITS = {
   }
 };
 
+for (const preset of Object.values(SF_DRUM_KITS)) {
+  if (!preset.source) preset.source = staticSource(preset);
+  if (!preset.family) preset.family = staticFamily(preset);
+}
+
+for (const manifest of CATALOG_MANIFESTS) for (const entry of manifest.catalog ?? []) {
+  if (!entry.drum) continue;
+  if (!entry.id || !entry.path || Object.hasOwn(SF_DRUM_KITS, entry.id))
+    throw new Error(`${manifest.id} catalog drum entry가 올바르지 않습니다: ${entry?.id ?? "(id 없음)"}`);
+  SF_DRUM_KITS[entry.id] = catalogSpec(manifest, entry);
+}
+
 // 킷의 피스 어휘 — 킷 전용 맵이 있으면 그것, 없으면 공통 DRUM_PIECES
 export function drumPieces(id) { return SF_DRUM_KITS[id]?.pieces ?? DRUM_PIECES; }
+// 같은 MIDI key를 CC 상태로 나누는 피스(예: Salamander 하이햇 개방도)의
+// 원래 controller 값을 MIDI/SFZ 경로가 공통으로 사용한다.
+export function drumPieceControls(id) { return SF_DRUM_KITS[id]?.pieceControls ?? {}; }
 
 export function isSfPreset(id) { return Object.hasOwn(SF_PRESETS, id); }
 export function isSfDrumKit(id) { return Object.hasOwn(SF_DRUM_KITS, id); }
 export function isDrumPreset(id) { return isSfDrumKit(id); }
 export function presetExists(id) { return isSfPreset(id) || isSfDrumKit(id); }
+export function presetKind(id) {
+  const spec = SF_PRESETS[id] ?? SF_DRUM_KITS[id];
+  if (!spec) return null;
+  if (spec.kind === "clip") return "clip";
+  return isSfDrumKit(id) ? "percussion" : "instrument";
+}
+export function presetDurationSec(id) {
+  const spec = SF_PRESETS[id] ?? SF_DRUM_KITS[id];
+  if (spec?.kind !== "clip") return null;
+  const value = spec.durationSec;
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+export function presetArticulations(id) {
+  const value = (SF_PRESETS[id] ?? SF_DRUM_KITS[id])?.articulations;
+  return value && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+export function presetDefaultArticulation(id) {
+  const spec = SF_PRESETS[id] ?? SF_DRUM_KITS[id];
+  return spec?.defaultArticulation ?? null;
+}
 export function presetLabel(id) {
   return SF_PRESETS[id]?.name ?? SF_DRUM_KITS[id]?.name ?? id;
 }

@@ -2,13 +2,17 @@
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS, isDrumPreset, presetLabel } from "./presets.js";
-import { fontStatus, resolveFont, requiredFontName, sf2Info } from "./sf2.js";
+import {
+  DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS,
+  isDrumPreset, presetLabel, presetKind, presetArticulations
+} from "./presets.js";
+import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
 import {
   createSong, validateSong, validateNote, findTrack, songText, songSummary, totalBars, beatsPerBar,
-  tempoSegments, beatToSec, TRACK_OVERRIDES, MAX_TEMPO_POINTS, MAX_SECTIONS
+  tempoSegments, beatToSec, notePlaybackEndBeat, TRACK_OVERRIDES, MAX_TEMPO_POINTS, MAX_SECTIONS
 } from "./song.js";
-import { renderRange, wavBuffer } from "./renderer.js";
+import { renderRange } from "./sampler-renderer.js";
+import { wavBuffer } from "./renderer.js";
 import { lufs } from "./master.js";
 import { midiBuffer } from "./midi.js";
 import { importMidi } from "./midi-import.js";
@@ -31,21 +35,14 @@ const listeners = new Set();
 export function subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); }
 function broadcast(ev) { for (const fn of listeners) { try { fn(ev); } catch { /* 리스너 오류 무시 */ } } }
 
-// 새 트랙·템플릿을 만들 때 필요한 음원이 실제로 열리고 요청한 bank/program을 갖는지 확인한다.
-// 누락된 전용 폰트를 default.sf2로 바꾸거나 무음으로 진행하지 않는다.
+// 새 트랙·템플릿을 만들 때 필요한 음원이 실제로 열리는지 확인한다.
+// 누락된 SoundFont/SFZ를 다른 음원으로 바꾸거나 무음으로 진행하지 않는다.
 function requirePresetAvailable(id) {
   const spec = SF_PRESETS[id] ?? SF_DRUM_KITS[id];
   if (!spec) throw new Error(`preset "${id}"이 없습니다 — list_presets로 확인하세요`);
-  const status = fontStatus(spec);
+  const status = samplerAssetStatus(spec);
   if (!status.available)
-    throw new Error(`preset "${id}"에 필요한 음원 ${status.name}을 사용할 수 없습니다: ${status.reason}`);
-  const sf = resolveFont(spec);
-  if (!sf)
-    throw new Error(`preset "${id}"에 필요한 음원 ${requiredFontName(spec)}을 열 수 없습니다`);
-  const bank = spec.bank ?? 0;
-  const program = spec.program ?? spec.gm ?? 0;
-  if (!sf.presets.has((bank << 8) | program))
-    throw new Error(`음원 ${requiredFontName(spec)}에 preset "${id}"용 bank ${bank}, program ${program}이 없습니다`);
+    throw new Error(`preset "${id}"에 필요한 음원 ${samplerAssetName(spec, status)}을 사용할 수 없습니다: ${status.reason}`);
   return spec;
 }
 
@@ -226,10 +223,61 @@ function undoLabel(name, args) {
   return args?.track ? `${base} (${args.track})` : base;
 }
 
+const CLIP_TIME_EPSILON = 1e-9;
+
+// Recorded Clip은 악보의 짧은 trigger dur가 아니라 원본 초 길이만큼 실제로 재생된다.
+// 구조 편집이 이 고정 구간의 중간을 가르면 trim/offset 없이 정직하게 표현할 수 없으므로,
+// 일반 노트를 늘이거나 줄이는 로직에 들어가기 전에 실제 재생 구간으로 판정한다.
+function fixedClipIntervals(song, bpb = beatsPerBar(song)) {
+  const segs = tempoSegments(song);
+  const intervals = [];
+  for (const track of song.tracks) {
+    if (presetKind(track.preset) !== "clip") continue;
+    for (const note of track.notes) {
+      const start = (note.bar - 1) * bpb + note.beat;
+      intervals.push({
+        track, note, start,
+        end: notePlaybackEndBeat(song, track, note, segs)
+      });
+    }
+  }
+  return intervals;
+}
+
+function clipLastBar(interval, bpb) {
+  return Math.max(interval.note.bar, Math.ceil(interval.end / bpb));
+}
+
+function rejectFixedClipInsertSeam(song, at, bpb) {
+  const seam = (at - 1) * bpb;
+  for (const interval of fixedClipIntervals(song, bpb)) {
+    if (interval.start >= seam - CLIP_TIME_EPSILON || interval.end <= seam + CLIP_TIME_EPSILON) continue;
+    throw new Error(
+      `"${interval.track.name}"의 Recorded Clip이 ${interval.note.bar}마디에서 시작해 ${clipLastBar(interval, bpb)}마디까지 이어져 ${at}마디 삽입 지점을 가릅니다`
+      + " — 원본 길이가 고정된 clip 중간에는 빈 시간을 끼울 수 없습니다. clip 전체를 move_note로 옮기거나 delete_note로 삭제한 뒤 다시 배치하세요"
+    );
+  }
+}
+
+function rejectPartialFixedClipDelete(song, from, to, rangeStart, rangeEnd, bpb) {
+  for (const interval of fixedClipIntervals(song, bpb)) {
+    const overlaps = interval.start < rangeEnd - CLIP_TIME_EPSILON &&
+      interval.end > rangeStart + CLIP_TIME_EPSILON;
+    const fullyCovered = interval.start >= rangeStart - CLIP_TIME_EPSILON &&
+      interval.end <= rangeEnd + CLIP_TIME_EPSILON;
+    if (!overlaps || fullyCovered) continue;
+    throw new Error(
+      `${from}~${to}마디 삭제 구간이 "${interval.track.name}" Recorded Clip(${interval.note.bar}~${clipLastBar(interval, bpb)}마디)의 일부만 가릅니다`
+      + " — Recorded Clip은 원본 길이가 고정되어 trim·offset 없이 중간만 잘라낼 수 없습니다. clip 전체 길이를 포함해 삭제하거나 delete_note로 전체 clip을 지운 뒤 다시 배치하세요"
+    );
+  }
+}
+
 // at마디 앞에 count마디만큼의 빈 시간을 끼워 넣은 곡을 만든다(검증 전).
 // 노트·구간 게인·템포 변화·피드백을 함께 밀고, 삽입 지점을 걸친 긴 노트는 그만큼 늘린다 —
 // 게인·피드백 처리와 대칭이라 마디 잘라내기와 왕복했을 때 원래대로 돌아온다.
 function shiftBars(song, at, count, bpb) {
+  rejectFixedClipInsertSeam(song, at, bpb);
   const shift = b => b >= at ? b + count : b;
   const ins = (at - 1) * bpb;
   let moved = 0, stretched = 0;
@@ -383,21 +431,82 @@ export const ops = {
     return `곡을 통째로 교체했습니다.\n${songSummary(state.song)}`;
   },
 
-  list_presets() {
+  list_presets({ query, family, source, kind, available_only = false, limit } = {}) {
+    const resultLimit = limit === undefined ? 30 : Number(limit);
+    if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > 100)
+      throw new Error(`list_presets limit은 1~100 정수여야 합니다 — 받은 값: ${JSON.stringify(limit)}`);
     const tpls = Object.entries(TEMPLATES).map(([id, t]) => `  ${id} — ${t.name}: ${t.desc}`).join("\n");
-    const line = ([id, p]) => {
-      const st = fontStatus(p);
-      return `  ${id} — ${p.name} [${st.available ? `설치됨: ${st.name}` : `${st.reason}: ${st.name}`}]: ${p.desc}`;
+    const entries = [
+      ...Object.entries(SF_PRESETS).map(([id, spec]) => ({ id, spec, drum: false })),
+      ...Object.entries(SF_DRUM_KITS).map(([id, spec]) => ({ id, spec, drum: true }))
+    ].map(item => ({
+      ...item,
+      kind: item.spec.kind === "clip" ? "clip" : item.drum ? "percussion" : "instrument",
+      status: samplerAssetStatus(item.spec, { shallow: true })
+    }));
+    const availableCount = entries.filter(item => item.status.available).length;
+    const norm = value => String(value ?? "").trim().toLocaleLowerCase("en");
+    const q = norm(query), qTokens = q.split(/\s+/).filter(Boolean);
+    const wantedFamily = norm(family), wantedSource = norm(source), wantedKind = norm(kind);
+    if (wantedKind && !["instrument", "percussion", "clip"].includes(wantedKind))
+      throw new Error(`kind는 instrument, percussion, clip 중 하나여야 합니다 — 받은 값: ${JSON.stringify(kind)}`);
+    const hasFilter = Boolean(q || wantedFamily || wantedSource || wantedKind || available_only || limit !== undefined);
+    const filtered = entries.filter(({ id, spec, status, kind: entryKind }) => {
+      if (available_only && !status.available) return false;
+      if (wantedFamily && norm(spec.family) !== wantedFamily) return false;
+      if (wantedSource && ![spec.source, spec.sourceDetail].some(value => norm(value) === wantedSource)) return false;
+      if (wantedKind && entryKind !== wantedKind) return false;
+      const searchable = norm([
+        id, spec.name, spec.desc, spec.family, spec.source, spec.sourceDetail,
+        spec.articulation, spec.category, spec.familyDetail, spec.sourceEntry,
+        spec.recordedNote, spec.recordedDynamic, spec.aliasSearch,
+        ...Object.entries(spec.articulations ?? {}).flatMap(([id, definition]) => [id, definition?.label]), entryKind
+      ].join(" "));
+      if (qTokens.length && !qTokens.every(token => searchable.includes(token))) return false;
+      return true;
+    });
+    if (!hasFilter) {
+      const countBy = key => [...entries.reduce((map, item) => {
+        const value = item.spec[key] ?? (key === "source" ? "기타/GM" : "기타");
+        map.set(value, (map.get(value) ?? 0) + 1);
+        return map;
+      }, new Map())].sort((a, b) => a[0].localeCompare(b[0]));
+      const sources = countBy("source").map(([name, count]) => `  ${name}: ${count}`).join("\n");
+      const families = countBy("family").map(([name, count]) => `  ${name}: ${count}`).join("\n");
+      const kinds = [...entries.reduce((map, item) => {
+        map.set(item.kind, (map.get(item.kind) ?? 0) + 1);
+        return map;
+      }, new Map())].map(([name, count]) => `  ${name}: ${count}`).join("\n");
+      const unavailable = entries.filter(item => !item.status.available).length;
+      return `외부 샘플 프리셋 ${entries.length}개 (사용 가능 ${availableCount}, 설치·수정 필요 ${unavailable})\n`
+        + `엔진: SpessaSynth · SoundFont / sfizz · SFZ\n\n종류별:\n${kinds}\n\n출처별:\n${sources}\n\n악기군별:\n${families}`
+        + `\n\n실제 ID·주법은 list_presets({family:"Violin"}), list_presets({source:"VSCO 2 CE"}), list_presets({query:"tremolo"})처럼 좁혀서 확인하세요.`
+        + `\n미설치·손상 음원은 다른 폰트나 팩으로 자동 대체하지 않습니다.`
+        + `\n\nnew_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
+    }
+    if (!filtered.length)
+      return `조건에 맞는 샘플 프리셋이 없습니다. 전체 ${entries.length}개, 사용 가능 ${availableCount}개입니다.`;
+    const line = ({ id, spec, drum, kind: entryKind, status }) => {
+      const asset = samplerAssetName(spec, status);
+      const allPieces = drum ? Object.keys(spec.pieces ?? DRUM_PIECES) : [];
+      const visiblePieces = allPieces.slice(0, 24);
+      const pieces = drum && entryKind !== "clip"
+        ? `\n    pitch: ${visiblePieces.join(", ")}${allPieces.length > visiblePieces.length ? ` … 외 ${allPieces.length - visiblePieces.length}개` : ""}`
+        : "";
+      const articulationRows = Object.entries(spec.articulations ?? {});
+      const articulations = articulationRows.length
+        ? `\n    articulation: ${articulationRows.map(([key, value]) => `${key}=${value.label ?? key}${key === spec.defaultArticulation ? " (기본)" : ""}`).join("; ")}`
+        : "";
+      return `  ${id} — ${spec.name} [${entryKind} · ${samplerEngineLabel(spec)} · ${status.available ? `설치됨: ${asset}` : `${status.reason}: ${asset}`}]: ${spec.desc}${pieces}${articulations}`;
     };
-    const info = sf2Info();
-    return `SoundFont 멜로디 프리셋${info ? ` (기본 폰트: ${info})` : ""}:\n${Object.entries(SF_PRESETS).map(line).join("\n")}`
-      + `\n\nSoundFont 드럼 킷 (pitch에 피스 이름 사용):\n${Object.entries(SF_DRUM_KITS).map(line).join("\n")}`
-      + `\n  공통 피스: ${Object.keys(DRUM_PIECES).join(", ")}`
-      + `\n\n미설치·손상 음원은 다른 폰트로 자동 대체하지 않습니다.`
-      + `\n\nnew_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
+    const shown = filtered.slice(0, resultLimit);
+    const more = filtered.length - shown.length;
+    return `검색 결과 ${filtered.length}개 중 ${shown.length}개 표시 (전체 ${entries.length}, 사용 가능 ${availableCount})`
+      + (more > 0 ? `\n${more}개가 더 있습니다 — query·family·source·kind를 더 좁히거나 limit을 최대 100까지 올리세요.` : "")
+      + `\n${shown.map(line).join("\n")}`;
   },
 
-  add_track({ name, preset, volume, pan, ...rest } = {}) {
+  add_track({ name, preset, volume, pan, articulation, ...rest } = {}) {
     const song = needSong();
     if (!name || !preset) throw new Error("name과 preset이 필요합니다");
     requirePresetAvailable(preset);
@@ -408,6 +517,7 @@ export const ops = {
     let seed = String(name);
     for (let i = 2; song.tracks.some(t => t.seed === seed); i++) seed = `${name}#${i}`;
     const track = { name, seed, preset, volume: volume ?? 0.8, pan: pan ?? 0, notes: [] };
+    if (articulation !== undefined) track.articulation = articulation;
     for (const [key] of TRACK_OVERRIDES) if (rest[key] !== undefined) track[key] = rest[key];
     state.song = validateSong({ ...song, tracks: [...song.tracks, track] });
     mutated();
@@ -422,7 +532,7 @@ export const ops = {
     return `트랙 "${t.name}" 삭제 — undo_edit으로 되돌릴 수 있습니다. 남은 트랙: ${song.tracks.map(t => t.name).join(", ") || "(없음)"}`;
   },
 
-  set_track({ track, preset, volume, pan, new_name, mute, solo, ...rest } = {}) {
+  set_track({ track, preset, volume, pan, new_name, mute, solo, articulation, ...rest } = {}) {
     const song = needSong();
     const t = findTrack(song, track);
     // 라이브 상태는 건드리지 않고 사본을 만들어 검증 통과 후에만 교체한다
@@ -439,7 +549,23 @@ export const ops = {
       const wasDrum = isDrumPreset(t.preset), isDrum = isDrumPreset(preset);
       if (wasDrum !== isDrum && t.notes.length)
         throw new Error(`"${t.name}"에 노트가 있어 ${wasDrum ? "드럼→멜로디" : "멜로디→드럼"} 전환이 불가합니다 — clear_notes 후 바꾸세요`);
-      updated.preset = preset; changes.push(`프리셋→${presetLabel(preset)}`);
+      updated.preset = preset;
+      // 프리셋마다 articulation ID 체계가 다르다. 호출자가 새 값을 함께 주지 않았다면
+      // 옛 프리셋의 선택을 새 음원에 억지로 적용하지 않고 새 프리셋 기본값으로 되돌린다.
+      if (articulation === undefined) delete updated.articulation;
+      changes.push(`프리셋→${presetLabel(preset)}`);
+    }
+    if (articulation !== undefined) {
+      if (articulation === null) {
+        delete updated.articulation;
+        changes.push("연주법→프리셋 기본값");
+      } else {
+        const definitions = presetArticulations(updated.preset);
+        if (typeof articulation !== "string" || !definitions || !Object.hasOwn(definitions, articulation))
+          throw new Error(`articulation ${JSON.stringify(articulation)}을 ${updated.preset}에서 찾을 수 없습니다 — list_presets로 선택 가능한 원래 연주법을 확인하세요`);
+        updated.articulation = articulation;
+        changes.push(`연주법→${definitions[articulation].label ?? articulation}`);
+      }
     }
     if (volume !== undefined) { updated.volume = volume; changes.push(`볼륨→${volume}`); }
     if (mute !== undefined) {
@@ -457,7 +583,7 @@ export const ops = {
         throw new Error(`트랙 이름 "${new_name}"이 이미 있습니다`);
       changes.push(`이름 ${t.name}→${trimmed}`); updated.name = trimmed;
     }
-    if (!changes.length) throw new Error("바꿀 항목이 없습니다 (preset/volume/pan/mute/solo/new_name 중 하나 이상)");
+    if (!changes.length) throw new Error("바꿀 항목이 없습니다 (preset/articulation/volume/pan/mute/solo/new_name 중 하나 이상)");
     state.song = validateSong({ ...song, tracks: song.tracks.map(x => x === t ? updated : x) });
     mutated();
     return `트랙 "${updated.name}" 변경: ${changes.join(", ")}`;
@@ -601,6 +727,8 @@ export const ops = {
   resize_note({ track, bar, beat, pitch, dur, from_dur } = {}) {
     const song = needSong();
     const t = findTrack(song, track);
+    if (presetKind(t.preset) === "clip")
+      throw new Error(`"${t.name}"은 Recorded Clip(녹음 클립) 트랙입니다 — 원본 길이가 고정된 one-shot이라 resize_note로 자를 수 없습니다. 시작 위치를 move_note로 옮기세요`);
     const n = pickNote(t, { bar, beat, pitch, dur: from_dur });
     const d = Number(dur);
     if (!Number.isFinite(d) || d <= 0 || d > 64) throw new Error("dur는 0보다 크고 64 이하인 박 단위 길이여야 합니다");
@@ -615,6 +743,8 @@ export const ops = {
   split_note({ track, bar, beat, pitch, dur, at_bar, at_beat } = {}) {
     const song = needSong();
     const t = findTrack(song, track);
+    if (presetKind(t.preset) === "clip")
+      throw new Error(`"${t.name}"은 Recorded Clip(녹음 클립) 트랙입니다 — split_note는 같은 원본을 두 번 재생하므로 지원하지 않습니다. 실제 trim·offset 편집 기능이 추가될 때까지 원본 한 번 재생으로 유지하세요`);
     const n = pickNote(t, { bar, beat, pitch, dur });
     const bpb = beatsPerBar(song);
     const ab = Number(at_bar), abeat = Number(at_beat ?? 0);
@@ -997,6 +1127,7 @@ export const ops = {
     const span = end - from + 1;
     const bpb = beatsPerBar(song);
     const rs = (from - 1) * bpb, re = end * bpb;
+    rejectPartialFixedClipDelete(song, from, end, rs, re, bpb);
     const mapF = b => b < from ? b : b > end ? b - span : from;      // 구간 안 시작점 → 이음새로
     const mapT = b => b < from ? b : b > end ? b - span : from - 1;  // 구간 안 끝점 → 이음새 앞으로
     let removed = 0, clipped = 0, pulled = 0;
