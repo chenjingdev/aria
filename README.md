@@ -8,6 +8,10 @@
 - 재생은 설치된 외부 샘플 팩(SF2/SFZ) → 검증된 오픈소스 엔진 → 오프라인 PCM/WAV 렌더 → macOS `afplay` 순서입니다
 - MIDI/WAV 내보내기 (기본 위치 `~/Music/aria/`)
 
+## 공동개발 브리프
+
+음악가·개발자와 함께 시작할 때는 제품 방향, 기존 요구사항, 아키텍처, 설치, 음악 작업 흐름, 첫 기여 과제를 한 문서로 정리한 [모바일 A/B 브리프](https://tot.page/HdAJYxu3Q7dyyc8D6S3BZQ/index.html@f3e6d83dbe62f4a9259f93a9d35cd6f1786f98f2)를 먼저 읽어 주세요. 화면 안에서 초안과 [Humanize KR](https://github.com/epoko77-ai/im-not-ai) 적용본을 나란히 보거나 각각 열 수 있습니다.
+
 ## 설치·등록
 
 ```bash

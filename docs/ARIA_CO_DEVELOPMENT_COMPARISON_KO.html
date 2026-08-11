@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Aria 공동개발 브리프 원본과 Humanize KR 적용본을 직접 비교하는 공개 페이지">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23151d22'/%3E%3Cpath d='M10 17h18v30H10z' fill='%23245bd7'/%3E%3Cpath d='M36 17h18v30H36z' fill='%23e55038'/%3E%3Cpath d='M28 10h8v44h-8z' fill='white'/%3E%3C/svg%3E">
+  <title>Aria 브리프 A/B — 원본과 Humanize KR 적용본</title>
+  <style>
+    :root {
+      --ground: #edf2f1;
+      --surface: #f9fbfa;
+      --ink: #172126;
+      --ink-2: #405158;
+      --muted: #68797e;
+      --line: #c2cece;
+      --line-strong: #8fa1a4;
+      --original: #245bd7;
+      --original-soft: #dce7ff;
+      --human: #e55038;
+      --human-soft: #ffe1db;
+      --good: #18765b;
+      --good-soft: #d9eee7;
+      --console: #131c20;
+      --console-ink: #eaf1f0;
+      --shadow: 0 20px 65px rgba(31, 52, 58, .16);
+      --display: "Iowan Old Style", "AppleMyungjo", "Palatino Linotype", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ground: #0b1316;
+        --surface: #111b1f;
+        --ink: #ebf1f0;
+        --ink-2: #c0cecd;
+        --muted: #8fa1a4;
+        --line: #2d3d41;
+        --line-strong: #53666a;
+        --original: #86aaff;
+        --original-soft: #1d3157;
+        --human: #ff8068;
+        --human-soft: #4a251f;
+        --good: #6bc8a9;
+        --good-soft: #183a31;
+        --console: #e8efee;
+        --console-ink: #152025;
+        --shadow: 0 22px 75px rgba(0, 0, 0, .35);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --ground: #0b1316;
+      --surface: #111b1f;
+      --ink: #ebf1f0;
+      --ink-2: #c0cecd;
+      --muted: #8fa1a4;
+      --line: #2d3d41;
+      --line-strong: #53666a;
+      --original: #86aaff;
+      --original-soft: #1d3157;
+      --human: #ff8068;
+      --human-soft: #4a251f;
+      --good: #6bc8a9;
+      --good-soft: #183a31;
+      --console: #e8efee;
+      --console-ink: #152025;
+      --shadow: 0 22px 75px rgba(0, 0, 0, .35);
+    }
+
+    :root[data-theme="light"] {
+      --ground: #edf2f1;
+      --surface: #f9fbfa;
+      --ink: #172126;
+      --ink-2: #405158;
+      --muted: #68797e;
+      --line: #c2cece;
+      --line-strong: #8fa1a4;
+      --original: #245bd7;
+      --original-soft: #dce7ff;
+      --human: #e55038;
+      --human-soft: #ffe1db;
+      --good: #18765b;
+      --good-soft: #d9eee7;
+      --console: #131c20;
+      --console-ink: #eaf1f0;
+      --shadow: 0 20px 65px rgba(31, 52, 58, .16);
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--ground); scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, transparent 0 49.92%, color-mix(in srgb, var(--line) 55%, transparent) 49.92% 50.08%, transparent 50.08%),
+        var(--ground);
+      font-family: var(--body);
+      line-height: 1.58;
+      overflow-x: hidden;
+    }
+    button, input { font: inherit; }
+    a { color: inherit; }
+    :focus-visible { outline: 3px solid var(--human); outline-offset: 3px; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 60px;
+      padding: 9px clamp(14px, 3vw, 42px);
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+      backdrop-filter: blur(16px);
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+      text-decoration: none;
+    }
+    .brand b { font-family: var(--display); font-size: 22px; letter-spacing: .08em; }
+    .brand span { color: var(--muted); font: 700 10px/1 var(--mono); letter-spacing: .11em; text-transform: uppercase; }
+    .theme-button {
+      min-height: 42px;
+      padding: 0 14px;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--surface);
+      cursor: pointer;
+    }
+
+    .intro {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: clamp(36px, 6vw, 82px) 0 34px;
+    }
+    .session-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--muted);
+      font: 750 11px/1 var(--mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .session-label::before { content: ""; width: 28px; height: 3px; background: linear-gradient(90deg, var(--original) 0 46%, transparent 46% 54%, var(--human) 54%); }
+    h1 {
+      max-width: 880px;
+      margin: 16px 0 14px;
+      font-family: var(--display);
+      font-size: clamp(42px, 7vw, 92px);
+      font-weight: 650;
+      line-height: .98;
+      letter-spacing: -.045em;
+      text-wrap: balance;
+    }
+    .lede { max-width: 760px; margin: 0; color: var(--ink-2); font-size: clamp(16px, 1.7vw, 20px); }
+
+    .signal-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      margin-top: 34px;
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line);
+    }
+    .signal {
+      min-height: 90px;
+      padding: 16px 18px;
+      border-right: 1px solid var(--line);
+    }
+    .signal:last-child { border-right: 0; }
+    .signal b { display: block; font: 750 clamp(22px, 3vw, 34px)/1 var(--mono); font-variant-numeric: tabular-nums; }
+    .signal span { display: block; margin-top: 9px; color: var(--muted); font-size: 12px; }
+    .signal.good b { color: var(--good); }
+
+    .copy-diff {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto 34px;
+      padding: 24px 0 10px;
+    }
+    .copy-diff summary {
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      color: var(--ink);
+      font-weight: 750;
+    }
+    .diff-table { display: grid; border-top: 1px solid var(--line-strong); }
+    .diff-row {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1fr);
+      border-bottom: 1px solid var(--line);
+    }
+    .diff-row > * { padding: 15px 18px; min-width: 0; }
+    .diff-row .axis { color: var(--muted); font: 700 11px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .diff-row .before { border-left: 3px solid var(--original); background: color-mix(in srgb, var(--original-soft) 38%, transparent); }
+    .diff-row .after { border-left: 3px solid var(--human); background: color-mix(in srgb, var(--human-soft) 40%, transparent); }
+    .diff-row p { margin: 0; font-size: 14px; }
+
+    .console {
+      position: sticky;
+      top: 60px;
+      z-index: 15;
+      color: var(--console-ink);
+      background: var(--console);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, .16);
+    }
+    .console-inner {
+      width: min(1500px, 100%);
+      margin: auto;
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: auto minmax(260px, 560px) minmax(180px, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      padding: 10px clamp(12px, 2vw, 28px);
+    }
+    .ab-mark { display: flex; align-items: center; gap: 8px; font: 800 12px/1 var(--mono); letter-spacing: .12em; }
+    .ab-mark i { width: 10px; height: 10px; border-radius: 50%; background: var(--original); box-shadow: 20px 0 0 var(--human); margin-right: 20px; }
+    .mode-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border: 1px solid color-mix(in srgb, var(--console-ink) 28%, transparent); border-radius: 5px; }
+    .mode-switch button {
+      min-height: 42px;
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 3px;
+      color: inherit;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 750;
+    }
+    .mode-switch button[aria-pressed="true"] { color: var(--console); background: var(--console-ink); }
+    .ratio-control { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .ratio-control label { white-space: nowrap; font: 700 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .ratio-control input { width: 100%; accent-color: var(--human); }
+    .open-links { display: flex; gap: 7px; }
+    .open-links a { min-height: 40px; display: inline-flex; align-items: center; padding: 0 11px; border: 1px solid color-mix(in srgb, var(--console-ink) 30%, transparent); border-radius: 4px; font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+
+    .viewer {
+      --left-ratio: 50%;
+      width: 100%;
+      min-height: 78vh;
+      display: grid;
+      grid-template-columns: var(--left-ratio) minmax(0, 1fr);
+      gap: 1px;
+      background: var(--line-strong);
+      border-bottom: 1px solid var(--line-strong);
+    }
+    .frame {
+      position: relative;
+      min-width: 0;
+      height: max(720px, 78vh);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .frame::before {
+      content: attr(data-label);
+      position: absolute;
+      z-index: 3;
+      top: 74px;
+      right: 12px;
+      padding: 7px 10px;
+      color: #fff;
+      border-radius: 3px;
+      background: var(--original);
+      font: 800 10px/1 var(--mono);
+      letter-spacing: .08em;
+      pointer-events: none;
+    }
+    .frame.human::before { background: var(--human); }
+    iframe { width: 100%; height: 100%; display: block; border: 0; background: #f3f7f6; }
+    .viewer[data-mode="original"] { grid-template-columns: 1fr; }
+    .viewer[data-mode="original"] .frame.human { display: none; }
+    .viewer[data-mode="human"] { grid-template-columns: 1fr; }
+    .viewer[data-mode="human"] .frame.original { display: none; }
+
+    .notes {
+      width: min(1180px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 38px 0 64px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+    .notes section { border-top: 3px solid var(--line-strong); padding-top: 15px; }
+    .notes h2 { margin: 0 0 8px; font-size: 17px; }
+    .notes p { margin: 0; color: var(--ink-2); font-size: 14px; }
+    .notes a { color: var(--original); font-weight: 700; }
+
+    @media (max-width: 900px) {
+      body { background: var(--ground); }
+      .signal-strip { grid-template-columns: 1fr 1fr; }
+      .signal:nth-child(2) { border-right: 0; }
+      .signal:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .console-inner { grid-template-columns: 1fr auto; gap: 8px 12px; }
+      .ab-mark { display: none; }
+      .mode-switch { grid-column: 1; }
+      .ratio-control { display: none; }
+      .open-links { grid-column: 2; grid-row: 1; }
+      .viewer[data-mode="split"] { grid-template-columns: 1fr; }
+      .viewer[data-mode="split"] .frame { height: 66vh; }
+      .diff-row { grid-template-columns: 82px 1fr; }
+      .diff-row .after { grid-column: 2; }
+      .notes { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .topbar { min-height: 54px; padding-inline: 12px; }
+      .brand span { display: none; }
+      .intro { width: calc(100% - 24px); padding-top: 28px; }
+      h1 { font-size: clamp(42px, 14vw, 64px); }
+      .signal-strip { margin-top: 26px; }
+      .signal { min-height: 82px; padding: 13px 12px; }
+      .copy-diff { width: calc(100% - 24px); }
+      .diff-row { grid-template-columns: 1fr; }
+      .diff-row .axis, .diff-row .after { grid-column: 1; }
+      .console { top: 54px; }
+      .console-inner { grid-template-columns: 1fr; padding: 8px; }
+      .mode-switch { grid-column: 1; width: 100%; }
+      .open-links { grid-column: 1; grid-row: 2; justify-content: stretch; }
+      .open-links a { flex: 1; justify-content: center; }
+      .frame { height: calc(100vh - 156px); min-height: 560px; }
+      .viewer[data-mode="split"] .frame { height: 62vh; min-height: 500px; }
+      .frame::before { top: 62px; }
+      .notes { width: calc(100% - 24px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#compare" aria-label="비교 화면으로 이동">
+      <b>aria</b>
+      <span>copy A/B · 2026.08.12</span>
+    </a>
+    <button class="theme-button" id="themeButton" type="button" aria-pressed="false">어둡게</button>
+  </header>
+
+  <main>
+    <section class="intro" aria-labelledby="page-title">
+      <span class="session-label">Humanize KR comparison session</span>
+      <h1 id="page-title">같은 내용,<br>다른 호흡.</h1>
+      <p class="lede">왼쪽은 처음 만든 Aria 공동개발 브리프, 오른쪽은 Humanize KR 규칙으로 한국어 문장만 보수적으로 다듬은 버전이다. HTML 구조와 CSS·JavaScript는 같고, 기술 정보와 직접 인용도 그대로 남겼다.</p>
+
+      <div class="signal-strip" aria-label="윤문 검증 결과">
+        <div class="signal"><b>4.2%</b><span>가시 텍스트 문자 변경률</span></div>
+        <div class="signal"><b>73 / 582</b><span>손댄 문장 / 전체 문장</span></div>
+        <div class="signal"><b>10 → 1</b><span>반복 대구 표현</span></div>
+        <div class="signal good"><b>PASS</b><span>수치 · 날짜 · 인용 · register</span></div>
+      </div>
+    </section>
+
+    <details class="copy-diff" open>
+      <summary>대표 문장 네 곳만 먼저 비교하기</summary>
+      <div class="diff-table">
+        <div class="diff-row">
+          <div class="axis">첫 설명</div>
+          <div class="before"><p>Aria는 텍스트를 한 번에 오디오로 뽑는 생성기가 아니다.</p></div>
+          <div class="after"><p>Aria는 텍스트에서 완성 오디오를 한 번 뽑고 끝내지 않는다.</p></div>
+        </div>
+        <div class="diff-row">
+          <div class="axis">사람 역할</div>
+          <div class="before"><p>사람은 수동적인 프롬프트 작성자가 아니다.</p></div>
+          <div class="after"><p>사람은 취향을 고르는 편집자다.</p></div>
+        </div>
+        <div class="diff-row">
+          <div class="axis">제품 목표</div>
+          <div class="before"><p>목표는 복잡한 DAW를 작은 화면으로 베끼는 것이 아니라, 전문 조작은 AI에 맡기고 사람이 귀로 판단할 수 있는 부분은 직접 만질 수 있게 만드는 것이다.</p></div>
+          <div class="after"><p>목표는 분명하다. 전문 조작은 AI가 맡고 사람은 귀로 판단할 수 있는 부분을 직접 만진다. 복잡한 DAW의 버튼을 작은 화면에 그대로 옮길 이유는 없다.</p></div>
+        </div>
+        <div class="diff-row">
+          <div class="axis">요구사항</div>
+          <div class="before"><p>자연어 요청이 실제 곡 편집으로 이어져야 한다.</p></div>
+          <div class="after"><p>말로 요청한 내용이 실제 곡 편집으로 이어진다.</p></div>
+        </div>
+      </div>
+    </details>
+
+    <section id="compare" aria-label="원본과 적용본 문서 비교">
+      <div class="console">
+        <div class="console-inner">
+          <div class="ab-mark"><i aria-hidden="true"></i>A / B</div>
+          <div class="mode-switch" role="group" aria-label="비교 화면 선택">
+            <button type="button" data-mode="original" aria-pressed="false">원본</button>
+            <button type="button" data-mode="split" aria-pressed="true">나란히</button>
+            <button type="button" data-mode="human" aria-pressed="false">적용본</button>
+          </div>
+          <div class="ratio-control">
+            <label for="ratio">좌우 비율 <output id="ratioValue">50 : 50</output></label>
+            <input id="ratio" type="range" min="28" max="72" value="50" step="1">
+          </div>
+          <div class="open-links">
+            <a href="https://tot.page/b_LTvnmkR8n9zBSq10_IKQ/index.html@937d928a6623edf720b08ed1ddd69b65a299eeb6" target="_blank" rel="noopener">원본만 ↗</a>
+            <a href="https://tot.page/u2qrhfvAWRXvRs7F_uzGXA/index.html@f340d77e37d73c3191cacc1777c7a6b84cfa0a77" target="_blank" rel="noopener">적용본만 ↗</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="viewer" id="viewer" data-mode="split">
+        <div class="frame original" data-label="A · ORIGINAL">
+          <iframe id="originalFrame" title="Aria 공동개발 브리프 원본" src="https://tot.page/b_LTvnmkR8n9zBSq10_IKQ/index.html@937d928a6623edf720b08ed1ddd69b65a299eeb6"></iframe>
+        </div>
+        <div class="frame human" data-label="B · HUMANIZE KR">
+          <iframe id="humanFrame" title="Aria 공동개발 브리프 Humanize KR 적용본" src="https://tot.page/u2qrhfvAWRXvRs7F_uzGXA/index.html@f340d77e37d73c3191cacc1777c7a6b84cfa0a77"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <div class="notes">
+      <section>
+        <h2>무엇을 바꿨나</h2>
+        <p>반복되던 “~해야 한다”, “A가 아니라 B”, 연결어미 뒤 쉼표를 줄이고 긴 문장을 끊었다. 의미가 있는 요구사항 번호, 표, 체크리스트, 음악·개발 용어는 손대지 않았다.</p>
+      </section>
+      <section>
+        <h2>검증 범위</h2>
+        <p><a href="https://github.com/epoko77-ai/im-not-ai" target="_blank" rel="noopener">Humanize KR v2.3.0</a>의 변경률·구조 게이트를 사용했다. 변경률 4.2%, 수치와 직접 인용 보존, 전체 판정 OK다.</p>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const themeButton = document.getElementById("themeButton");
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      let storedTheme = null;
+      try { storedTheme = localStorage.getItem("aria-compare-theme"); } catch {}
+      const viewer = document.getElementById("viewer");
+      const modeButtons = [...document.querySelectorAll(".mode-switch button[data-mode]")];
+      const ratio = document.getElementById("ratio");
+      const ratioValue = document.getElementById("ratioValue");
+
+      function isDark() {
+        if (root.dataset.theme) return root.dataset.theme === "dark";
+        return media.matches;
+      }
+
+      function syncThemeButton() {
+        const dark = isDark();
+        themeButton.textContent = dark ? "밝게" : "어둡게";
+        themeButton.setAttribute("aria-pressed", String(dark));
+      }
+
+      if (storedTheme === "dark" || storedTheme === "light") root.dataset.theme = storedTheme;
+      syncThemeButton();
+      media.addEventListener?.("change", () => { if (!root.dataset.theme) syncThemeButton(); });
+      themeButton.addEventListener("click", () => {
+        root.dataset.theme = isDark() ? "light" : "dark";
+        try { localStorage.setItem("aria-compare-theme", root.dataset.theme); } catch {}
+        syncThemeButton();
+      });
+
+      function setMode(mode, focus = false) {
+        viewer.dataset.mode = mode;
+        modeButtons.forEach(button => {
+          const active = button.dataset.mode === mode;
+          button.setAttribute("aria-pressed", String(active));
+          if (active && focus) button.focus();
+        });
+      }
+
+      modeButtons.forEach((button, index) => {
+        button.addEventListener("click", () => setMode(button.dataset.mode));
+        button.addEventListener("keydown", event => {
+          if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+          event.preventDefault();
+          const delta = event.key === "ArrowRight" ? 1 : -1;
+          const next = (index + delta + modeButtons.length) % modeButtons.length;
+          setMode(modeButtons[next].dataset.mode, true);
+        });
+      });
+
+      ratio.addEventListener("input", () => {
+        const left = Number(ratio.value);
+        viewer.style.setProperty("--left-ratio", `${left}%`);
+        ratioValue.textContent = `${left} : ${100 - left}`;
+      });
+
+      if (matchMedia("(max-width: 560px)").matches) setMode("human");
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1726 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="음악가·개발자 공동개발자를 위한 Aria 제품 방향, 요구사항, 아키텍처, 온보딩 문서">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23e55038'/%3E%3Cpath d='M23 16v28c0 5-4 8-9 8s-8-3-8-7 3-7 8-7c2 0 4 .5 5 1.5V16h4zm22 7v21c0 5-4 8-9 8s-8-3-8-7 3-7 8-7c2 0 4 .5 5 1.5V23h4z' fill='white'/%3E%3C/svg%3E">
+  <title>Aria 공동개발 브리프 — 원본</title>
+  <style>
+    :root {
+      --paper: #f3f7f6;
+      --sheet: #fbfdfc;
+      --ink: #172126;
+      --ink-2: #33434a;
+      --muted: #627278;
+      --faint: #87969a;
+      --line: #c9d5d5;
+      --line-strong: #9eaeaf;
+      --panel: #e8efee;
+      --panel-2: #dde8e7;
+      --accent: #245bd7;
+      --accent-ink: #173f99;
+      --accent-soft: #dce7ff;
+      --transport: #e55038;
+      --transport-soft: #ffe1db;
+      --good: #18765b;
+      --good-soft: #d9eee7;
+      --warn: #9a5a0b;
+      --warn-soft: #f8e7c8;
+      --bad: #ad3547;
+      --bad-soft: #f8dde2;
+      --shadow: 0 18px 55px rgba(30, 54, 60, 0.11);
+      --font-display: "Iowan Old Style", "Palatino Linotype", "AppleMyungjo", serif;
+      --font-body: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --content: 1180px;
+      --reading: 720px;
+      --tap: 44px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #0c1417;
+        --sheet: #111b1f;
+        --ink: #e9f0ef;
+        --ink-2: #c1cecd;
+        --muted: #96a7a9;
+        --faint: #6f8386;
+        --line: #2d3d41;
+        --line-strong: #506367;
+        --panel: #172429;
+        --panel-2: #203136;
+        --accent: #82a7ff;
+        --accent-ink: #b8cbff;
+        --accent-soft: #1c3157;
+        --transport: #ff7b63;
+        --transport-soft: #49251f;
+        --good: #68c7a6;
+        --good-soft: #183a31;
+        --warn: #efb464;
+        --warn-soft: #3e301d;
+        --bad: #f08b99;
+        --bad-soft: #48242c;
+        --shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --paper: #0c1417;
+      --sheet: #111b1f;
+      --ink: #e9f0ef;
+      --ink-2: #c1cecd;
+      --muted: #96a7a9;
+      --faint: #6f8386;
+      --line: #2d3d41;
+      --line-strong: #506367;
+      --panel: #172429;
+      --panel-2: #203136;
+      --accent: #82a7ff;
+      --accent-ink: #b8cbff;
+      --accent-soft: #1c3157;
+      --transport: #ff7b63;
+      --transport-soft: #49251f;
+      --good: #68c7a6;
+      --good-soft: #183a31;
+      --warn: #efb464;
+      --warn-soft: #3e301d;
+      --bad: #f08b99;
+      --bad-soft: #48242c;
+      --shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+    }
+
+    :root[data-theme="light"] {
+      --paper: #f3f7f6;
+      --sheet: #fbfdfc;
+      --ink: #172126;
+      --ink-2: #33434a;
+      --muted: #627278;
+      --faint: #87969a;
+      --line: #c9d5d5;
+      --line-strong: #9eaeaf;
+      --panel: #e8efee;
+      --panel-2: #dde8e7;
+      --accent: #245bd7;
+      --accent-ink: #173f99;
+      --accent-soft: #dce7ff;
+      --transport: #e55038;
+      --transport-soft: #ffe1db;
+      --good: #18765b;
+      --good-soft: #d9eee7;
+      --warn: #9a5a0b;
+      --warn-soft: #f8e7c8;
+      --bad: #ad3547;
+      --bad-soft: #f8dde2;
+      --shadow: 0 18px 55px rgba(30, 54, 60, 0.11);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 86px; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, transparent 0, transparent calc(50% - .5px), color-mix(in srgb, var(--line) 28%, transparent) 50%, transparent calc(50% + .5px)),
+        var(--paper);
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.72;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent-ink); text-underline-offset: .2em; }
+    a:hover { color: var(--transport); }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    :focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 72%, white); outline-offset: 3px; }
+    ::selection { color: var(--ink); background: var(--accent-soft); }
+    [hidden] { display: none !important; }
+
+    .progress {
+      position: fixed;
+      z-index: 100;
+      inset: 0 0 auto;
+      height: 3px;
+      transform: scaleX(0);
+      transform-origin: 0 50%;
+      background: linear-gradient(90deg, var(--accent), var(--transport));
+    }
+
+    .topbar {
+      position: sticky;
+      z-index: 60;
+      top: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 62px;
+      padding: 8px max(18px, env(safe-area-inset-left)) 8px max(18px, env(safe-area-inset-right));
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+      background: color-mix(in srgb, var(--paper) 88%, transparent);
+      backdrop-filter: blur(18px) saturate(130%);
+    }
+
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .brand strong { font: 700 19px/1 var(--font-display); letter-spacing: .045em; }
+    .brand span {
+      overflow: hidden;
+      color: var(--muted);
+      font: 700 10px/1.2 var(--font-mono);
+      letter-spacing: .09em;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .transport-dot {
+      width: 9px;
+      height: 9px;
+      flex: none;
+      border-radius: 50%;
+      background: var(--transport);
+      box-shadow: 0 0 0 4px var(--transport-soft);
+    }
+    .top-actions { display: flex; align-items: center; gap: 7px; }
+    .icon-button {
+      min-width: var(--tap);
+      min-height: var(--tap);
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      color: var(--ink-2);
+      background: var(--sheet);
+      cursor: pointer;
+    }
+    .icon-button:hover { border-color: var(--line-strong); background: var(--panel); }
+
+    .mobile-nav {
+      position: sticky;
+      z-index: 55;
+      top: 62px;
+      display: none;
+      gap: 6px;
+      padding: 8px 14px;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 94%, transparent);
+      scrollbar-width: none;
+    }
+    .mobile-nav::-webkit-scrollbar { display: none; }
+    .mobile-nav a {
+      flex: none;
+      min-height: 36px;
+      padding: 7px 11px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .mobile-nav a[aria-current="true"] { color: var(--accent-ink); border-color: var(--line); background: var(--accent-soft); }
+
+    .page {
+      width: min(var(--content), calc(100% - 36px));
+      margin: 0 auto;
+      padding: 42px 0 100px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: clamp(34px, 5vw, 76px);
+      align-items: start;
+    }
+    .side-nav {
+      position: sticky;
+      top: 90px;
+      display: grid;
+      gap: 4px;
+      max-height: calc(100vh - 120px);
+      padding-right: 18px;
+      overflow-y: auto;
+      border-right: 1px solid var(--line);
+    }
+    .side-nav .nav-kicker {
+      margin: 0 0 8px;
+      color: var(--faint);
+      font: 700 10px/1.4 var(--font-mono);
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .side-nav a {
+      display: block;
+      padding: 7px 9px;
+      border-left: 2px solid transparent;
+      color: var(--muted);
+      font-size: 12.5px;
+      font-weight: 650;
+      line-height: 1.35;
+      text-decoration: none;
+    }
+    .side-nav a:hover { color: var(--ink); background: var(--panel); }
+    .side-nav a[aria-current="true"] { color: var(--accent-ink); border-left-color: var(--accent); background: var(--accent-soft); }
+    .side-note {
+      margin-top: 16px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--panel);
+      font-size: 11px;
+      line-height: 1.55;
+    }
+    .side-note strong { display: block; margin-bottom: 4px; color: var(--ink-2); }
+
+    main { min-width: 0; }
+    section { scroll-margin-top: 86px; }
+    .section {
+      padding: clamp(62px, 9vw, 104px) 0;
+      border-top: 1px solid var(--line);
+    }
+    .section:first-of-type { border-top: 0; }
+    .section-head {
+      display: grid;
+      grid-template-columns: minmax(0, var(--reading)) auto;
+      gap: 22px;
+      align-items: end;
+      margin-bottom: 30px;
+    }
+    .eyebrow {
+      display: block;
+      margin-bottom: 9px;
+      color: var(--accent-ink);
+      font: 750 11px/1.3 var(--font-mono);
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { margin: 0; color: var(--ink); text-wrap: balance; }
+    h1 {
+      max-width: 780px;
+      font: 680 clamp(44px, 7.2vw, 82px)/.98 var(--font-display);
+      letter-spacing: -.045em;
+    }
+    h2 { font: 680 clamp(31px, 4.2vw, 49px)/1.08 var(--font-display); letter-spacing: -.032em; }
+    h3 { font: 720 clamp(19px, 2vw, 24px)/1.25 var(--font-body); letter-spacing: -.018em; }
+    h4 { margin: 0; font-size: 16px; }
+    p { margin: 0; }
+    .lead {
+      max-width: 720px;
+      margin-top: 22px;
+      color: var(--ink-2);
+      font-size: clamp(18px, 2.4vw, 24px);
+      line-height: 1.58;
+      letter-spacing: -.015em;
+    }
+    .measure { max-width: var(--reading); color: var(--ink-2); }
+    .section-intro { margin-top: 13px; color: var(--muted); font-size: 16px; }
+    .section-index {
+      color: var(--line-strong);
+      font: 700 12px/1 var(--font-mono);
+      letter-spacing: .08em;
+    }
+
+    .hero { padding: 22px 0 76px; }
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 22px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 27px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 3px;
+      color: var(--muted);
+      background: var(--sheet);
+      font: 700 10.5px/1.25 var(--font-mono);
+      letter-spacing: .02em;
+    }
+    .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+    .chip.good { color: var(--good); border-color: color-mix(in srgb, var(--good) 36%, var(--line)); background: var(--good-soft); }
+    .chip.good::before { background: var(--good); }
+    .chip.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 36%, var(--line)); background: var(--warn-soft); }
+    .chip.warn::before { background: var(--warn); }
+
+    .hero-score {
+      position: relative;
+      min-height: 270px;
+      margin-top: 42px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      background: var(--sheet);
+      box-shadow: var(--shadow);
+    }
+    .score-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 47px;
+      padding: 9px 13px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      background: var(--panel);
+      font: 700 10.5px/1.2 var(--font-mono);
+    }
+    .score-toolbar .play {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--transport);
+    }
+    .score-toolbar .play::before {
+      content: "";
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 9px solid currentColor;
+    }
+    .score-grid {
+      position: relative;
+      height: 220px;
+      background:
+        repeating-linear-gradient(90deg, transparent 0, transparent calc(12.5% - 1px), color-mix(in srgb, var(--line-strong) 45%, transparent) calc(12.5% - 1px), color-mix(in srgb, var(--line-strong) 45%, transparent) 12.5%),
+        repeating-linear-gradient(0deg, transparent 0, transparent 27px, color-mix(in srgb, var(--line) 52%, transparent) 27px, color-mix(in srgb, var(--line) 52%, transparent) 28px);
+    }
+    .bar-number {
+      position: absolute;
+      top: 6px;
+      color: var(--faint);
+      font: 700 9px/1 var(--font-mono);
+    }
+    .note {
+      position: absolute;
+      height: 11px;
+      border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+      border-radius: 2px;
+      background: color-mix(in srgb, var(--accent) 76%, var(--sheet));
+      box-shadow: inset 0 -2px rgba(0, 0, 0, .08);
+    }
+    .note.orange { border-color: color-mix(in srgb, var(--transport) 62%, transparent); background: color-mix(in srgb, var(--transport) 78%, var(--sheet)); }
+    .playhead { position: absolute; z-index: 2; top: 0; bottom: 0; left: 62%; width: 2px; background: var(--transport); }
+    .playhead::before { content: ""; position: absolute; top: 0; left: -4px; border: 5px solid transparent; border-top-color: var(--transport); }
+    .score-loop {
+      position: absolute;
+      z-index: 4;
+      inset: auto 16px 15px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+      gap: 9px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid color-mix(in srgb, var(--line-strong) 80%, transparent);
+      background: color-mix(in srgb, var(--sheet) 91%, transparent);
+      backdrop-filter: blur(10px);
+      color: var(--ink-2);
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.3;
+      text-align: center;
+    }
+    .score-loop .arrow { color: var(--transport); font-family: var(--font-mono); }
+    .score-loop b { color: var(--accent-ink); }
+
+    .hero-bottom {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      margin-top: 24px;
+    }
+    .read-path { padding-top: 13px; border-top: 3px solid var(--line); }
+    .read-path strong { display: block; color: var(--ink); font-size: 14px; }
+    .read-path span { display: block; margin-top: 4px; color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+
+    .callout {
+      display: grid;
+      grid-template-columns: 8px 1fr;
+      gap: 17px;
+      padding: 19px 20px 19px 0;
+      border-block: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 52%, transparent);
+    }
+    .callout::before { content: ""; background: var(--accent); }
+    .callout.warn::before { background: var(--warn); }
+    .callout.bad::before { background: var(--bad); }
+    .callout h3 { margin-bottom: 5px; font-size: 17px; }
+    .callout p { color: var(--muted); font-size: 14px; }
+    .callout code { font-family: var(--font-mono); font-size: .92em; }
+
+    .grid-2, .grid-3 { display: grid; gap: 18px; }
+    .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .principle {
+      min-width: 0;
+      padding: 21px 0 4px;
+      border-top: 1px solid var(--line-strong);
+    }
+    .principle .marker { display: block; margin-bottom: 18px; color: var(--transport); font: 800 12px/1 var(--font-mono); }
+    .principle h3 { margin-bottom: 8px; }
+    .principle p { color: var(--muted); font-size: 14px; }
+    .principle .proof { display: block; margin-top: 12px; color: var(--faint); font: 650 10.5px/1.55 var(--font-mono); }
+
+    .not-this {
+      display: grid;
+      grid-template-columns: minmax(150px, .5fr) 1.5fr;
+      gap: 22px;
+      margin-top: 38px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .not-this h3 { color: var(--transport); }
+    .not-this ul { margin: 0; padding-left: 1.2em; color: var(--ink-2); }
+
+    .filterbar, .tabbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 22px 0;
+    }
+    .filterbar button, .tabbar button {
+      min-height: var(--tap);
+      padding: 8px 13px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      color: var(--muted);
+      background: var(--sheet);
+      font-size: 12px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .filterbar button[aria-pressed="true"], .tabbar button[aria-selected="true"] {
+      color: var(--accent-ink);
+      border-color: color-mix(in srgb, var(--accent) 52%, var(--line));
+      background: var(--accent-soft);
+    }
+
+    .requirement-list { display: grid; border-top: 1px solid var(--line-strong); }
+    .requirement {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1.1fr) minmax(220px, .9fr);
+      gap: 18px;
+      padding: 19px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .req-id { color: var(--faint); font: 800 11px/1.4 var(--font-mono); }
+    .req-title { margin-bottom: 4px; color: var(--ink); font-weight: 760; line-height: 1.4; }
+    .req-desc, .req-proof { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .req-proof strong { color: var(--ink-2); }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 23px;
+      margin-top: 8px;
+      padding: 3px 7px;
+      border: 1px solid currentColor;
+      border-radius: 3px;
+      font: 750 9.5px/1.2 var(--font-mono);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .status.current { color: var(--good); background: var(--good-soft); }
+    .status.partial { color: var(--warn); background: var(--warn-soft); }
+    .status.next { color: var(--accent-ink); background: var(--accent-soft); }
+
+    .timeline {
+      position: relative;
+      display: grid;
+      gap: 0;
+      margin-top: 34px;
+      padding-left: 24px;
+      border-left: 1px solid var(--line-strong);
+    }
+    .timeline-item { position: relative; display: grid; grid-template-columns: 92px 1fr; gap: 18px; padding: 0 0 24px; }
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      top: 6px;
+      left: -30px;
+      width: 11px;
+      height: 11px;
+      border: 2px solid var(--sheet);
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .timeline time { color: var(--faint); font: 700 11px/1.4 var(--font-mono); }
+    .timeline p { color: var(--ink-2); font-size: 14px; }
+
+    .architecture {
+      padding: 22px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      background: var(--sheet);
+      box-shadow: var(--shadow);
+    }
+    .arch-panel { min-height: 470px; }
+    .arch-panel h3 { margin-bottom: 4px; }
+    .arch-note { margin-bottom: 22px; color: var(--muted); font-size: 13px; }
+    .arch-stage {
+      display: grid;
+      gap: 14px;
+      align-items: stretch;
+    }
+    .arch-stage.collab { grid-template-columns: 1fr 42px 1.15fr 42px 1fr; }
+    .arch-stage.runtime { grid-template-columns: 1fr 38px 1.2fr 38px 1fr; }
+    .arch-stage.audio { grid-template-columns: repeat(7, minmax(90px, 1fr)); gap: 9px; overflow-x: auto; padding-bottom: 8px; }
+    .node {
+      display: flex;
+      min-height: 126px;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .node.actor { border-top: 5px solid var(--transport); }
+    .node.state { border: 2px solid var(--accent); background: var(--accent-soft); }
+    .node.engine { border-bottom: 5px solid var(--good); }
+    .node strong { display: block; color: var(--ink); font-size: 14px; }
+    .node small { display: block; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .node code { color: var(--accent-ink); font: 700 10px/1.4 var(--font-mono); }
+    .connector { display: grid; place-items: center; color: var(--transport); font: 900 20px/1 var(--font-mono); }
+    .dual-lane { display: grid; gap: 12px; }
+    .boundary {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+      padding: 14px;
+      border: 1px dashed var(--line-strong);
+      color: var(--muted);
+      background: color-mix(in srgb, var(--panel) 55%, transparent);
+      font-size: 11px;
+    }
+    .arch-caption {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+    }
+    .arch-caption div { color: var(--muted); font-size: 12px; }
+    .arch-caption strong { display: block; margin-bottom: 4px; color: var(--ink-2); }
+
+    .code-shell {
+      position: relative;
+      margin-top: 18px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      background: #10171a;
+    }
+    .code-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 42px;
+      padding: 7px 10px 7px 14px;
+      border-bottom: 1px solid #2a383d;
+      color: #9db0b4;
+      font: 700 10px/1.3 var(--font-mono);
+    }
+    .copy-button {
+      min-width: 72px;
+      min-height: 30px;
+      padding: 4px 9px;
+      border: 1px solid #405259;
+      border-radius: 3px;
+      color: #d5e0e1;
+      background: #1d292d;
+      cursor: pointer;
+    }
+    pre {
+      margin: 0;
+      padding: 18px;
+      overflow: auto;
+      color: #e7efee;
+      font: 12px/1.68 var(--font-mono);
+      tab-size: 2;
+    }
+    code { font-family: var(--font-mono); }
+    :not(pre) > code { padding: .12em .32em; border: 1px solid var(--line); color: var(--accent-ink); background: var(--panel); font-size: .88em; }
+
+    .model-grid { display: grid; grid-template-columns: 1.12fr .88fr; gap: 24px; align-items: start; }
+    .fact-list { display: grid; border-top: 1px solid var(--line-strong); }
+    .fact-row {
+      display: grid;
+      grid-template-columns: 145px 1fr;
+      gap: 16px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    .fact-row dt { color: var(--muted); font-weight: 700; }
+    .fact-row dd { margin: 0; color: var(--ink-2); }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin: 28px 0;
+      border-block: 1px solid var(--line-strong);
+    }
+    .metric { padding: 22px 18px; border-right: 1px solid var(--line); }
+    .metric:last-child { border-right: 0; }
+    .metric strong { display: block; color: var(--ink); font: 700 clamp(26px, 4vw, 42px)/1 var(--font-display); font-variant-numeric: tabular-nums; }
+    .metric span { display: block; margin-top: 7px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+
+    .capability-map { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .capability {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 15px;
+      min-height: 116px;
+      padding: 17px;
+      border: 1px solid var(--line);
+      background: var(--sheet);
+    }
+    .capability strong { color: var(--ink); font-size: 13px; }
+    .capability p { color: var(--muted); font-size: 12.5px; line-height: 1.58; }
+    .tool-count { color: var(--accent-ink); font: 800 10px/1.4 var(--font-mono); }
+
+    .workflow {
+      counter-reset: step;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      border: 1px solid var(--line-strong);
+      background: var(--line);
+    }
+    .workflow article { counter-increment: step; min-height: 180px; padding: 18px; background: var(--sheet); }
+    .workflow article::before { content: counter(step, decimal-leading-zero); display: block; margin-bottom: 28px; color: var(--transport); font: 800 11px/1 var(--font-mono); }
+    .workflow h3 { margin-bottom: 7px; font-size: 15px; }
+    .workflow p { color: var(--muted); font-size: 12px; line-height: 1.55; }
+
+    .setup-grid { display: grid; grid-template-columns: .88fr 1.12fr; gap: 28px; }
+    .checklist { display: grid; gap: 0; border-top: 1px solid var(--line-strong); }
+    .check {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .check::before { content: ""; width: 17px; height: 17px; margin-top: 4px; border: 1px solid var(--line-strong); background: var(--sheet); }
+    .check strong { display: block; color: var(--ink-2); font-size: 13px; }
+    .check span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+    .role-table { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line-strong); }
+    .role { min-height: 230px; padding: 20px; border-right: 1px solid var(--line); background: var(--sheet); }
+    .role:last-child { border-right: 0; }
+    .role .label { display: block; margin-bottom: 22px; color: var(--accent-ink); font: 800 10px/1.3 var(--font-mono); letter-spacing: .07em; text-transform: uppercase; }
+    .role h3 { margin-bottom: 9px; font-size: 17px; }
+    .role ul { margin: 0; padding-left: 1.15em; color: var(--muted); font-size: 12.5px; }
+
+    .decision-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 0 26px; margin-top: 28px; }
+    .decision-rule { display: grid; grid-template-columns: 36px 1fr; gap: 12px; padding: 16px 0; border-top: 1px solid var(--line); }
+    .decision-rule b { color: var(--transport); font: 800 11px/1.5 var(--font-mono); }
+    .decision-rule strong { display: block; color: var(--ink-2); font-size: 13px; }
+    .decision-rule span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+
+    .priority-list { display: grid; gap: 12px; }
+    .priority {
+      display: grid;
+      grid-template-columns: 78px minmax(0, 1fr) minmax(210px, .7fr);
+      gap: 18px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      background: var(--sheet);
+    }
+    .priority .rank { color: var(--transport); font: 800 11px/1.4 var(--font-mono); }
+    .priority h3 { margin-bottom: 5px; font-size: 16px; }
+    .priority p, .priority .done { color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+    .priority .done strong { color: var(--ink-2); }
+
+    .risk-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    .table-wrap { overflow-x: auto; border-block: 1px solid var(--line-strong); }
+    .risk-table th, .risk-table td { min-width: 130px; padding: 13px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .risk-table th { color: var(--muted); font: 800 10px/1.35 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+    .risk-table td { color: var(--ink-2); }
+    .risk-table td:first-child { min-width: 180px; color: var(--ink); font-weight: 700; }
+
+    details { border-top: 1px solid var(--line); }
+    details:last-child { border-bottom: 1px solid var(--line); }
+    summary {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 58px;
+      color: var(--ink-2);
+      font-weight: 720;
+      cursor: pointer;
+    }
+    summary::after { content: "+"; color: var(--accent-ink); font: 800 17px/1 var(--font-mono); }
+    details[open] summary::after { content: "−"; }
+    .details-body { padding: 0 0 20px; color: var(--muted); font-size: 13px; }
+    .details-body ul { margin: 0; padding-left: 1.25em; }
+
+    .glossary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 24px; }
+    .term { display: grid; grid-template-columns: 152px 1fr; gap: 14px; padding: 14px 0; border-top: 1px solid var(--line); }
+    .term dt { color: var(--ink); font-size: 12.5px; font-weight: 760; }
+    .term dd { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .source-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 24px; margin-top: 22px; }
+    .source-list a { display: block; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; text-decoration: none; }
+    .source-list small { display: block; color: var(--faint); font-family: var(--font-mono); font-weight: 500; }
+
+    .final-note {
+      margin-top: 62px;
+      padding: 32px;
+      border: 1px solid var(--line-strong);
+      background: var(--accent-soft);
+    }
+    .final-note p { max-width: 760px; color: var(--ink-2); font-size: 17px; }
+    .final-note strong { color: var(--accent-ink); }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      padding-top: 30px;
+      border-top: 1px solid var(--line);
+      color: var(--faint);
+      font: 650 10.5px/1.6 var(--font-mono);
+    }
+
+    @media (max-width: 980px) {
+      .page { width: min(820px, calc(100% - 32px)); }
+      .layout { grid-template-columns: 1fr; }
+      .side-nav { display: none; }
+      .mobile-nav { display: flex; }
+      .section-head { grid-template-columns: 1fr; }
+      .section-index { display: none; }
+      .arch-stage.collab, .arch-stage.runtime { grid-template-columns: 1fr; }
+      .connector { min-height: 26px; transform: rotate(90deg); }
+      .boundary { grid-template-columns: 1fr; }
+      .arch-caption { grid-template-columns: 1fr; }
+      .arch-panel { min-height: 0; }
+      .model-grid, .setup-grid { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .metric:nth-child(2) { border-right: 0; }
+      .metric:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .workflow { grid-template-columns: repeat(2, 1fr); }
+      .role-table { grid-template-columns: 1fr; }
+      .role { min-height: 0; border-right: 0; border-bottom: 1px solid var(--line); }
+      .role:last-child { border-bottom: 0; }
+      .priority { grid-template-columns: 70px 1fr; }
+      .priority .done { grid-column: 2; }
+    }
+
+    @media (max-width: 700px) {
+      :root { --tap: 44px; }
+      html { scroll-padding-top: 112px; }
+      body { font-size: 15px; line-height: 1.67; }
+      .topbar { padding-inline: 12px; }
+      .brand span { display: none; }
+      .icon-button { padding-inline: 10px; }
+      #printButton { display: none; }
+      .mobile-nav { top: 61px; }
+      .page { width: min(100% - 24px, 620px); padding-top: 24px; }
+      .hero { padding-bottom: 58px; }
+      h1 { font-size: clamp(41px, 13vw, 62px); }
+      .lead { font-size: 18px; }
+      .hero-score { min-height: 315px; margin-top: 30px; }
+      .score-grid { height: 265px; }
+      .score-loop { grid-template-columns: 1fr; inset-inline: 9px; padding: 9px; }
+      .score-loop .arrow { transform: rotate(90deg); }
+      .hero-bottom, .grid-2, .grid-3, .capability-map { grid-template-columns: 1fr; }
+      .section { padding: 58px 0; }
+      .not-this { grid-template-columns: 1fr; padding: 18px; }
+      .requirement { grid-template-columns: 66px 1fr; gap: 12px; }
+      .req-proof { grid-column: 2; }
+      .timeline-item { grid-template-columns: 1fr; gap: 3px; }
+      .architecture { padding: 14px; }
+      .tabbar { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+      .tabbar button { flex: none; }
+      .arch-stage.audio { grid-template-columns: 1fr; overflow: visible; }
+      .arch-stage.audio .connector { transform: rotate(90deg); }
+      .fact-row { grid-template-columns: 108px 1fr; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .metric { padding: 18px 10px; }
+      .capability { grid-template-columns: 88px 1fr; }
+      .workflow { grid-template-columns: 1fr; }
+      .workflow article { min-height: 0; }
+      .role-table { display: grid; }
+      .decision-rules { grid-template-columns: 1fr; }
+      .priority { grid-template-columns: 1fr; }
+      .priority .done { grid-column: auto; }
+      .glossary, .source-list { grid-template-columns: 1fr; }
+      .term { grid-template-columns: 118px 1fr; }
+      .final-note { padding: 22px; }
+      .footer { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
+    }
+
+    @media print {
+      :root, :root[data-theme="dark"], :root[data-theme="light"] {
+        --paper: #fff;
+        --sheet: #fff;
+        --ink: #111;
+        --ink-2: #333;
+        --muted: #555;
+        --faint: #777;
+        --line: #bbb;
+        --line-strong: #777;
+        --panel: #f4f4f4;
+        --panel-2: #eaeaea;
+        --accent: #204b9b;
+        --accent-ink: #173a78;
+        --accent-soft: #e9effa;
+        --transport: #a73525;
+        --transport-soft: #f7e5e1;
+        --good: #1b654e;
+        --good-soft: #e7f2ee;
+        --warn: #7a4b0e;
+        --warn-soft: #f5ead8;
+        --bad: #8a2d3b;
+        --bad-soft: #f4e2e5;
+        --shadow: none;
+      }
+      @page { size: A4; margin: 15mm; }
+      body { background: #fff; font-size: 10pt; }
+      .progress, .topbar, .mobile-nav, .side-nav, .filterbar, .tabbar, .copy-button { display: none !important; }
+      .page { width: 100%; padding: 0; }
+      .layout { display: block; }
+      .hero { padding-top: 0; }
+      .hero-score, .architecture { box-shadow: none; break-inside: avoid; }
+      .section { padding: 11mm 0; }
+      .arch-panel[hidden], .requirement[hidden] { display: block !important; }
+      .arch-panel { min-height: 0; margin-top: 8mm; break-inside: avoid; }
+      .arch-stage.collab, .arch-stage.runtime { grid-template-columns: 1fr 24px 1.15fr 24px 1fr; }
+      .connector { transform: none; }
+      .arch-stage.audio { grid-template-columns: repeat(7, 1fr); overflow: visible; }
+      .node { min-height: 90px; padding: 9px; }
+      .score-loop { backdrop-filter: none; }
+      .requirement, .priority, .callout, .role, .workflow article, details { break-inside: avoid; }
+      details > .details-body { display: block !important; }
+      details:not([open]) > .details-body { display: block !important; }
+      a { color: inherit; text-decoration: none; }
+      .footer { margin-top: 8mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="문서 맨 위로">
+      <span class="transport-dot" aria-hidden="true"></span>
+      <strong>aria</strong>
+      <span>co-development score / 2026.08.12</span>
+    </a>
+    <div class="top-actions">
+      <button class="icon-button" id="themeButton" type="button" aria-pressed="false" title="밝은 화면과 어두운 화면 전환">어둡게</button>
+      <button class="icon-button" id="printButton" type="button" title="인쇄하거나 PDF로 저장">PDF / 인쇄</button>
+    </div>
+  </header>
+
+  <nav class="mobile-nav" aria-label="모바일 문서 목차">
+    <a href="#vision">방향</a>
+    <a href="#requirements">요구사항</a>
+    <a href="#architecture">구조</a>
+    <a href="#model">곡 모델</a>
+    <a href="#workflow">작업 흐름</a>
+    <a href="#setup">설치</a>
+    <a href="#collaboration">협업</a>
+    <a href="#priorities">우선순위</a>
+    <a href="#limits">한계</a>
+  </nav>
+
+  <div class="page" id="top">
+    <div class="layout">
+      <aside class="side-nav" aria-label="문서 목차">
+        <p class="nav-kicker">Session index</p>
+        <a href="#vision">제품 방향</a>
+        <a href="#requirements">요구사항 지도</a>
+        <a href="#architecture">아키텍처</a>
+        <a href="#model">곡 데이터 모델</a>
+        <a href="#workflow">기능과 작업 흐름</a>
+        <a href="#setup">설치와 실행</a>
+        <a href="#collaboration">공동개발 방식</a>
+        <a href="#priorities">첫 기여와 우선순위</a>
+        <a href="#limits">한계와 리스크</a>
+        <a href="#references">용어와 근거</a>
+        <div class="side-note">
+          <strong>문서 기준</strong>
+          2026-08-12 공개 코드 스냅숏, 저장소 구현, 기존 대화에서 확인된 요구사항을 대조했다. 설치 프리셋 수는 컴퓨터마다 달라진다.
+        </div>
+      </aside>
+
+      <main>
+        <section class="hero" aria-labelledby="hero-title">
+          <div class="hero-meta">
+            <span class="chip good">테스트 199개 통과</span>
+            <span class="chip good">MCP 도구 45개</span>
+            <span class="chip warn">기능 알파 / 협업 준비 중</span>
+            <span class="chip good">공개 스냅숏 a40d92a</span>
+          </div>
+          <span class="eyebrow">음악가 · 개발자 공동개발 온보딩</span>
+          <h1 id="hero-title">느낌으로 지휘하고,<br>데이터로 고친다.</h1>
+          <p class="lead">Aria는 텍스트를 한 번에 오디오로 뽑는 생성기가 아니다. AI와 사람이 같은 편집 가능한 악보를 보고, 실제 샘플 음원으로 듣고, 마음에 들 때까지 좁은 범위를 함께 고치는 로컬 작곡 환경이다.</p>
+
+          <div class="hero-score" aria-label="Aria의 협업 루프를 피아노롤로 표현한 그림">
+            <div class="score-toolbar">
+              <span class="play">LOOP · 9–16 BAR</span>
+              <span>96 BPM · 4/4 · SHARED SONG STATE</span>
+            </div>
+            <div class="score-grid" aria-hidden="true">
+              <span class="bar-number" style="left:2%">09</span>
+              <span class="bar-number" style="left:14.5%">10</span>
+              <span class="bar-number" style="left:27%">11</span>
+              <span class="bar-number" style="left:39.5%">12</span>
+              <span class="bar-number" style="left:52%">13</span>
+              <span class="bar-number" style="left:64.5%">14</span>
+              <span class="bar-number" style="left:77%">15</span>
+              <span class="bar-number" style="left:89.5%">16</span>
+              <span class="note" style="left:2%;top:42px;width:12%"></span>
+              <span class="note" style="left:15%;top:56px;width:8%"></span>
+              <span class="note" style="left:26%;top:42px;width:10%"></span>
+              <span class="note orange" style="left:39%;top:70px;width:16%"></span>
+              <span class="note" style="left:57%;top:42px;width:7%"></span>
+              <span class="note" style="left:65%;top:55px;width:10%"></span>
+              <span class="note orange" style="left:77%;top:35px;width:20%"></span>
+              <span class="note" style="left:3%;top:103px;width:19%"></span>
+              <span class="note" style="left:25%;top:117px;width:7%"></span>
+              <span class="note orange" style="left:34%;top:103px;width:18%"></span>
+              <span class="note" style="left:54%;top:117px;width:7%"></span>
+              <span class="note" style="left:63%;top:103px;width:14%"></span>
+              <span class="note orange" style="left:79%;top:89px;width:18%"></span>
+              <span class="playhead"></span>
+            </div>
+            <div class="score-loop">
+              <span>사람<br><b>“후렴이 덜 벅차”</b></span>
+              <span class="arrow">→</span>
+              <span>AI<br><b>MCP 편집</b></span>
+              <span class="arrow">→</span>
+              <span>정본<br><b>Song JSON</b></span>
+              <span class="arrow">→</span>
+              <span>앱<br><b>샘플 렌더 · 재생</b></span>
+            </div>
+          </div>
+
+          <div class="hero-bottom" aria-label="추천 읽기 순서">
+            <div class="read-path"><strong>5분만 있다면</strong><span>제품 방향 → 코드 스냅숏 → 첫 기여 과제만 읽는다.</span></div>
+            <div class="read-path"><strong>코드를 시작한다면</strong><span>아키텍처 → 곡 모델 → 설치 → 확장 체크리스트를 읽는다.</span></div>
+            <div class="read-path"><strong>음악을 맡는다면</strong><span>요구사항 → 오디션 루프 → 음악 품질 기준을 먼저 합의한다.</span></div>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="snapshot-title">
+          <div class="callout">
+            <div>
+              <h3 id="snapshot-title">협업 기준 코드 스냅숏을 고정했다.</h3>
+              <p><a href="https://github.com/chenjingdev/aria/tree/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef"><code>chenjingdev/aria@a40d92a</code></a>에 현재 구현과 필수 파일 <code>src/sfizz-channels.js</code>를 함께 공개했다. 이 스냅숏에서 199개 검사가 통과한다. 두 사람은 같은 SHA를 checkout해 시작하면 된다. 다만 Aria 자체 코드의 <code>LICENSE</code>는 아직 정해지지 않았으므로 재배포·상용화 전에 소유권과 사용 조건을 합의해야 한다.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="vision" aria-labelledby="vision-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Product direction</span>
+              <h2 id="vision-title">첸징이 만들려는 것은<br>“AI용 DAW”가 아니다.</h2>
+              <p class="section-intro measure">목표는 복잡한 DAW를 작은 화면으로 베끼는 것이 아니라, 전문 조작은 AI에 맡기고 사람이 귀로 판단할 수 있는 부분은 직접 만질 수 있게 만드는 것이다.</p>
+            </div>
+            <span class="section-index">01 / 09</span>
+          </div>
+
+          <div class="grid-3">
+            <article class="principle">
+              <span class="marker">P–01</span>
+              <h3>AI가 실제 도구를 쓴다</h3>
+              <p>“○○ 느낌의 곡을 만들어줘”라고 말하면 Claude Code나 Codex 같은 에이전트가 MIDI 파일만 던지는 대신 Aria의 도구로 곡을 만들고, 재생하고, 다시 고친다.</p>
+              <span class="proof">2026-08-03 직접 요구 · 현재 MCP 구현</span>
+            </article>
+            <article class="principle">
+              <span class="marker">P–02</span>
+              <h3>사람은 취향의 편집자다</h3>
+              <p>사람은 수동적인 프롬프트 작성자가 아니다. 피아노롤에서 노트와 구간을 보고, 트랙을 끄고 켜고, 특정 마디에 피드백을 남기며 결과를 고른다.</p>
+              <span class="proof">2026-08-04 구간 피드 요구 · GUI/MCP 공유 상태</span>
+            </article>
+            <article class="principle">
+              <span class="marker">P–03</span>
+              <h3>느낄 수 있는 것은 직접</h3>
+              <p>“이 악기가 너무 크다”, “박자가 미묘하게 튄다”, “후렴이 약하다”처럼 비전문가도 귀로 판단할 수 있는 문제는 시각화와 간단한 조절로 노출한다.</p>
+              <span class="proof">2026-08-05·06 명시적 UX 방향</span>
+            </article>
+            <article class="principle">
+              <span class="marker">P–04</span>
+              <h3>전문 용어를 숨기지 않는다</h3>
+              <p>Articulation, Velocity, Reverb 같은 원래 용어를 먼저 보여 주되 “연주법”, “음의 세기”, “공간 잔향”처럼 감각적인 설명과 실제 소리의 차이를 곁들인다.</p>
+              <span class="proof">2026-08-08 승인 · 현재 UI/문서 적용</span>
+            </article>
+            <article class="principle">
+              <span class="marker">P–05</span>
+              <h3>악보가 정본이다</h3>
+              <p>원본은 파형이 아니라 마디·박·음높이·길이·세기가 담긴 구조화된 곡이다. 그래서 한 음만 고치고, 음원을 교체해 다시 렌더하고, 같은 입력을 비교 검증할 수 있다.</p>
+              <span class="proof">2026-08-03 확인 · Song JSON 모델</span>
+            </article>
+            <article class="principle">
+              <span class="marker">P–06</span>
+              <h3>소리를 그럴듯하게 속이지 않는다</h3>
+              <p>없는 악기·샘플·주법을 비슷한 소리나 무음으로 몰래 대체하지 않는다. 실제 transition 녹음이 없으면 “true legato”라고 부르지 않고 한계를 드러낸다.</p>
+              <span class="proof">현재 엔진 계약 · 회귀 테스트로 강제</span>
+            </article>
+          </div>
+
+          <div class="not-this">
+            <h3>Aria가 아닌 것</h3>
+            <ul>
+              <li>Suno류의 text-to-audio 생성기</li>
+              <li>전문 DAW의 모든 버튼을 그대로 옮긴 축소판</li>
+              <li>자체 채팅창과 특정 모델을 내장한 AI 음악 앱</li>
+              <li>음원 샘플을 서버나 Git에서 재배포하는 서비스</li>
+              <li>숫자 지표만 보고 “음악적으로 좋다”고 판정하는 자동 채점기</li>
+            </ul>
+          </div>
+
+          <div class="timeline" aria-label="제품 방향이 만들어진 대화 기록 타임라인">
+            <div class="timeline-item"><time>08.03</time><p>“AI가 제어하기 좋은 작곡앱”, “바이브 코딩하듯 느낌으로 말하면 알아서 도구로 작곡”이라는 최초 목표를 명시했다.</p></div>
+            <div class="timeline-item"><time>08.04</time><p>곡의 구간을 선택해 피드백을 남기면 AI가 그 범위를 읽고 수정하는 사람–AI 협업 루프를 요구했다.</p></div>
+            <div class="timeline-item"><time>08.05</time><p>비음악인도 감각적으로 판단할 수 있는 영역은 UI/UX로 제어해야 한다고 정리하고, 선택 구간 후보 여러 개 중 고르는 흐름을 논의했다.</p></div>
+            <div class="timeline-item"><time>08.06</time><p>상용 DAW의 이해하기 어려운 전문 버튼은 줄이고, 전문 작업은 AI가 하되 음량·타이밍·질감 같은 감각 문제는 사람이 다루는 방향을 확정했다.</p></div>
+            <div class="timeline-item"><time>08.08–09</time><p>내장 신스를 제거하고 실제 SF2/SFZ 샘플 엔진으로 통합했다. 레가토·주법·음질을 효과 이름이 아니라 실제 녹음과 엔진 동작으로 구분하기 시작했다.</p></div>
+            <div class="timeline-item"><time>08.12</time><p>음악가이자 개발자인 공동개발자와 제품·음악 품질을 함께 발전시키는 단계로 이동한다.</p></div>
+          </div>
+        </section>
+
+        <section class="section" id="requirements" aria-labelledby="requirements-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Requirements map</span>
+              <h2 id="requirements-title">결정된 것과<br>아직 고를 것을 나눈다.</h2>
+              <p class="section-intro measure">“현재 구현”은 이미 제품 동작으로 존재하고, “부분 구현”은 방향은 확정됐지만 경험이 덜 완성됐으며, “다음 실험”은 함께 검증할 가설이다.</p>
+            </div>
+            <span class="section-index">02 / 09</span>
+          </div>
+
+          <div class="filterbar" role="group" aria-label="요구사항 상태 필터">
+            <button type="button" data-filter="all" aria-pressed="true">전체</button>
+            <button type="button" data-filter="current" aria-pressed="false">현재·부분 구현</button>
+            <button type="button" data-filter="next" aria-pressed="false">다음 실험</button>
+          </div>
+
+          <div class="requirement-list">
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–01</span><span class="status current">현재 구현</span></div>
+              <div><div class="req-title">자연어 요청이 실제 곡 편집으로 이어져야 한다.</div><p class="req-desc">LLM이 45개 MCP 도구로 곡·트랙·노트·구조·표현·저장·재생을 다룬다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 새 곡을 만들고 구간을 재생한 뒤 피드백에 맞춰 같은 곡을 수정할 수 있다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–02</span><span class="status current">현재 구현</span></div>
+              <div><div class="req-title">GUI와 AI가 같은 곡 상태를 편집해야 한다.</div><p class="req-desc">별도 복사본이 아니라 하나의 <code>state.song</code>과 같은 <code>runOp()</code> 계층을 공유한다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> GUI 변경이 SSE로 반영되고, MCP가 즉시 같은 상태를 읽으며, Undo/자동저장 규칙이 동일하다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–03</span><span class="status partial">부분 구현</span></div>
+              <div><div class="req-title">비음악인이 느낄 수 있는 문제를 직접 다루게 한다.</div><p class="req-desc">mute/solo, 트랙 볼륨·팬, velocity, 구간 gain, EQ, reverb, 피아노롤 편집은 있다. 튀는 음량·타이밍을 한눈에 진단하는 시각화는 더 발전시켜야 한다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 사용자가 전문 메뉴를 탐색하지 않고 문제 트랙·구간을 찾고 작은 수정 또는 AI 요청을 할 수 있다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–04</span><span class="status current">현재 구현</span></div>
+              <div><div class="req-title">구간 피드백이 AI 작업 큐가 되어야 한다.</div><p class="req-desc">GUI에서 선택 범위와 트랙에 메모를 남기고, AI가 <code>list_feedback</code>로 읽어 수정한 뒤 <code>resolve_feedback</code>로 닫는다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 피드백의 마디 범위가 구조 편집에도 따라 움직이고, 실제 수정 전 임의로 완료되지 않는다.</p>
+            </article>
+            <article class="requirement" data-status="next">
+              <div><span class="req-id">REQ–05</span><span class="status next">다음 실험</span></div>
+              <div><div class="req-title">선택 구간의 후보를 여러 개 만들고 귀로 고르게 한다.</div><p class="req-desc">현재는 곡 전체 A/B 슬롯만 있다. 목표는 구간을 선택해 서로 다른 축의 후보 3–5개를 만들고, 주변 트랙과 함께 끊김 없이 비교한 뒤 한 안을 적용하는 것이다.</p></div>
+              <p class="req-proof"><strong>검증할 것:</strong> 후보가 실제로 서로 다르고, 문맥 속 비교가 빠르며, 적용 전 원곡이 바뀌지 않는가.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–06</span><span class="status current">현재 구현</span></div>
+              <div><div class="req-title">장난감 같은 대체음보다 실제 샘플의 표현을 보존한다.</div><p class="req-desc">SF2는 SpessaSynth, SFZ는 sfizz가 스테레오·벨로시티 층·라운드로빈·키스위치/CC·드럼 초크를 처리한다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 요청한 bank/program/key/velocity/articulation이 없으면 원인을 표시하고 곡 상태를 바꾸지 않는다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–07</span><span class="status partial">부분 구현</span></div>
+              <div><div class="req-title">음악 용어와 감각 언어를 함께 제공한다.</div><p class="req-desc">프리셋·주법·믹스 파라미터에는 양쪽 설명이 들어가 있다. 모든 새 기능에서 이 규칙을 일관되게 지키는 디자인 검수가 필요하다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 정확한 용어, 쉬운 설명, 가능한 경우 A/B 또는 미리듣기가 한 세트다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–08</span><span class="status current">현재 구현</span></div>
+              <div><div class="req-title">편집은 되돌릴 수 있고 실패는 원자적이어야 한다.</div><p class="req-desc">최대 30단계 Undo/Redo, 자동저장, 곡 라이브러리, SFZ 샘플 대응·bend 채널 사전검사를 갖는다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 실패한 편집이 곡·Undo·자동저장·GUI 중 일부만 바꾸지 않는다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–09</span><span class="status partial">부분 구현</span></div>
+              <div><div class="req-title">결과는 Aria JSON·WAV·MIDI·스템으로 이동할 수 있어야 한다.</div><p class="req-desc">정확한 현재 소리는 WAV가 보존한다. MIDI는 편집 호환을 위한 근사 형식이므로 주법·bend·믹스 손실을 명시하고 위험한 경우 내보내기를 차단한다.</p></div>
+              <p class="req-proof"><strong>남은 일:</strong> <code>volume &gt; 1</code>에서 잘못된 MIDI CC7 값이 생기는 버그를 수정하고 round-trip 정책을 더 분명히 한다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–10</span><span class="status partial">부분 구현</span></div>
+              <div><div class="req-title">음원 출처와 라이선스를 제품 기능으로 취급한다.</div><p class="req-desc">팩 manifest, checksum, 출처, 라이선스, 설치 상태가 있다. 그러나 기본 SoundFont의 클린 설치 절차와 Aria 자체 코드 라이선스는 아직 없다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 새 개발자가 비공개 파일 복사 없이 합법적인 출처와 검증된 절차로 동일한 상태에 도달한다.</p>
+            </article>
+            <article class="requirement" data-status="current">
+              <div><span class="req-id">REQ–11</span><span class="status current">현재 구현</span></div>
+              <div><div class="req-title">작곡 지식은 앱 엔진이 아니라 AI 스킬에서 진화시킨다.</div><p class="req-desc"><code>aria-compose</code>가 감정·형식·리듬·화성·편곡·믹스·장르·수정 절차를 가르친다. 앱은 실행·검증·렌더를 담당한다.</p></div>
+              <p class="req-proof"><strong>완료 기준:</strong> 음악 규칙이 DSP 코드에 흩어지지 않고, 도구 표면과 스킬 문서가 감사 스크립트로 일치한다.</p>
+            </article>
+            <article class="requirement" data-status="next">
+              <div><span class="req-id">REQ–12</span><span class="status next">다음 실험</span></div>
+              <div><div class="req-title">음악가의 귀를 재현 가능한 품질 기준으로 바꾼다.</div><p class="req-desc">8–16마디 기준곡에서 편성, 주법 전환, groove, climax, tail, 음원별 차이를 같은 범위로 A/B하고 기록한다.</p></div>
+              <p class="req-proof"><strong>검증할 것:</strong> 주관적인 피드백이 코드 회귀 테스트와 충돌하지 않으면서 반복 가능한 acceptance criteria가 되는가.</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="architecture" aria-labelledby="architecture-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Architecture</span>
+              <h2 id="architecture-title">한 곡, 한 상태,<br>두 명의 편집자.</h2>
+              <p class="section-intro measure">Aria의 핵심 구조는 단순하다. 브라우저와 LLM은 서로 다른 곡을 만들지 않는다. 같은 본체 프로세스의 같은 곡을 같은 연산 계층으로 고친다.</p>
+            </div>
+            <span class="section-index">03 / 09</span>
+          </div>
+
+          <div class="tabbar" role="tablist" aria-label="아키텍처 보기 선택">
+            <button id="tab-collab" type="button" role="tab" aria-selected="true" aria-controls="panel-collab">협업 루프</button>
+            <button id="tab-runtime" type="button" role="tab" aria-selected="false" aria-controls="panel-runtime" tabindex="-1">런타임 구조</button>
+            <button id="tab-audio" type="button" role="tab" aria-selected="false" aria-controls="panel-audio" tabindex="-1">오디오 경로</button>
+          </div>
+
+          <div class="architecture">
+            <section class="arch-panel" id="panel-collab" role="tabpanel" aria-labelledby="tab-collab">
+              <h3>제품 관점: 취향과 실행이 하나의 악보에서 만난다</h3>
+              <p class="arch-note">사람은 “무엇이 어색한가”를 판단하고, AI는 작은 편집을 실행한다. 양쪽 모두 결과를 다시 같은 구간에서 확인한다.</p>
+              <div class="arch-stage collab">
+                <div class="node actor"><div><strong>사람 · 음악적 판단</strong><small>듣기, 선택, 구간 피드백, 직접 노트·볼륨·주법 편집</small></div><code>GUI / PIANO ROLL</code></div>
+                <div class="connector" aria-hidden="true">⇄</div>
+                <div class="node state"><div><strong>공유 Song JSON</strong><small>마디·박·트랙·노트·템포·주법·게인·피드백이 들어 있는 편집 가능한 정본</small></div><code>state.song + undo + autosave</code></div>
+                <div class="connector" aria-hidden="true">⇄</div>
+                <div class="node actor"><div><strong>AI · 음악적 실행</strong><small>자연어 브리프 해석, 도구 호출, 작은 수정, 구간 재생, 진단</small></div><code>MCP + ARIA-COMPOSE</code></div>
+                <div class="boundary"><span><strong>사람의 권한</strong><br>취향, 의도, 최종 선택</span><span><strong>앱의 권한</strong><br>검증, 상태, 정확한 렌더</span><span><strong>AI의 권한</strong><br>제안, 편집, 자기점검</span></div>
+              </div>
+              <div class="arch-caption"><div><strong>단일 정본</strong>파일을 주고받는 지연 없이 같은 상태를 본다.</div><div><strong>좁은 수정</strong>전체 곡 재생성보다 문제 구간·원인 한 층을 고친다.</div><div><strong>귀가 마지막</strong>peak·LUFS는 진단이지 음악성의 대체물이 아니다.</div></div>
+            </section>
+
+            <section class="arch-panel" id="panel-runtime" role="tabpanel" aria-labelledby="tab-runtime" hidden>
+              <h3>코드 관점: 본체 하나가 상태와 HTTP API를 소유한다</h3>
+              <p class="arch-note">MCP 브리지는 상태 없는 전달 계층이다. GUI와 브리지는 모두 <code>/api/rpc</code>를 통해 <code>core.runOp()</code>으로 들어간다.</p>
+              <div class="arch-stage runtime">
+                <div class="dual-lane">
+                  <div class="node actor"><div><strong>MCP client</strong><small>Claude Code, Codex 등</small></div><code>stdio</code></div>
+                  <div class="node actor"><div><strong>Browser GUI</strong><small>피아노롤과 직접 편집</small></div><code>public/index.html</code></div>
+                </div>
+                <div class="connector" aria-hidden="true">→</div>
+                <div class="dual-lane">
+                  <div class="node"><div><strong>Stateless bridge</strong><small>본체 탐색·자동 시작·Bearer token</small></div><code>src/mcp-bridge.js</code></div>
+                  <div class="node state"><div><strong>HTTP + Core</strong><small>RPC, SSE, 상태, Undo, 자동저장, 곡 라이브러리</small></div><code>web.js → core.js</code></div>
+                </div>
+                <div class="connector" aria-hidden="true">→</div>
+                <div class="dual-lane">
+                  <div class="node"><div><strong>Model & registry</strong><small>곡 검증·시간·프리셋·팩 상태</small></div><code>song.js / presets.js</code></div>
+                  <div class="node engine"><div><strong>Renderer</strong><small>샘플 계획·엔진 세션·믹스·마스터</small></div><code>sampler-renderer.js</code></div>
+                </div>
+                <div class="boundary"><span><strong>localhost only</strong><br>기본 127.0.0.1:7788</span><span><strong>실시간 동기화</strong><br>SSE로 곡·재생·로그 방송</span><span><strong>파일 저장</strong><br>~/.aria 및 ~/Music/aria</span></div>
+              </div>
+              <div class="arch-caption"><div><strong>새 op 추가</strong><code>ops</code>, <code>MUTATING</code>, MCP schema, GUI, 스킬 문서, 테스트를 함께 고친다.</div><div><strong>중복 로직 주의</strong>서버와 브라우저에 시간 계산이 일부 중복돼 양쪽을 같이 검증해야 한다.</div><div><strong>현재 병목</strong><code>core.js</code>와 4,405줄 단일 GUI 파일이 큰 충돌 지점이다.</div></div>
+            </section>
+
+            <section class="arch-panel" id="panel-audio" role="tabpanel" aria-labelledby="tab-audio" hidden>
+              <h3>소리 관점: 정확한 샘플에서 공통 마스터까지</h3>
+              <p class="arch-note">엔진은 악기를 고르거나 편곡하지 않는다. Aria가 지정한 asset과 주법을 정확히 열어 dry stereo PCM을 돌려준다.</p>
+              <div class="arch-stage audio">
+                <div class="node"><div><strong>Song notes</strong><small>on/off, velocity, bend, articulation, CC 계획</small></div><code>song.js</code></div>
+                <div class="connector" aria-hidden="true">→</div>
+                <div class="node engine"><div><strong>SF2 / DLS</strong><small>SpessaSynth Core 4.3.16</small></div><code>spessa-engine.js</code></div>
+                <div class="node engine"><div><strong>SFZ</strong><small>pinned sfizz sidecar</small></div><code>sfizz-engine.js</code></div>
+                <div class="connector" aria-hidden="true">→</div>
+                <div class="node"><div><strong>Track mix</strong><small>pan · gain · 3-band EQ · reverb send</small></div><code>sampler-renderer.js</code></div>
+                <div class="connector" aria-hidden="true">→</div>
+                <div class="node state"><div><strong>Master / output</strong><small>compressor · limiter · soft clip · LUFS → afplay / WAV / stems</small></div><code>master.js / player.js</code></div>
+              </div>
+              <div class="arch-caption"><div><strong>Strict no-fallback</strong>누락·손상은 실패로 보이고 다른 악기나 무음으로 넘기지 않는다.</div><div><strong>실제 표현</strong>스테레오, velocity layer, round robin, keyswitch/CC, choke를 보존한다.</div><div><strong>물리적 한계</strong>전이 샘플이 없는 음원에서 true legato를 새로 만들 수는 없다.</div></div>
+            </section>
+          </div>
+
+          <div class="source-list">
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/index.js">본체와 단일 인스턴스 <small>src/index.js</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/web.js">HTTP·SSE·RPC 경계 <small>src/web.js</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/core.js">상태와 모든 편집 연산 <small>src/core.js</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/sampler-renderer.js">공통 오디오 렌더 <small>src/sampler-renderer.js</small></a>
+          </div>
+        </section>
+
+        <section class="section" id="model" aria-labelledby="model-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Song model</span>
+              <h2 id="model-title">악보는 단순하고,<br>계약은 엄격하다.</h2>
+              <p class="section-intro measure">화성·프레이즈·에너지 곡선을 모두 객체화한 모델은 아니다. 현재 정본은 한 개의 Song JSON이고 음악적 역할 대부분은 노트·트랙 이름·섹션 레이블로 표현된다.</p>
+            </div>
+            <span class="section-index">04 / 09</span>
+          </div>
+
+          <div class="model-grid">
+            <div class="code-shell">
+              <div class="code-head"><span>개념적 Song JSON</span><button class="copy-button" type="button" data-copy-target="song-code">복사</button></div>
+              <pre id="song-code"><code>{
+  title, bpm, timeSig,
+  tempoMap: [{ bar, bpm, ramp? }],
+  sections: [{ bar, label }],
+  tracks: [{
+    name, seed, preset,
+    volume, pan, mute?, solo?,
+    articulation?,
+    articulationRegions?: [
+      { from, to, articulation }
+    ],
+    velRange?, reverb?,
+    eqLow?, eqMid?, eqHigh?,
+    gains?: [{ from, to, db, to_db? }],
+    notes: [{
+      bar, beat, pitch, dur, vel, bend?
+    }]
+  }],
+  feedback: [{
+    id, from_bar, to_bar,
+    track?, text, done, ts
+  }]
+}</code></pre>
+            </div>
+
+            <dl class="fact-list">
+              <div class="fact-row"><dt>좌표</dt><dd><code>bar</code>는 1부터, 마디 안 <code>beat</code>는 0부터 시작한다.</dd></div>
+              <div class="fact-row"><dt>시간 단위</dt><dd><code>beat</code>와 <code>dur</code>는 4분음표 단위다. 16분음표는 0.25, 8분음표는 0.5다.</dd></div>
+              <div class="fact-row"><dt>화음</dt><dd>같은 bar/beat에 여러 pitch를 놓는다. 별도 Chord 객체는 없다.</dd></div>
+              <div class="fact-row"><dt>드럼·클립</dt><dd>숫자 키가 아니라 프리셋이 제공한 <code>kick</code>, <code>snare</code>, <code>play</code> 같은 피스 ID를 쓴다.</dd></div>
+              <div class="fact-row"><dt>섹션</dt><dd><code>{bar,label}</code> 이름표다. 섹션 역할·끝·에너지 곡선은 아직 일급 필드가 아니다.</dd></div>
+              <div class="fact-row"><dt>곡 길이</dt><dd>마지막 노트/클립에서 계산하며 최소 8마디다. silence ending용 별도 필드는 없다.</dd></div>
+              <div class="fact-row"><dt>안전</dt><dd>편집 전 검증, 성공 시에만 Undo·자동저장·SSE를 갱신한다.</dd></div>
+              <div class="fact-row"><dt>Schema</dt><dd>명시적 schemaVersion은 없다. 기존 곡 호환은 <code>validateSong()</code>의 기본값·정규화에 의존한다.</dd></div>
+            </dl>
+          </div>
+
+          <div class="callout warn" style="margin-top:30px">
+            <div>
+              <h3>음악 언어와 저장 모델을 혼동하지 않는다.</h3>
+              <p><code>focal</code>, <code>pulse</code>, <code>build</code>, <code>arrive</code>, 코드 심벌, motif, phrase, track role은 <code>aria-compose</code>가 사고하는 언어지만 현재 JSON 필드는 아니다. 이 개념들을 모델에 올릴 때는 AI가 더 잘 작곡하는지, 사람이 더 쉽게 편집하는지부터 검증해야 한다.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="workflow" aria-labelledby="workflow-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Capabilities & workflow</span>
+              <h2 id="workflow-title">기능은 많지만,<br>루프는 짧아야 한다.</h2>
+              <p class="section-intro measure">현재 도구 표면은 넓다. 제품 경험의 품질은 기능 개수보다 “같은 구간을 듣고 → 한 문제를 정의하고 → 가장 작은 원인을 고치고 → 다시 듣는” 속도에서 결정된다.</p>
+            </div>
+            <span class="section-index">05 / 09</span>
+          </div>
+
+          <div class="metrics" aria-label="현재 프로젝트 수치">
+            <div class="metric"><strong>45</strong><span>LLM에 공개된 MCP 도구</span></div>
+            <div class="metric"><strong>2</strong><span>활성 샘플 엔진 · SF2와 SFZ</span></div>
+            <div class="metric"><strong>199</strong><span>공개 코드 스냅숏에서 통과한 검사</span></div>
+            <div class="metric"><strong>2,114</strong><span>이 개발 Mac에서 사용 가능한 프리셋 · 새 컴퓨터 보장 아님</span></div>
+          </div>
+
+          <div class="capability-map">
+            <article class="capability"><span class="tool-count">SONG / STATE</span><div><strong>곡·저장·복구</strong><p>새 곡, 전체 JSON 교체, 곡 라이브러리, 30단계 Undo/Redo, A/B 슬롯, 자동저장.</p></div></article>
+            <article class="capability"><span class="tool-count">NOTES / FORM</span><div><strong>노트와 구조</strong><p>추가·삭제·이동·길이·분할, 마디 삽입·삭제·복제, 섹션 이름표, MIDI 가져오기.</p></div></article>
+            <article class="capability"><span class="tool-count">EXPRESSION</span><div><strong>표현과 그루브</strong><p>Velocity, pitch bend, 구간 gain/ramp, 실제 articulation, humanize, swing, quantize.</p></div></article>
+            <article class="capability"><span class="tool-count">LISTEN / EXPORT</span><div><strong>오디션과 이동</strong><p>구간 재생·루프, 레벨 진단, WAV/MIDI/스템 내보내기, GUI 즉시 믹스.</p></div></article>
+            <article class="capability"><span class="tool-count">ASSETS</span><div><strong>음원과 출처</strong><p>프리셋 검색, 팩 설치 상태, checksum, 정확한 bank/program/sample/articulation 대응.</p></div></article>
+            <article class="capability"><span class="tool-count">HUMAN ↔ AI</span><div><strong>피드백 큐</strong><p>사람이 선택 범위에 메모를 남기고 AI가 실제 수정 후 완료하는 협업 계약.</p></div></article>
+          </div>
+
+          <h3 style="margin:40px 0 16px">권장 공동 작곡 루프</h3>
+          <div class="workflow">
+            <article><h3>현재 상태 보호</h3><p><code>get_song</code> → 열린 피드백 확인 → 의미 있는 고유 이름으로 저장한다.</p></article>
+            <article><h3>브리프를 6축으로</h3><p>장르 어휘, 감정, 움직임, 질감, 서사 곡선, 필수·금지 조건으로 번역한다.</p></article>
+            <article><h3>4–8마디 증명</h3><p>pulse, bass/harmonic floor, 한 가지 정체성, focal gesture로 작은 구간부터 듣는다.</p></article>
+            <article><h3>구조 확장</h3><p>섹션을 붙이고 반복을 복제한 뒤 밀도·음역·편성·리듬 중 필요한 축만 변형한다.</p></article>
+            <article><h3>표현 정리</h3><p>velocity → volume → region gain → register/density → 실제 주법 → 작은 EQ 순으로 본다.</p></article>
+            <article><h3>같은 범위 A/B</h3><p>한 번에 원인 한 층만 바꾸고 전환 전 1–2마디 lead-in을 포함해 비교한다.</p></article>
+            <article><h3>피드백 닫기</h3><p>수정·오디션이 끝난 항목만 완료 처리하고 최종 고유 이름으로 저장한다.</p></article>
+            <article><h3>의도에 맞게 내보내기</h3><p>현재 소리를 보존하면 WAV, DAW 편집 근사면 MIDI, 재믹스면 stems를 고른다.</p></article>
+          </div>
+
+          <div style="margin-top:30px">
+            <details>
+              <summary>WAV·MIDI·스템은 무엇이 다른가?</summary>
+              <div class="details-body"><ul><li><strong>Aria Song JSON</strong>: 편집 가능성을 가장 완전하게 보존한다.</li><li><strong>WAV</strong>: 선택한 샘플, 주법, pan, EQ, reverb, gain, master sound를 보존한다.</li><li><strong>MIDI</strong>: pitch·onset·duration·velocity·tempo 중심의 교환 형식이다. 정확한 샘플 주법과 믹스는 손실되며 위험한 articulation은 내보내기를 차단한다.</li><li><strong>Stems</strong>: DAW 재믹싱용 트랙 WAV다. 완성 마스터와 동일하지 않으며 현재도 완전한 raw dry stem은 아니다.</li></ul></div>
+            </details>
+            <details>
+              <summary>Recorded Clip은 왜 일반 노트처럼 자르지 못하나?</summary>
+              <div class="details-body">Recorded Clip은 음계 악기가 아니라 원래 연주 전체를 한 번 재생하는 고정 길이 녹음이다. 현재 trim, source offset, time-stretch가 없으므로 중간 재생·분할·길이 변경을 허용하면 소리가 조용히 틀어질 수 있어 명시적으로 거부한다.</div>
+            </details>
+            <details>
+              <summary>“후렴이 약하다”를 어떻게 고치나?</summary>
+              <div class="details-body">전 트랙 볼륨을 일괄 상승시키기 전에 focal register, bass/backbeat 도착, lead-in, 밀도 대비, 주법을 본다. 한 원인 층을 바꾼 뒤 같은 범위를 다시 듣는다. 음악가 공동개발자가 이 진단 순서를 장르별 기준곡으로 구체화하면 큰 가치가 생긴다.</div>
+            </details>
+          </div>
+        </section>
+
+        <section class="section" id="setup" aria-labelledby="setup-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Developer onboarding</span>
+              <h2 id="setup-title">앱 설치와 음원 설치는<br>서로 다른 일이다.</h2>
+              <p class="section-intro measure">현재 개발 Mac에서는 모두 동작하지만, 새 컴퓨터의 재현 절차는 아직 완성되지 않았다. 아래는 지금 가능한 안전한 시작 방법과 반드시 보완할 공백이다.</p>
+            </div>
+            <span class="section-index">06 / 09</span>
+          </div>
+
+          <div class="setup-grid">
+            <div>
+              <h3>필요한 환경</h3>
+              <div class="checklist" style="margin-top:14px">
+                <div class="check"><div><strong>macOS · 현재 완전 지원</strong><span>스피커 재생은 <code>afplay</code> 전용이다. Windows/Linux는 WAV export 중심이다.</span></div></div>
+                <div class="check"><div><strong>Node.js 18 이상</strong><span>현재 검증 Mac은 Node 24.7.0이지만 package contract는 18 이상이다.</span></div></div>
+                <div class="check"><div><strong>Git · CMake · C/C++ toolchain</strong><span>고정된 sfizz 소스를 로컬에서 빌드한다. macOS는 Xcode Command Line Tools가 일반적이다.</span></div></div>
+                <div class="check"><div><strong>음원용 디스크 공간</strong><span>현재 세 SFZ 팩 약 3.8GiB + SoundFont 약 1.6GiB. 준비 과정에는 더 큰 임시 공간이 필요하다.</span></div></div>
+                <div class="check"><div><strong>합법적인 로컬 음원</strong><span>대용량 샘플은 Git에 없다. 무료 사용과 샘플 재배포 허용은 다른 권리다.</span></div></div>
+              </div>
+            </div>
+
+            <div>
+              <h3>현재 권장 명령</h3>
+              <div class="code-shell">
+                <div class="code-head"><span>clone 후 시작</span><button class="copy-button" type="button" data-copy-target="setup-code">복사</button></div>
+                <pre id="setup-code"><code>cd /받은/경로/aria
+
+# package-lock 그대로 설치
+npm ci
+
+# 고정 sfizz commit 빌드·검증
+npm run engine:install:sfizz
+
+# 전체 회귀
+npm test
+
+# GUI 시작
+npm start
+
+# Claude Code MCP 등록 예시
+claude mcp add -s user aria -- \
+  node /절대/경로/aria/src/mcp-bridge.js</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-top:32px">
+            <article class="principle"><span class="marker">DATA</span><h3><code>~/.aria/</code></h3><p>현재 곡, 곡 라이브러리, runtime, SoundFont, SFZ 팩, sfizz 엔진이 기본적으로 들어간다.</p></article>
+            <article class="principle"><span class="marker">OUTPUT</span><h3><code>~/Music/aria/</code></h3><p>경로를 따로 주지 않은 MIDI·WAV·스템의 기본 출력 위치다.</p></article>
+            <article class="principle"><span class="marker">PORT</span><h3><code>127.0.0.1:7788</code></h3><p>기본 포트다. 충돌하면 다음 빈 포트로 이동하고 MCP 브리지가 실제 주소를 찾는다.</p></article>
+          </div>
+
+          <div class="callout warn" style="margin-top:30px">
+            <div>
+              <h3>현재 <code>npm run pack:install -- &lt;id&gt;</code>는 세 관리형 팩에 잘못 연결돼 있다.</h3>
+              <p>package script는 Git형 설치기만 호출하지만 VSCO, Philharmonia, Salamander Drumkit manifest는 모두 <code>prepared-archive</code> 형식이다. GUI의 “음원 관리”는 올바른 설치기를 고른다. CLI는 manifest-aware router로 고치는 것이 첫 협업 과제다.</p>
+            </div>
+          </div>
+
+          <div style="margin-top:30px">
+            <details open>
+              <summary>클린 머신에서 아직 재현되지 않는 것</summary>
+              <div class="details-body"><ul><li><code>default.sf2</code> GeneralUser GS와 Salamander piano를 합법적 출처·checksum·정확한 파일명으로 설치하는 통합 명령이 없다.</li><li>현재 Mac의 2,114/2,114 프리셋은 로컬 설치 상태이지 저장소 기본값이 아니다.</li><li>VSCO 전체 준비 자료가 없으면 일부 전수 테스트는 skip되면서 종료 코드 0을 낸다.</li><li>실제 재생 검사는 non-macOS에서 skip돼도 테스트 총계만 보면 구분하기 어렵다.</li></ul></div>
+            </details>
+            <details>
+              <summary>개발 중 사용자 곡을 보호하는 법</summary>
+              <div class="details-body">테스트는 대부분 임시 데이터 디렉터리를 쓰지만 수동 실험도 실제 <code>~/.aria/song.json</code>과 분리하는 습관이 좋다. 앱 본체 상태를 건드리는 스크립트는 <code>ARIA_DATA_DIR</code>, pack/engine override, 임시 포트를 명시하고, 테스트 후 프로세스와 임시 경로를 정리한다.</div>
+            </details>
+          </div>
+        </section>
+
+        <section class="section" id="collaboration" aria-labelledby="collaboration-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Working agreement</span>
+              <h2 id="collaboration-title">코드 리뷰와 귀 리뷰를<br>같은 변경에 묶는다.</h2>
+              <p class="section-intro measure">역할은 고정 직책이 아니라 기본 책임 제안이다. 서로의 영역을 넘나들되, 제품 의도·음악 판단·기술 불변식의 최종 확인자를 명시하면 결정이 덜 흐려진다.</p>
+            </div>
+            <span class="section-index">07 / 09</span>
+          </div>
+
+          <div class="role-table">
+            <article class="role"><span class="label">첸징 · 제품/경험 기본 책임</span><h3>무엇을 쉽게 느끼고 고칠 것인가</h3><ul><li>AI-first 제품 방향과 사용자 시나리오</li><li>비음악인용 감각 UI와 피드백 흐름</li><li>브라우저 경험·오케스트레이션·통합 우선순위</li><li>외부 공개와 제품 범위 결정</li></ul></article>
+            <article class="role"><span class="label">공동개발자 · 음악/구현 기본 책임</span><h3>어떤 소리가 음악적으로 통과인가</h3><ul><li>편곡·연주법·그루브·전환 acceptance criteria</li><li>실제 샘플과 장르별 음색 공백 A/B</li><li>음악가 관점의 도구·데이터 모델 검토</li><li>독립 기능 구현과 회귀 테스트</li></ul></article>
+            <article class="role"><span class="label">공동 소유</span><h3>소리와 시스템이 만나는 경계</h3><ul><li>Song schema와 새로운 일급 음악 개념</li><li>후보 생성·선택·A/B 경험</li><li>음원 라이선스·배포 범위</li><li>Definition of Done과 출시 품질</li></ul></article>
+          </div>
+
+          <h3 style="margin:40px 0 10px">변경 하나의 Definition of Done</h3>
+          <div class="decision-rules">
+            <div class="decision-rule"><b>01</b><div><strong>사용자 시나리오가 한 문장이다.</strong><span>“누가, 어떤 소리를 듣고, 무엇을 고치려는가”가 코드보다 먼저 있다.</span></div></div>
+            <div class="decision-rule"><b>02</b><div><strong>GUI와 MCP의 의미가 같다.</strong><span>한쪽만 가능한 기능이면 이유를 문서화하고 core 검증을 우회하지 않는다.</span></div></div>
+            <div class="decision-rule"><b>03</b><div><strong>실패가 곡을 부분 변경하지 않는다.</strong><span>새 mutation은 Undo·autosave·SSE·rollback 계약을 통과한다.</span></div></div>
+            <div class="decision-rule"><b>04</b><div><strong>정확한 용어와 쉬운 설명이 함께 있다.</strong><span>새 음악 기능은 UI·MCP schema·skill capability에서 같은 뜻을 쓴다.</span></div></div>
+            <div class="decision-rule"><b>05</b><div><strong>같은 구간의 귀 검증이 있다.</strong><span>원본과 변경본을 동일 범위·같은 조건에서 A/B하고 결과를 기록한다.</span></div></div>
+            <div class="decision-rule"><b>06</b><div><strong>자동 검사가 재현된다.</strong><span>관련 회귀 테스트, 스킬 감사, 전체 <code>npm test</code>가 통과하고 skip을 구분한다.</span></div></div>
+            <div class="decision-rule"><b>07</b><div><strong>음원 출처와 손실을 숨기지 않는다.</strong><span>fallback, MIDI 근사, 라이선스, 플랫폼 한계를 사용자에게 드러낸다.</span></div></div>
+            <div class="decision-rule"><b>08</b><div><strong>원래 곡으로 돌아갈 수 있다.</strong><span>넓은 실험 전 고유 이름 저장, 작은 편집, Undo/Redo 또는 A/B 경로가 있다.</span></div></div>
+          </div>
+
+          <div class="callout" style="margin-top:32px">
+            <div>
+              <h3>권장 리뷰 단위: “코드 diff + 8마디 JSON + 같은 범위 A/B 메모”</h3>
+              <p>오디오 바이너리를 Git에 넣지 않고, 작은 곡 fixture와 렌더 진단·청취 메모를 함께 남긴다. 음악가의 “뭔가 튄다”를 재현 가능한 마디·트랙·주법·조건으로 바꾸고, 테스트가 잡는 기술 회귀와 귀가 잡는 음악 회귀를 한 PR에서 본다.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="priorities" aria-labelledby="priorities-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">First contributions</span>
+              <h2 id="priorities-title">먼저 협업 가능하게,<br>그다음 더 음악적으로.</h2>
+              <p class="section-intro measure">공유 가능한 코드 기준선은 마련됐다. 이제 새 기능을 늘리기 전에 권리·설치·품질 기준을 두 사람이 함께 고정해야 한다.</p>
+            </div>
+            <span class="section-index">08 / 09</span>
+          </div>
+
+          <div class="priority-list">
+            <article class="priority"><span class="rank">P0 · DONE</span><div><h3>통과한 코드와 remote를 공유한다</h3><p>필수 <code>sfizz-channels.js</code>까지 <a href="https://github.com/chenjingdev/aria/tree/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef"><code>a40d92a</code></a>에 고정했다. 두 사람은 이 SHA에서 같은 출발선을 재현할 수 있다.</p></div><p class="done"><strong>완료:</strong> 공개 remote, 필수 모듈 포함, 199 tests 통과. 다음 단계는 새 clone에서 설치·오디오 경로 검증.</p></article>
+            <article class="priority"><span class="rank">P0 · NOW</span><div><h3>코드 소유권·라이선스·샘플 권리를 합의한다</h3><p>비공개 공동저작/오픈소스/상용화 방향과 Aria 자체 코드 라이선스를 정한다. THIRD_PARTY_NOTICES는 Aria 코드 권리를 대신하지 않는다.</p></div><p class="done"><strong>완료:</strong> LICENSE 또는 명시적 비공개 협약, package metadata, 음원 바이너리 비배포 원칙.</p></article>
+            <article class="priority"><span class="rank">P0 · BUG</span><div><h3>MIDI CC7 범위 버그를 수정한다</h3><p><code>track.volume</code>은 0–2지만 현재 exporter는 <code>volume * 127</code>을 clamp하지 않는다. volume 2에서 data byte 254가 실제로 생성된다.</p></div><p class="done"><strong>완료:</strong> 명확한 volume→CC7 정책, 0–127 보장, round-trip/회귀 테스트.</p></article>
+            <article class="priority"><span class="rank">P0 · DX</span><div><h3>설치 router와 <code>npm run doctor</code>를 만든다</h3><p>pack source type에 맞는 설치기를 고르고 Node, build tools, ffmpeg, sfizz, SoundFont, 팩, 디스크, 포트를 읽기 전용으로 진단한다.</p></div><p class="done"><strong>완료:</strong> 새 Mac에서 숨은 파일 복사 없이 문서만으로 현재 상태와 부족한 것을 안다.</p></article>
+            <article class="priority"><span class="rank">P1 · QUALITY</span><div><h3>음악 골든 루프를 만든다</h3><p>8–16마디 기준곡으로 GM/VSCO/Philharmonia/Salamander, 주법 전환, 하이햇 단계, clip tail, groove, climax를 같은 조건에서 A/B한다.</p></div><p class="done"><strong>완료:</strong> 곡 JSON fixture, 자동 진단, 음악가 청취 체크리스트, 기대 차이를 문서화.</p></article>
+            <article class="priority"><span class="rank">P1 · PRODUCT</span><div><h3>선택 구간 후보 3–5개와 in-context A/B를 실험한다</h3><p>후보는 원곡을 바꾸지 않는 holding area에 저장하고, 밀도·리듬·음역·접근법 축을 의도적으로 벌려 주변 트랙과 함께 비교한다.</p></div><p class="done"><strong>완료:</strong> 빠른 전환, keyboard 사용, 원본 보존, 적용·폐기·재생성 경로, 사용성 관찰.</p></article>
+            <article class="priority"><span class="rank">P1 · TEAM</span><div><h3>CI와 파일 경계를 정리한다</h3><p>최소 <code>npm test</code> CI, Node/OS matrix, lint/format 정책을 추가하고 4,405줄 GUI와 대형 core/engine 파일의 충돌 경계를 줄인다.</p></div><p class="done"><strong>완료:</strong> PR마다 자동 품질 게이트, 책임별 모듈, skip과 실제 오디오 검증 구분.</p></article>
+            <article class="priority"><span class="rank">P2 · PERF</span><div><h3>동기식 sfizz 렌더를 작업 프로세스로 격리한다</h3><p>대형 팩 렌더가 Node 이벤트 루프와 GUI 반응을 막지 않게 worker/process 경계를 설계하고 측정으로 우선순위를 확정한다.</p></div><p class="done"><strong>완료:</strong> 기준 곡의 latency/memory 수치, 취소·오류·프로세스 정리 계약.</p></article>
+          </div>
+
+          <div class="final-note">
+            <span class="eyebrow">추천 첫 과제</span>
+            <p><strong>음악가·개발자 친구의 첫 기여는 “클린 머신 온보딩 + 8마디 음악 품질 체크”가 가장 좋다.</strong> 시스템 전체를 안전하게 훑으면서도 단순 문서 작업에 머물지 않고, 실제 소리가 맞는지 그의 귀와 개발 역량을 동시에 활용할 수 있다.</p>
+          </div>
+        </section>
+
+        <section class="section" id="limits" aria-labelledby="limits-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Limits & risks</span>
+              <h2 id="limits-title">현재 한계를 알아야<br>방향을 지킬 수 있다.</h2>
+              <p class="section-intro measure">이 표의 목적은 약점을 과장하는 것이 아니라, 공동개발자가 이미 알려진 물리적·기술적·법적 경계를 다시 발견하는 시간을 줄이는 것이다.</p>
+            </div>
+            <span class="section-index">09 / 09</span>
+          </div>
+
+          <div class="table-wrap">
+            <table class="risk-table">
+              <thead><tr><th>영역</th><th>현재 상태</th><th>개발 판단</th></tr></thead>
+              <tbody>
+                <tr><td>플랫폼 재생</td><td>macOS <code>afplay</code> 전용. 다른 OS는 WAV export.</td><td>지원 OS를 넓힐지, local Mac product로 집중할지 제품 결정이 필요하다.</td></tr>
+                <tr><td>루프</td><td>프로세스 재스폰 방식이라 반복 사이 약 100ms 틈.</td><td>그루브 비교 UX라면 브라우저 Web Audio 또는 연속 플레이어 경로가 중요하다.</td></tr>
+                <tr><td>sfizz 성능</td><td>동기식 child process. 긴 렌더가 본체 이벤트 루프를 막을 수 있다.</td><td>추측보다 latency/memory 측정 후 worker 격리 우선순위를 정한다.</td></tr>
+                <tr><td>대형 SF2</td><td>초기 파일 해석 시 순간 메모리 사용이 크다.</td><td>개별 폰트 순차 처리와 사용 preset/key/velocity trim 계약을 유지한다.</td></tr>
+                <tr><td>true legato</td><td>실제 transition sample과 매핑이 없으면 불가능.</td><td>release/overlap 근사를 true legato라고 부르지 않는다.</td></tr>
+                <tr><td>선택 구간 재생</td><td>앞 마디에서 시작해 이어지는 일반 sustain이 빠질 수 있다.</td><td>전환 오디션은 1–2마디 lead-in을 포함하고 향후 preroll 설계를 검토한다.</td></tr>
+                <tr><td>Recorded Clip</td><td>중간 offset, trim, time-stretch, split 미지원.</td><td>무음이나 잘린 결과보다 명시적 거부를 유지한다.</td></tr>
+                <tr><td>MIDI</td><td>멜로디 트랙 최대 15, bend·믹스 손실, 실제 articulation은 export 차단.</td><td>WAV가 sound truth, MIDI는 명시적 근사라는 UX를 유지한다.</td></tr>
+                <tr><td>스템</td><td>완성 믹스와 같지 않고 완전한 raw dry stem도 아님.</td><td>스템 계약을 문서와 파일 metadata에서 더 분명히 한다.</td></tr>
+                <tr><td>박자표</td><td>곡 전체 하나. 마디 중간/구간별 박자표 변경 불가.</td><td>실제 사용곡 필요가 생기기 전 모델 복잡도를 늘리지 않는다.</td></tr>
+                <tr><td>동시성</td><td>단일 인스턴스·단일 현재 곡. 여러 MCP 세션도 같은 상태 사용.</td><td>공동개발과 다중 사용자 실시간 편집을 혼동하지 않는다.</td></tr>
+                <tr><td>소스 구조</td><td>GUI 4,405줄, core 약 1,868줄, sfizz engine 약 1,116줄.</td><td>두 사람이 자주 만질 경계부터 모듈화해 merge conflict를 줄인다.</td></tr>
+                <tr><td>클린 설치</td><td>기본 SoundFont 자동 설치·검증 절차 없음.</td><td>개인 파일 복사로 해결하지 말고 출처·라이선스·checksum 기반으로 만든다.</td></tr>
+                <tr><td>라이선스</td><td>Aria 자체 LICENSE 없음. 샘플 팩마다 재배포 조건이 다름.</td><td>코드 권리와 오디오 자산 권리를 분리해 공동개발 시작 전에 합의한다.</td></tr>
+                <tr><td>CI</td><td>199 checks는 강하지만 자동 PR 게이트·lint·typecheck·coverage 없음.</td><td>현재 테스트를 CI에 먼저 올리고, skip을 성공과 구분한다.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section" id="references" aria-labelledby="references-title">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">Glossary & source trail</span>
+              <h2 id="references-title">같은 단어로 이야기하기.</h2>
+              <p class="section-intro measure">전문 용어를 없애기보다 쉬운 뜻을 바로 붙인다. 세부 구현이 바뀌면 아래 저장소 문서와 실제 코드가 최종 근거다.</p>
+            </div>
+          </div>
+
+          <dl class="glossary">
+            <div class="term"><dt>MCP</dt><dd>LLM이 앱의 도구를 발견하고 호출하는 연결 규약.</dd></div>
+            <div class="term"><dt>Song JSON</dt><dd>Aria가 편집 가능한 곡의 정본으로 삼는 구조화 데이터.</dd></div>
+            <div class="term"><dt>Velocity</dt><dd>한 음을 얼마나 세게 연주하는지. 샘플의 강약 층과 음색에도 영향을 준다.</dd></div>
+            <div class="term"><dt>Articulation</dt><dd>스타카토·피치카토처럼 실제 발음과 연주 방식이 달라지는 주법.</dd></div>
+            <div class="term"><dt>Round robin</dt><dd>같은 음을 반복할 때 다른 녹음 take를 순환해 기계적인 반복을 줄이는 규칙.</dd></div>
+            <div class="term"><dt>Keyswitch / CC</dt><dd>샘플러에 주법이나 상태를 전달하는 MIDI 제어 방식.</dd></div>
+            <div class="term"><dt>SF2 / SoundFont</dt><dd>샘플과 악기 매핑을 묶은 포맷. Aria에서는 SpessaSynth가 재생한다.</dd></div>
+            <div class="term"><dt>SFZ</dt><dd>텍스트 악기 정의와 오디오 파일을 조합한 개방형 샘플 포맷. sfizz가 재생한다.</dd></div>
+            <div class="term"><dt>Stem</dt><dd>DAW에서 다시 섞기 위한 트랙별 오디오 파일. 완성 믹스와는 다르다.</dd></div>
+            <div class="term"><dt>LUFS</dt><dd>사람이 느끼는 음량에 가까운 비교 지표. 음악성이나 납품 true-peak 보증은 아니다.</dd></div>
+            <div class="term"><dt>Fallback</dt><dd>없는 자산 대신 비슷한 것을 조용히 쓰는 자동 대체. Aria의 음원 경로에서는 금지한다.</dd></div>
+            <div class="term"><dt>True legato</dt><dd>앞 음에서 다음 음으로 넘어가는 실제 전이 녹음을 재생하는 레가토.</dd></div>
+          </dl>
+
+          <h3 style="margin:42px 0 8px">저장소의 최종 근거</h3>
+          <div class="callout" id="source-snapshot-note" style="margin:20px 0 14px">
+            <div>
+              <h3>코드 링크는 같은 스냅숏을 연다</h3>
+              <p>아래 근거 링크는 모두 공개 저장소의 <a href="https://github.com/chenjingdev/aria/tree/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef"><code>a40d92a</code></a> 커밋에 고정했다. 이후 <code>main</code>이 바뀌어도 이 문서가 검토한 코드는 그대로 남는다.</p>
+            </div>
+          </div>
+          <div class="source-list">
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/README.md">제품 개요·실행·한계 <small>README.md</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/docs/ENGINE_BACKENDS.md">엔진 계약과 선택 근거 <small>docs/ENGINE_BACKENDS.md</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/docs/SOUND_LIBRARY_AUDIT.md">음원·라이선스·팩 감사 <small>docs/SOUND_LIBRARY_AUDIT.md</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/THIRD_PARTY_NOTICES.md">제3자 엔진·자산 고지 <small>THIRD_PARTY_NOTICES.md</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/song.js">곡 schema·검증·시간 <small>src/song.js</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/core.js">상태·편집·Undo·저장 <small>src/core.js</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/src/mcp.js">45개 도구와 AI용 설명 <small>src/mcp.js</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/public/index.html">브라우저 피아노롤 GUI <small>public/index.html</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/skills/aria-compose/SKILL.md">AI 작곡 작업법 <small>skills/aria-compose/SKILL.md</small></a>
+            <a href="https://github.com/chenjingdev/aria/blob/a40d92aeacc94d5c0d6e1a717f87b45deb82e5ef/package.json">명령·의존성·Node 계약 <small>package.json</small></a>
+          </div>
+
+          <div class="final-note">
+            <span class="eyebrow">한 문장 인수인계</span>
+            <p><strong>Aria는 AI가 곡 파일을 생성해 던지는 도구가 아니라, 사람과 AI가 한 악보 상태와 한 편집 엔진을 공유하는 로컬 작곡 워크스테이션이다.</strong> 음악적 판단은 <code>aria-compose</code>에서, 곡과 편집 안전은 <code>song.js/core.js</code>에서, 실제 소리는 샘플 엔진과 공통 렌더러에서 발전시킨다.</p>
+          </div>
+        </section>
+
+        <footer class="footer">
+          <span>ARIA CO-DEVELOPMENT BRIEF · KOREAN · 2026-08-12</span>
+          <span>Repository snapshot: chenjingdev/aria@a40d92a · local-first alpha</span>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const themeButton = document.getElementById("themeButton");
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      let storedTheme = null;
+      try { storedTheme = localStorage.getItem("aria-brief-theme"); } catch {}
+
+      function isDark() {
+        if (root.dataset.theme) return root.dataset.theme === "dark";
+        return media.matches;
+      }
+
+      function syncThemeButton() {
+        const dark = isDark();
+        themeButton.textContent = dark ? "밝게" : "어둡게";
+        themeButton.setAttribute("aria-pressed", String(dark));
+        themeButton.title = dark ? "밝은 화면으로 전환" : "어두운 화면으로 전환";
+      }
+
+      if (storedTheme === "dark" || storedTheme === "light") root.dataset.theme = storedTheme;
+      syncThemeButton();
+      media.addEventListener?.("change", () => { if (!root.dataset.theme) syncThemeButton(); });
+      themeButton.addEventListener("click", () => {
+        root.dataset.theme = isDark() ? "light" : "dark";
+        try { localStorage.setItem("aria-brief-theme", root.dataset.theme); } catch {}
+        syncThemeButton();
+      });
+
+      document.getElementById("printButton").addEventListener("click", () => window.print());
+
+      const progress = document.getElementById("progress");
+      function updateProgress() {
+        const max = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        progress.style.transform = `scaleX(${Math.min(1, Math.max(0, window.scrollY / max))})`;
+      }
+      addEventListener("scroll", updateProgress, { passive: true });
+      addEventListener("resize", updateProgress, { passive: true });
+      updateProgress();
+
+      const navLinks = [...document.querySelectorAll(".side-nav a[href^='#'], .mobile-nav a[href^='#']")];
+      const observedSections = [...document.querySelectorAll("main section[id]")];
+      const observer = new IntersectionObserver(entries => {
+        const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (!visible) return;
+        navLinks.forEach(link => {
+          const active = link.getAttribute("href") === `#${visible.target.id}`;
+          if (active) link.setAttribute("aria-current", "true");
+          else link.removeAttribute("aria-current");
+        });
+      }, { rootMargin: "-24% 0px -62%", threshold: [0, .2, .55] });
+      observedSections.forEach(section => observer.observe(section));
+
+      const filterButtons = [...document.querySelectorAll("[data-filter]")];
+      const requirements = [...document.querySelectorAll(".requirement[data-status]")];
+      filterButtons.forEach(button => button.addEventListener("click", () => {
+        const filter = button.dataset.filter;
+        filterButtons.forEach(item => item.setAttribute("aria-pressed", String(item === button)));
+        requirements.forEach(item => {
+          const show = filter === "all" || (filter === "current" && item.dataset.status === "current") || item.dataset.status === filter;
+          item.hidden = !show;
+        });
+      }));
+
+      const tabs = [...document.querySelectorAll('[role="tab"]')];
+      function selectTab(tab, focus = false) {
+        tabs.forEach(item => {
+          const selected = item === tab;
+          item.setAttribute("aria-selected", String(selected));
+          item.tabIndex = selected ? 0 : -1;
+          document.getElementById(item.getAttribute("aria-controls")).hidden = !selected;
+        });
+        if (focus) tab.focus();
+      }
+      tabs.forEach((tab, index) => {
+        tab.addEventListener("click", () => selectTab(tab));
+        tab.addEventListener("keydown", event => {
+          let next = index;
+          if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+          else if (event.key === "ArrowLeft") next = (index - 1 + tabs.length) % tabs.length;
+          else if (event.key === "Home") next = 0;
+          else if (event.key === "End") next = tabs.length - 1;
+          else return;
+          event.preventDefault();
+          selectTab(tabs[next], true);
+        });
+      });
+
+      async function copyText(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return;
+        } catch {
+          const area = document.createElement("textarea");
+          area.value = text;
+          area.setAttribute("readonly", "");
+          area.style.position = "fixed";
+          area.style.opacity = "0";
+          document.body.appendChild(area);
+          area.select();
+          document.execCommand("copy");
+          area.remove();
+        }
+      }
+      document.querySelectorAll("[data-copy-target]").forEach(button => {
+        button.addEventListener("click", async () => {
+          const target = document.getElementById(button.dataset.copyTarget);
+          await copyText(target.innerText);
+          const original = button.textContent;
+          button.textContent = "복사됨";
+          setTimeout(() => { button.textContent = original; }, 1400);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
