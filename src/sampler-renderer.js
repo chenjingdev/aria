@@ -6,11 +6,13 @@ import {
 } from "./presets.js";
 import {
   noteToMidi, beatsPerBar, noteStartBeat, totalBars, tempoSegments, beatToSec, secToBeat,
-  notePlaybackEndBeat
+  notePlaybackEndBeat, effectiveArticulation
 } from "./song.js";
 import { fontStatus, requiredFontPath, requiredFontName } from "./sf2.js";
 import { openSpessaSession } from "./spessa-engine.js";
-import { openSfizzSession, resolveSfzPath, SFIZZ_ENGINE_ID } from "./sfizz-engine.js";
+import {
+  assertSfizzCoverage, openSfizzSession, resolveSfzPath, SFIZZ_ENGINE_ID
+} from "./sfizz-engine.js";
 import { masterChain } from "./master.js";
 import { eq3, eqActive } from "./eq.js";
 import { rampEnvelope, reverbProcess } from "./renderer.js";
@@ -84,6 +86,105 @@ function presetSpec(options, id) {
   if (drum) return { preset: SF_DRUM_KITS[id], drum: true, injected: false };
   if (melodic) return { preset: SF_PRESETS[id], drum: false, injected: false };
   return null;
+}
+
+function samplerPerformanceNote(track, registered, note, velocityRange) {
+  const { preset, drum: sfDrum } = registered;
+  const pieces = registered.injected ? preset.pieces : drumPieces(track.preset);
+  const key = sfDrum ? pieces?.[note.pitch] : noteToMidi(note.pitch);
+  if (key === undefined || key === null)
+    throw new Error(`트랙 "${track.name}"의 음 ${note.pitch}을 ${track.preset}에서 찾을 수 없습니다`);
+  return {
+    key,
+    velocity: velocityForEngine(note.vel, velocityRange),
+    bend: sfDrum ? 0 : (note.bend ?? 0),
+    // 구간 주법은 음이 시작되는 마디에서 결정한다. 경계를 가로지르는 긴 음을
+    // 중간에 다른 샘플로 갈아 끼우지 않고 note-off까지 같은 주법으로 유지한다.
+    articulation: preset.engine === SFIZZ_ENGINE_ID ? effectiveArticulation(track, note.bar) : undefined,
+    gain: (preset.gain ?? 1) * 0.9 * constantRegionGain(track, note.bar),
+    // 같은 MIDI key라도 하이햇 개방도처럼 CC 상태가 다른 피스가 있다.
+    // 피스 ID에 연결된 원래 control을 노트와 함께 sampler로 전달한다.
+    controls: sfDrum ? (preset.pieceControls?.[note.pitch] ?? []) : []
+  };
+}
+
+function coverageErrorMessage(track, preset, sourceNote, performance, articulationId, engineError) {
+  const selectedId = articulationId ?? preset.defaultArticulation;
+  const definition = selectedId === undefined || selectedId === null
+    ? null : preset.articulations?.[selectedId];
+  const articulation = definition?.label ?? selectedId ?? "Preset Default (프리셋 기본 주법)";
+  const keyswitch = definition?.keyswitch;
+  const keyswitchKey = typeof keyswitch === "number" ? keyswitch : keyswitch?.key;
+  const velocity = performance.velocity === sourceNote.vel
+    ? String(performance.velocity)
+    : `${performance.velocity} (악보 값 ${sourceNote.vel}에 Velocity Range를 적용한 실제 입력)`;
+  const pitch = typeof sourceNote.pitch === "string" ? sourceNote.pitch : String(sourceNote.pitch);
+  return `트랙 "${track.name}"의 ${sourceNote.bar}마디 ${sourceNote.beat}박 `
+    + `Pitch (피치, 음높이) ${pitch} (MIDI ${performance.key}), `
+    + `Velocity (벨로시티, 음을 세게·여리게 내는 값) ${velocity}는 `
+    + `Articulation (아티큘레이션, 실제 녹음 연주법) ${articulation}`
+    + (Number.isInteger(keyswitchKey)
+      ? `의 Keyswitch (키스위치, 건반으로 주법을 바꾸는 신호) MIDI ${keyswitchKey}` : "")
+    + ` 상태에서 SFZ ${path.basename(engineError.details?.sfz ?? preset.sfz)}의 `
+    + "Attack Region (어택 리전, 음을 누르는 순간 실제 소리가 시작되는 샘플 구간)이 없습니다"
+    + " — 이 편집을 적용하면 해당 음이 무음이 되므로 저장하지 않았습니다. "
+    + "음역 안의 Pitch로 옮기거나 이 Pitch·Velocity를 실제로 녹음한 Instrument (인스트루먼트, 악기 음원) 또는 Articulation을 선택하세요";
+}
+
+// 곡 편집 preflight: 오디오를 렌더하지 않고 실제 render plan과 같은 pitch·velocity·
+// Articulation/Keyswitch/CC 조합이 SFZ attack sample에 닿는지 검사한다.
+export function assertSfizzSongCoverage(song, options = {}) {
+  let checkedTracks = 0, checkedNotes = 0;
+  for (const track of song.tracks) {
+    const registered = presetSpec(options, track.preset);
+    if (!registered || registered.preset?.engine !== SFIZZ_ENGINE_ID || !track.notes.length) continue;
+    // renderRange의 planTrack과 같은 방어선을 공유한다. 현재 song validation은 이
+    // legacy 필드를 보존하지 않지만, 이전 in-memory 객체나 내부 호출도 preflight만
+    // 통과한 뒤 실제 render에서 뒤늦게 실패해서는 안 된다.
+    validateTrackControls(track);
+    const { preset, drum: sfDrum } = registered;
+    const velocityRange = track.velRange ?? preset.velRange ??
+      (sfDrum ? DEFAULT_DRUM_VEL_RANGE : DEFAULT_VEL_RANGE);
+    const groups = new Map();
+    for (const note of track.notes) {
+      const performance = samplerPerformanceNote(track, registered, note, velocityRange);
+      const id = performance.articulation;
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push({ sourceNote: note, performance });
+    }
+    const entries = [...groups.entries()];
+    const layers = entries.map(([articulation, notes]) => ({
+      articulation,
+      notes: notes.map(({ performance }) => ({
+        key: performance.key,
+        velocity: performance.velocity,
+        controls: performance.controls
+      }))
+    }));
+    try {
+      assertSfizzCoverage(preset, layers, { packRoots: options.packRoots });
+    } catch (error) {
+      if (error?.details?.reason !== "attack-region-missing") throw error;
+      const layer = entries[error.details.layerIndex];
+      const source = layer?.[1]?.[error.details.noteIndex];
+      if (!source) throw error;
+      error.message = coverageErrorMessage(
+        track, preset, source.sourceNote, source.performance, layer[0], error
+      );
+      error.attackCoverageMismatch = true;
+      error.track = track.name;
+      error.bar = source.sourceNote.bar;
+      error.beat = source.sourceNote.beat;
+      error.pitch = source.sourceNote.pitch;
+      error.midi = source.performance.key;
+      error.velocity = source.performance.velocity;
+      error.articulation = layer[0] ?? preset.defaultArticulation ?? null;
+      throw error;
+    }
+    checkedTracks++;
+    checkedNotes += track.notes.length;
+  }
+  return { checkedTracks, checkedNotes };
 }
 
 const CLIP_TIME_EPSILON = 1e-9;
@@ -168,24 +269,104 @@ function planTrack(song, track, fromBar, toBar, segs, startSec, len, sr, options
     if (start < 0 || start >= len) continue;
     const gateSec = beatToSec(segs, beat + note.dur) - beatToSec(segs, beat);
     const end = Math.min(len, Math.max(start + 1, Math.round(start + gateSec * sr)));
-    const pieces = registered.injected ? preset.pieces : drumPieces(track.preset);
-    const key = sfDrum ? pieces?.[note.pitch] : noteToMidi(note.pitch);
-    if (key === undefined || key === null)
-      throw new Error(`트랙 "${track.name}"의 음 ${note.pitch}을 ${track.preset}에서 찾을 수 없습니다`);
+    const performance = samplerPerformanceNote(track, registered, note, velocityRange);
     notes.push({
+      ...performance,
       startSample: start,
       endSample: end,
-      key,
-      velocity: velocityForEngine(note.vel, velocityRange),
-      bend: sfDrum ? 0 : (note.bend ?? 0),
-      gain: (preset.gain ?? 1) * 0.9 * constantRegionGain(track, note.bar),
-      // 같은 MIDI key라도 하이햇 개방도처럼 CC 상태가 다른 피스가 있다.
-      // 피스 ID에 연결된 원래 control을 노트와 함께 sampler로 전달한다.
-      controls: sfDrum ? (preset.pieceControls?.[note.pitch] ?? []) : []
     });
   }
   return {
     track, preset, sfDrum, notes, engine, assetPath, assetName, resolvedAsset, enginePreset
+  };
+}
+
+// sfizz의 한 renderTrack 호출은 시작 시점에 키스위치/CC 하나를 설정한다. 한 트랙에
+// 여러 구간 주법이 있으면 주법별로 독립 렌더한 dry PCM을 먼저 합친다. 그러면 서로
+// 다른 주법의 긴 음이 겹쳐도 채널 전역 키스위치가 앞 음을 바꾸지 않으며, 트랙의
+// pan/EQ/reverb/volume은 합친 뒤 정확히 한 번만 적용된다.
+function renderPlan(session, plan, len) {
+  if (plan.engine !== SFIZZ_ENGINE_ID) {
+    return session.renderTrack({
+      preset: plan.enginePreset,
+      track: {},
+      notes: plan.notes,
+      length: len
+    });
+  }
+
+  const groups = new Map();
+  for (const note of plan.notes) {
+    const id = note.articulation;
+    if (!groups.has(id)) groups.set(id, []);
+    groups.get(id).push(note);
+  }
+  if (groups.size === 1) {
+    const [articulation, notes] = groups.entries().next().value;
+    return session.renderTrack({
+      preset: plan.enginePreset,
+      track: { articulation },
+      notes,
+      length: len
+    });
+  }
+
+  const left = new Float32Array(len), right = new Float32Array(len);
+  const layers = [], layerDiagnostics = [];
+  for (const [articulation, notes] of groups) {
+    const rendered = session.renderTrack({
+      preset: plan.enginePreset,
+      track: { articulation },
+      notes,
+      length: len
+    });
+    for (let i = 0; i < len; i++) {
+      left[i] += rendered.left[i];
+      right[i] += rendered.right[i];
+    }
+    layers.push({
+      id: rendered.diagnostics.articulation ?? articulation ?? null,
+      notes: notes.length,
+      invocations: rendered.diagnostics.invocations ?? 1,
+      ...(rendered.diagnostics.gain !== undefined ? { gain: rendered.diagnostics.gain } : {})
+    });
+    layerDiagnostics.push(rendered.diagnostics);
+  }
+  // 기존 단일 주법 진단 필드를 잃지 않도록 multi-render의 처리량은 합하고, 실제로
+  // 섞인 최종 dry PCM의 peak/nonzero/stereo 차이는 다시 측정한다.
+  const sum = key => layerDiagnostics.reduce((total, item) => total + (Number(item[key]) || 0), 0);
+  let peak = 0, nonzeroSamples = 0, stereoDifference = 0;
+  for (let i = 0; i < len; i++) {
+    const l = left[i], r = right[i];
+    peak = Math.max(peak, Math.abs(l), Math.abs(r));
+    if (Math.abs(l) > 1 / 32768 || Math.abs(r) > 1 / 32768) nonzeroSamples++;
+    stereoDifference += Math.abs(l - r);
+  }
+  const first = layerDiagnostics[0];
+  const gains = [...new Set(layerDiagnostics.map(item => item.gain).filter(value => value !== undefined))];
+  return {
+    left, right,
+    diagnostics: {
+      engine: SFIZZ_ENGINE_ID,
+      sfz: first.sfz,
+      ...(first.pack !== undefined ? { pack: first.pack } : {}),
+      notes: sum("notes"),
+      articulations: layers,
+      invocations: sum("invocations"),
+      channels: sum("channels"),
+      bendNotes: sum("bendNotes"),
+      controlledNotes: sum("controlledNotes"),
+      bendEvents: sum("bendEvents"),
+      pitchRangeSemitones: first.pitchRangeSemitones,
+      sourceFrames: sum("sourceFrames"),
+      trimmedFrames: sum("trimmedFrames"),
+      paddedFrames: sum("paddedFrames"),
+      sourceEncoding: first.sourceEncoding,
+      ...(gains.length === 1 ? { gain: gains[0] } : gains.length ? { gains } : {}),
+      peak,
+      nonzeroSamples,
+      stereoMeanDifference: len ? stereoDifference / len : 0
+    }
   };
 }
 
@@ -318,14 +499,7 @@ export function renderRange(song, fromBar = 1, toBar = totalBars(song), opts = {
       for (const plan of group) {
         let dry;
         try {
-          dry = session.renderTrack({
-            preset: plan.enginePreset,
-            track: plan.engine === SFIZZ_ENGINE_ID
-              ? { articulation: plan.track.articulation }
-              : {},
-            notes: plan.notes,
-            length: len
-          });
+          dry = renderPlan(session, plan, len);
         } catch (error) {
           error.message = `트랙 "${plan.track.name}": ${error.message}`;
           throw error;

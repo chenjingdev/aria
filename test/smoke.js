@@ -1,5 +1,7 @@
 // aria — 스모크 테스트: 모델·렌더·파일 형식 무결성
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
 import { createTestSoundfonts } from "./soundfont-fixture.js";
 
 const soundfonts = createTestSoundfonts("aria-smoke-sf2");
@@ -7,7 +9,9 @@ process.env.ARIA_SF2 = soundfonts.defaultPath;
 process.env.ARIA_DATA_DIR = soundfonts.dataDir;
 process.on("exit", soundfonts.cleanup);
 
-const { createSong, validateSong, noteToMidi, totalBars, songText } = await import("../src/song.js");
+const {
+  createSong, validateSong, noteToMidi, totalBars, songText, effectiveArticulation
+} = await import("../src/song.js");
 const { renderRange } = await import("../src/sampler-renderer.js");
 const { wavBuffer } = await import("../src/renderer.js");
 const { midiBuffer } = await import("../src/midi.js");
@@ -173,6 +177,30 @@ ok("MIDI는 명시적 녹음 주법을 거부하고 implicit/null 기본 주법�
     ]
   });
   assert.equal(midiBuffer(unusedExplicit).toString("ascii", 0, 4), "MThd");
+
+  const unusedRegion = validateSong({
+    ...base,
+    tracks: [{
+      ...base.tracks[0],
+      articulationRegions: [{ from: 2, to: 3, articulation: preset.defaultArticulation }]
+    }]
+  });
+  assert.equal(midiBuffer(unusedRegion).toString("ascii", 0, 4), "MThd",
+    "노트가 시작하지 않는 빈 구간 주법이 portable MIDI를 불필요하게 막음");
+
+  const usedRegion = validateSong({
+    ...base,
+    tracks: [{
+      ...base.tracks[0],
+      articulationRegions: [{ from: 1, to: 1, articulation: preset.defaultArticulation }]
+    }]
+  });
+  assert.throws(() => midiBuffer(usedRegion), error => {
+    assert.match(error.message, /1마디=/);
+    assert.match(error.message, /set_region_articulation/);
+    assert.match(error.message, /WAV/);
+    return true;
+  });
 });
 
 ok("모든 템플릿·프리셋이 유효", () => {
@@ -198,7 +226,7 @@ ok("삭제한 내장 합성 프리셋 ID를 더는 인정하지 않음", () => {
 });
 
 // ---------- 리뷰에서 확정된 결함의 회귀 테스트 ----------
-const { state, ops, runOp, subscribe, addLog } = await import("../src/core.js");
+const { state, ops, runOp, subscribe, addLog, loadAutosave } = await import("../src/core.js");
 
 ok("같은 밀리초의 반복 작업 기록도 고유 ID를 가진다", () => {
   const n = state.log.length;
@@ -817,6 +845,383 @@ ok("키스위치 프리셋의 원래 연주법을 곡·도구가 검증하고 �
   const listed = ops.list_presets({ query: `${preset.family} ${choices[0]}`, limit: 5 });
   assert.match(listed, new RegExp(presetId));
   assert.match(listed, /articulation:/);
+});
+
+ok("구간 주법이 겹친 범위를 나눠 대체하고 선택 범위만 상속값으로 되돌림", () => {
+  const [presetId, preset] = Object.entries(SF_PRESETS).find(([, item]) =>
+    item.articulations && Object.keys(item.articulations).length > 1);
+  const [sustain, contrast] = Object.keys(preset.articulations);
+  const make = articulationRegions => validateSong({
+    title: "regional articulation", bpm: 100, timeSig: [4, 4], tempoMap: [],
+    tracks: [{
+      name: "구간 주법 악기", preset: presetId, articulation: sustain,
+      articulationRegions, volume: 0.8, pan: 0,
+      notes: [1, 3, 4, 5, 6, 8].map(bar => ({ bar, beat: 0, pitch: "C4", dur: 1, vel: 90 }))
+    }]
+  });
+
+  const canonical = make([
+    { from: 3, to: 4, articulation: contrast },
+    { from: 1, to: 2, articulation: contrast }
+  ]);
+  assert.deepEqual(canonical.tracks[0].articulationRegions,
+    [{ from: 1, to: 4, articulation: contrast }], "인접한 같은 주법이 합쳐지지 않음");
+  assert.equal(effectiveArticulation(canonical.tracks[0], 2), contrast);
+  assert.equal(effectiveArticulation(canonical.tracks[0], 8), sustain);
+  assert.throws(() => make([
+    { from: 1, to: 3, articulation: sustain },
+    { from: 3, to: 4, articulation: contrast }
+  ]), /겹칩니다/);
+  assert.throws(() => make([{ from: 1, to: 2, articulation: "없는-연주법" }]),
+    /구간 articulation.*찾을 수 없습니다/);
+  assert.throws(() => validateSong({
+    title: "unsupported regional articulation", bpm: 100, timeSig: [4, 4], tempoMap: [],
+    tracks: [{ name: "GM", preset: "sf-piano-gm", volume: 0.8, pan: 0,
+      articulationRegions: [{ from: 1, to: 2, articulation: sustain }], notes: [] }]
+  }), /별도 연주법 선택 없음/);
+
+  state.song = make([]);
+  ops.set_region_articulation({
+    track: "구간 주법 악기", from_bar: 2, to_bar: 7, articulation: sustain
+  });
+  ops.set_region_articulation({
+    track: "구간 주법 악기", from_bar: 4, to_bar: 5, articulation: contrast
+  });
+  assert.deepEqual(state.song.tracks[0].articulationRegions, [
+    { from: 2, to: 3, articulation: sustain },
+    { from: 4, to: 5, articulation: contrast },
+    { from: 6, to: 7, articulation: sustain }
+  ]);
+  ops.set_region_articulation({
+    track: "구간 주법 악기", from_bar: 5, to_bar: 6, articulation: null
+  });
+  assert.deepEqual(state.song.tracks[0].articulationRegions, [
+    { from: 2, to: 3, articulation: sustain },
+    { from: 4, to: 4, articulation: contrast },
+    { from: 7, to: 7, articulation: sustain }
+  ], "null이 선택 범위 밖 override까지 지움");
+  assert.throws(() => ops.set_region_articulation({
+    track: "구간 주법 악기", from_bar: 1, to_bar: 2, articulation: "없는-연주법"
+  }), /list_presets/);
+
+  const before = JSON.stringify(state.song);
+  runOp("set_region_articulation", {
+    track: "구간 주법 악기", from_bar: 8, to_bar: 8, articulation: contrast
+  }, "gui");
+  assert.equal(effectiveArticulation(state.song.tracks[0], 8), contrast);
+  runOp("undo_edit", {}, "gui");
+  assert.equal(JSON.stringify(state.song), before, "구간 주법 한 번이 undo 한 단계로 복원되지 않음");
+  runOp("redo_edit", {}, "gui");
+  assert.equal(effectiveArticulation(state.song.tracks[0], 8), contrast);
+
+  const regionsBeforeRepeatedPreset = structuredClone(state.song.tracks[0].articulationRegions);
+  ops.set_track({ track: "구간 주법 악기", preset: presetId, volume: 0.9 });
+  assert.equal(state.song.tracks[0].articulation, sustain,
+    "같은 preset ID를 반복한 설정이 트랙 전체 주법을 지움");
+  assert.deepEqual(state.song.tracks[0].articulationRegions, regionsBeforeRepeatedPreset,
+    "같은 preset ID를 반복한 설정이 구간 주법을 지움");
+
+  ops.set_track({ track: "구간 주법 악기", preset: "sf-piano-gm" });
+  assert.equal(state.song.tracks[0].articulation, undefined);
+  assert.equal(state.song.tracks[0].articulationRegions, undefined,
+    "프리셋 변경 뒤 옛 ID namespace의 구간 주법이 남음");
+});
+
+ok("마디 삽입·복제·잘라내기가 구간 주법의 의미를 함께 보존", () => {
+  const [presetId, preset] = Object.entries(SF_PRESETS).find(([, item]) =>
+    item.articulations && Object.keys(item.articulations).length > 1);
+  const [a, b] = Object.keys(preset.articulations);
+  const make = regions => validateSong({
+    title: "regional articulation structure", bpm: 100, timeSig: [4, 4], tempoMap: [],
+    tracks: [{ name: "현악", preset: presetId, volume: 0.8, pan: 0,
+      articulationRegions: regions,
+      notes: Array.from({ length: 12 }, (_, i) => ({ bar: i + 1, beat: 0, pitch: "C4", dur: 1, vel: 90 })) }]
+  });
+
+  state.song = make([{ from: 2, to: 4, articulation: a }]);
+  ops.insert_bars({ at_bar: 3, count: 2 });
+  assert.deepEqual(state.song.tracks[0].articulationRegions,
+    [{ from: 2, to: 6, articulation: a }], "구간 안 삽입이 주법 범위를 늘리지 않음");
+
+  state.song = make([
+    { from: 1, to: 2, articulation: a },
+    { from: 4, to: 4, articulation: b },
+    { from: 5, to: 8, articulation: b }
+  ]);
+  ops.copy_bars({ from_bar: 1, to_bar: 4, at_bar: 5, mode: "overwrite" });
+  assert.deepEqual(state.song.tracks[0].articulationRegions, [
+    { from: 1, to: 2, articulation: a },
+    { from: 4, to: 4, articulation: b },
+    { from: 5, to: 6, articulation: a },
+    { from: 8, to: 8, articulation: b }
+  ], "overwrite 복제가 source의 상속 빈칸까지 대상 범위에 복제하지 않음");
+
+  state.song = make([
+    { from: 1, to: 3, articulation: a },
+    { from: 4, to: 6, articulation: b },
+    { from: 7, to: 8, articulation: a }
+  ]);
+  ops.delete_bars({ from_bar: 3, to_bar: 6 });
+  assert.deepEqual(state.song.tracks[0].articulationRegions,
+    [{ from: 1, to: 4, articulation: a }], "잘라내기 뒤 맞닿은 같은 주법이 이어지지 않음");
+});
+
+ok("SFZ Instrument·구간 Articulation·Velocity 편집이 attack sample 누락을 원자적으로 거부", () => {
+  const presetId = "test-sfz-attack-coverage";
+  const fixtureDir = path.join(soundfonts.dataDir, "sfz-attack-coverage");
+  const sfz = path.join(fixtureDir, "SViolin-KS.sfz");
+  const missingPresetId = "test-sfz-missing-first";
+  const badPresetId = "test-sfz-invalid-metadata";
+  fs.mkdirSync(fixtureDir, { recursive: true });
+  fs.writeFileSync(path.join(fixtureDir, "sample.wav"), Buffer.from([1]));
+  const validSfzText = [
+    "<control> default_path=./",
+    "<global> sw_default=36 sw_lokey=36 sw_hikey=37",
+    "<group> sw_last=36",
+    "<region> sample=sample.wav key=60 hivel=100",
+    "<group> sw_last=37",
+    "<region> sample=sample.wav key=61"
+  ].join("\n");
+  fs.writeFileSync(sfz, validSfzText);
+  SF_PRESETS[presetId] = {
+    engine: "sfizz", sfz, name: "Solo Violin · Keyswitch Test", family: "Violin", source: "Test",
+    gm: 40, gain: 1, reverb: 0.3, release: 0.5,
+    articulations: {
+      sustain: {
+        label: "Sustain Vibrato (길게 이어 연주하며 음높이를 부드럽게 떨기)",
+        keyswitch: { key: 36, velocity: 127 }
+      },
+      staccato: {
+        label: "Staccato (활을 짧게 써 또렷하게 끊어 연주)",
+        keyswitch: { key: 37, velocity: 127 }
+      }
+    },
+    defaultArticulation: "sustain"
+  };
+  SF_PRESETS[missingPresetId] = {
+    ...SF_PRESETS[presetId], sfz:path.join(fixtureDir, "not-installed.sfz"),
+    name:"Missing SFZ Test"
+  };
+  SF_PRESETS[badPresetId] = {
+    ...SF_PRESETS[presetId], name:"Invalid Metadata Test",
+    articulations:{ bad:{ label:"Bad Articulation", keyswitch:{ key:999, velocity:127 } } },
+    defaultArticulation:"bad"
+  };
+
+  try {
+    state.song = validateSong({
+      title:"instrument preflight", bpm:120, timeSig:[4, 4], tempoMap:[],
+      tracks:[{ name:"바이올린", preset:"sf-violin", volume:0.8, pan:0,
+        notes:[{ bar:94, beat:3.75, pitch:"E3", dur:0.25, vel:83 }] }]
+    });
+    let before = JSON.stringify(state.song);
+    let historyBefore = ops.edit_history();
+    assert.throws(() => runOp("set_track", {
+      track:"바이올린", preset:presetId, articulation:"sustain", velRange:1
+    }, "gui"), error => {
+      assert.equal(error.code, "SAMPLE_MISSING");
+      assert.equal(error.attackCoverageMismatch, true);
+      assert.equal(error.track, "바이올린");
+      assert.equal(error.bar, 94);
+      assert.equal(error.beat, 3.75);
+      assert.equal(error.pitch, "E3");
+      assert.equal(error.midi, 52);
+      assert.equal(error.velocity, 83);
+      assert.match(error.message, /94마디 3\.75박/);
+      assert.match(error.message, /Pitch \(피치, 음높이\) E3 \(MIDI 52\)/);
+      assert.match(error.message, /Velocity \(벨로시티/);
+      assert.match(error.message, /Articulation \(아티큘레이션/);
+      assert.match(error.message, /Attack Region \(어택 리전/);
+      assert.match(error.message, /저장하지 않았습니다/);
+      return true;
+    });
+    assert.equal(JSON.stringify(state.song), before, "거부한 Instrument 변경이 곡을 일부 변경함");
+    assert.equal(ops.edit_history(), historyBefore, "거부한 Instrument 변경이 undo 이력을 추가함");
+
+    state.song = validateSong({
+      title:"articulation preflight", bpm:120, timeSig:[4, 4], tempoMap:[],
+      tracks:[{ name:"바이올린", preset:"sf-violin", volume:0.8, pan:0,
+        notes:[{ bar:1, beat:0, pitch:"C4", dur:1, vel:80 }] }]
+    });
+    runOp("set_track", {
+      track:"바이올린", preset:presetId, articulation:"sustain", velRange:1
+    }, "gui");
+    before = JSON.stringify(state.song);
+    historyBefore = ops.edit_history();
+    assert.throws(() => runOp("set_region_articulation", {
+      track:"바이올린", from_bar:1, to_bar:1, articulation:"staccato"
+    }, "gui"), /1마디 0박.*C4.*Staccato.*Attack Region/);
+    assert.equal(JSON.stringify(state.song), before, "거부한 구간 Articulation이 곡을 일부 변경함");
+    assert.equal(ops.edit_history(), historyBefore, "거부한 구간 Articulation이 undo 이력을 추가함");
+
+    assert.throws(() => runOp("set_velocity", {
+      track:"바이올린", from_bar:1, to_bar:1, vel:110
+    }, "gui"), /Velocity .*110.*Attack Region/);
+    assert.equal(JSON.stringify(state.song), before, "거부한 Velocity 변경이 곡을 일부 변경함");
+    assert.equal(ops.edit_history(), historyBefore, "거부한 Velocity 변경이 undo 이력을 추가함");
+
+    // 예전 저장곡에 누락 음이 여러 개 있어도 그대로 열리고, coverage와 무관한 편집 및
+    // 한 음씩의 부분 수리는 허용한다. 남은 옛 누락이 새 결함으로 오판되면 안 된다.
+    const legacy = validateSong({
+      title:"legacy sfz invalid", bpm:120, timeSig:[4, 4], tempoMap:[],
+      tracks:[{ name:"옛 바이올린", preset:presetId, articulation:"sustain",
+        volume:0.8, pan:0, velRange:1, notes:[
+          { bar:1, beat:0, pitch:"E3", dur:1, vel:80 },
+          { bar:2, beat:0, pitch:"F3", dur:1, vel:80 }
+        ] }]
+    });
+    state.song = legacy;
+    let savedSongs = null;
+    const unsubscribeSave = subscribe(event => {
+      if (event.type === "state") savedSongs = event.songs;
+    });
+    try {
+      assert.match(ops.save_song({ name:"legacy sfz invalid saved" }), /보관/,
+        "save_song이 불필요한 mutated 뒤 실패함");
+    } finally { unsubscribeSave(); }
+    assert.ok(savedSongs?.includes("legacy sfz invalid saved"),
+      "coverage/autosave를 생략한 save_song이 GUI 곡 목록 broadcast까지 잃음");
+    state.song = validateSong({ title:"before legacy load", bpm:120, timeSig:[4,4], tempoMap:[],
+      tracks:[{ name:"Piano", preset:"sf-piano-gm", volume:0.8, pan:0,
+        notes:[{ bar:1, beat:0, pitch:"C4", dur:1, vel:80 }] }] });
+    runOp("load_song", { name:"legacy sfz invalid saved" }, "gui");
+    runOp("set_track", { track:"옛 바이올린", new_name:"옛 바이올린 수정", volume:0.7 }, "gui");
+    runOp("add_feedback", { from_bar:1, text:"legacy 곡을 고치는 중" }, "gui");
+    runOp("delete_note", { track:"옛 바이올린 수정", bar:1, beat:0, pitch:"E3", dur:1 }, "gui");
+    assert.deepEqual(state.song.tracks[0].notes.map(note => note.pitch), ["F3"],
+      "첫 누락을 고칠 때 두 번째 legacy 누락 때문에 수리가 막힘");
+    before = JSON.stringify(state.song);
+    historyBefore = ops.edit_history();
+    assert.throws(() => runOp("add_notes", { track:"옛 바이올린 수정", notes:[
+      { bar:3, beat:0, pitch:"D3", dur:1, vel:80 }
+    ] }, "gui"), /D3.*Attack Region/);
+    assert.equal(JSON.stringify(state.song), before, "새 누락 음 거부가 legacy 곡을 오염시킴");
+    assert.equal(ops.edit_history(), historyBefore, "새 누락 음 거부가 history를 오염시킴");
+
+    // autosave와 A/B load도 같은 legacy-adopt 정책을 쓴다.
+    fs.writeFileSync(path.join(soundfonts.dataDir, "song.json"), JSON.stringify(legacy));
+    assert.equal(loadAutosave(), true);
+    runOp("set_track", { track:"옛 바이올린", volume:0.65 }, "gui");
+    state.song = legacy;
+    ops.ab_save({ slot:"A" });
+    state.song = validateSong({ title:"before ab", bpm:120, timeSig:[4,4], tempoMap:[], tracks:[] });
+    runOp("ab_load", { slot:"A" }, "gui");
+    runOp("set_track", { track:"옛 바이올린", volume:0.6 }, "gui");
+
+    // 첫 SFZ track의 asset 부재는 그 track만 건너뛰고, 뒤 track의 실제 mismatch를 찾는다.
+    const masked = validateSong({
+      title:"asset masking", bpm:120, timeSig:[4,4], tempoMap:[], tracks:[
+        { name:"미설치", preset:missingPresetId, articulation:"sustain", volume:0.8, pan:0,
+          notes:[{ bar:1, beat:0, pitch:"C4", dur:1, vel:80 }] },
+        { name:"검사 대상", preset:presetId, articulation:"sustain", velRange:1, volume:0.8, pan:0,
+          notes:[{ bar:1, beat:0, pitch:"C4", dur:1, vel:80 }] }
+      ]
+    });
+    state.song = masked;
+    ops.save_song({ name:"asset masking saved" });
+    state.song = validateSong({ title:"before masking", bpm:120, timeSig:[4,4], tempoMap:[], tracks:[] });
+    runOp("load_song", { name:"asset masking saved" }, "gui");
+    before = JSON.stringify(state.song);
+    historyBefore = ops.edit_history();
+    assert.throws(() => runOp("set_velocity", {
+      track:"검사 대상", from_bar:1, to_bar:1, vel:110
+    }, "gui"), /검사 대상.*Velocity .*110.*Attack Region/);
+    assert.equal(JSON.stringify(state.song), before, "앞 미설치 asset이 뒤 mismatch 원자성을 깨뜨림");
+    assert.equal(ops.edit_history(), historyBefore, "앞 미설치 asset이 뒤 mismatch history를 깨뜨림");
+
+    // engine 오류 전체를 삼키지 않는다. asset-unavailable이 아닌 metadata 결함은 그대로 실패한다.
+    state.song = validateSong({ title:"bad metadata source", bpm:120, timeSig:[4,4], tempoMap:[],
+      tracks:[{ name:"바이올린", preset:"sf-violin", volume:0.8, pan:0,
+        notes:[{ bar:1, beat:0, pitch:"C4", dur:1, vel:80 }] }] });
+    before = JSON.stringify(state.song);
+    assert.throws(() => runOp("set_track", {
+      track:"바이올린", preset:badPresetId, articulation:"bad"
+    }, "gui"), /keyswitch.*0~127|0~127.*keyswitch/i);
+    assert.equal(JSON.stringify(state.song), before, "비-asset SFZ 오류가 삼켜져 preset이 반영됨");
+
+    // redo snapshot은 저장 당시 유효했지만 SFZ asset이 바뀌면 이제 무음일 수 있다.
+    // candidate 검사 전에 stack을 pop하면 실패한 redo가 history까지 망가진다.
+    fs.writeFileSync(sfz, validSfzText);
+    state.song = validateSong({ title:"history asset epoch", bpm:120, timeSig:[4,4], tempoMap:[],
+      tracks:[{ name:"바이올린", preset:"sf-violin", volume:0.8, pan:0,
+        notes:[{ bar:1, beat:0, pitch:"C4", dur:1, vel:80 }] }] });
+    runOp("set_track", {
+      track:"바이올린", preset:presetId, articulation:"sustain", velRange:1
+    }, "gui");
+    runOp("undo_edit", {}, "gui");
+    fs.writeFileSync(sfz, validSfzText.replace("key=60", "key=62"));
+    before = JSON.stringify(state.song);
+    historyBefore = ops.edit_history();
+    assert.throws(() => runOp("redo_edit", {}, "gui"), /C4.*Attack Region/);
+    assert.equal(JSON.stringify(state.song), before, "실패한 redo가 state를 바꿈");
+    assert.equal(ops.edit_history(), historyBefore, "실패한 redo가 undo/redo stack을 바꿈");
+    fs.writeFileSync(sfz, validSfzText);
+  } finally {
+    fs.writeFileSync(sfz, validSfzText);
+    delete SF_PRESETS[presetId];
+    delete SF_PRESETS[missingPresetId];
+    delete SF_PRESETS[badPresetId];
+  }
+});
+
+ok("SFZ Pitch Bend 편집은 실제 주법별 MIDI 채널 한도를 원자적으로 지킨다", () => {
+  const [presetId, preset] = Object.entries(SF_PRESETS).find(([, item]) =>
+    item.engine === "sfizz" && item.articulations && Object.keys(item.articulations).length > 1);
+  assert.ok(presetId, "여러 주법이 있는 SFZ 프리셋이 없음");
+  const defaultArticulation = preset.defaultArticulation ?? Object.keys(preset.articulations)[0];
+  const make = (notes, regions = undefined) => validateSong({
+    title:"sfizz bend capacity", bpm:120, timeSig:[4, 4], tempoMap:[],
+    tracks:[{ name:"SFZ 현악", preset:presetId, volume:0.8, pan:0,
+      ...(regions ? { articulationRegions:regions } : {}), notes }]
+  });
+  const id = note => ({ bar:note.bar, beat:note.beat, pitch:note.pitch, dur:note.dur });
+  const acrossBars = Array.from({ length:17 }, (_, index) => ({
+    bar:index + 1, beat:0, pitch:"C4", dur:0.5, vel:90
+  }));
+
+  state.song = make(acrossBars);
+  const before = JSON.stringify(state.song);
+  const historyBefore = ops.edit_history();
+  assert.throws(() => runOp("set_bend", {
+    track:"SFZ 현악", notes:acrossBars.map(id), bend:2
+  }, "gui"), /MIDI 채널 17개.*SFZ 한도 16개/);
+  assert.equal(JSON.stringify(state.song), before, "거부한 Pitch Bend가 곡을 일부 변경함");
+  assert.equal(ops.edit_history(), historyBefore, "거부한 Pitch Bend가 undo 이력을 추가함");
+
+  state.song = make(acrossBars);
+  assert.throws(() => ops.set_bend({
+    track:"SFZ 현악", notes:acrossBars.slice(0, 16).map(id), bend:-2
+  }), /MIDI 채널 17개/, "16개 bend와 straight lane 하나를 16채널로 잘못 셈");
+  ops.set_bend({ track:"SFZ 현악", notes:acrossBars.slice(0, 15).map(id), bend:2 });
+  assert.equal(state.song.tracks[0].notes.filter(note => note.bend === 2).length, 15,
+    "15개 bend + 재사용 가능한 straight lane을 허용하지 않음");
+  const beforePaste = JSON.stringify(state.song);
+  const pasteHistoryBefore = ops.edit_history();
+  assert.throws(() => runOp("add_notes", { track:"SFZ 현악", notes:[
+    { bar:18, beat:0, pitch:"C4", dur:0.5, vel:90, bend:2 }
+  ] }, "gui"), /MIDI 채널 17개/, "bend를 보존한 붙여넣기가 SFZ 채널 검사를 우회함");
+  assert.equal(JSON.stringify(state.song), beforePaste, "거부한 bent note 붙여넣기가 곡을 일부 변경함");
+  assert.equal(ops.edit_history(), pasteHistoryBefore, "거부한 bent note 붙여넣기가 undo 이력을 추가함");
+  ops.set_bend({ track:"SFZ 현악", notes:acrossBars.map(id), bend:0 });
+  assert.ok(state.song.tracks[0].notes.every(note => note.bend === undefined),
+    "Pitch Bend 0으로 채널 용량을 복구하지 못함");
+
+  const firstLayer = Array.from({ length:8 }, (_, index) => ({
+    bar:1, beat:index * 0.4, pitch:"C4", dur:0.2, vel:90
+  }));
+  const explicitDefaultLayer = Array.from({ length:9 }, (_, index) => ({
+    bar:2, beat:index * 0.4, pitch:"C4", dur:0.2, vel:90
+  }));
+  const split = [...firstLayer, ...explicitDefaultLayer];
+  state.song = make(split, [{ from:2, to:2, articulation:defaultArticulation }]);
+  ops.set_bend({ track:"SFZ 현악", notes:split.map(id), bend:-12 });
+  assert.equal(state.song.tracks[0].notes.filter(note => note.bend === -12).length, 17,
+    "implicit 기본과 explicit 주법의 독립 렌더 층을 합쳐 거짓 거부함");
+  const beforeMerge = JSON.stringify(state.song);
+  assert.throws(() => runOp("set_region_articulation", {
+    track:"SFZ 현악", from_bar:2, to_bar:2, articulation:null
+  }, "gui"), /MIDI 채널 17개/, "구간 주법 병합이 SFZ 채널 검사를 우회함");
+  assert.equal(JSON.stringify(state.song), beforeMerge, "거부한 주법 층 병합이 곡을 일부 변경함");
 });
 
 ok("SFZ one-shot은 피스별 실측 길이를 갖고 일반 악기는 원본 파일 길이를 release로 쓰지 않음", () => {

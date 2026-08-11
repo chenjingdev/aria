@@ -82,23 +82,37 @@ function trackChunk(events) {
 }
 
 export function midiBuffer(song) {
-  // Aria의 track.articulation은 특정 SFZ에 녹음·매핑된 주법을 선택한다. 이를
+  // Aria의 track.articulation과 articulationRegions는 특정 SFZ에 녹음·매핑된
+  // 주법을 선택한다. 이를
   // 일반 GM program만 남는 portable MIDI로 조용히 내보내면 사용자가 고른 소리가
   // 사라진다. 기본 주법(키 생략/null)은 기존 GM 근사를 허용하되, 명시적 선택은
   // WAV로 보존하거나 사용자가 직접 기본값으로 되돌리기 전까지 엄격하게 막는다.
-  const articulated = song.tracks.filter(track =>
-    Array.isArray(track.notes) && track.notes.length > 0 &&
-    typeof track.articulation === "string" && track.articulation.trim()
-  );
+  // 노트가 하나도 시작하지 않는 빈 region은 내보낼 연주가 없으므로 차단하지 않는다.
+  const articulated = song.tracks.map(track => {
+    if (!Array.isArray(track.notes) || !track.notes.length) return null;
+    const baseline = typeof track.articulation === "string" && track.articulation.trim()
+      ? track.articulation.trim() : null;
+    const usedRegions = (track.articulationRegions ?? []).filter(region =>
+      track.notes.some(note => note.bar >= region.from && note.bar <= region.to));
+    if (!baseline && !usedRegions.length) return null;
+    return { track, baseline, usedRegions };
+  }).filter(Boolean);
   if (articulated.length) {
     const details = articulated
-      .map(track => `"${track.name}" (${track.articulation})`)
+      .map(({ track, baseline, usedRegions }) => {
+        const choices = [
+          ...(baseline ? [`트랙 전체=${baseline}`] : []),
+          ...usedRegions.map(region => `${region.from}${region.to !== region.from ? `~${region.to}` : ""}마디=${region.articulation}`)
+        ];
+        return `"${track.name}" (${choices.join(", ")})`;
+      })
       .join(", ");
     throw new Error(
       `MIDI 내보내기를 중단했습니다 — 사용 중인 트랙에 명시적인 녹음 주법/키스위치가 있습니다: ${details}. ` +
       "표준 MIDI의 GM 근사로는 이 아티큘레이션을 안전하게 보존할 수 없습니다. " +
-      "현재 소리를 보존하려면 WAV로 내보내거나, set_track({track:\"트랙 이름\", articulation:null})로 " +
-      "프리셋 기본 주법으로 되돌린 뒤 MIDI를 내보내세요."
+      "현재 소리를 보존하려면 WAV로 내보내세요. GM 근사가 목적이면 " +
+      "set_region_articulation({track:\"트랙 이름\", from_bar:1, to_bar:999, articulation:null})로 구간 주법을 지우고, " +
+      "필요하면 set_track({track:\"트랙 이름\", articulation:null})로 트랙 전체도 프리셋 기본 주법에 되돌린 뒤 MIDI를 내보내세요."
     );
   }
   const melodicCount = song.tracks.filter(t => !isDrumPreset(t.preset)).length;

@@ -5,12 +5,14 @@ import os from "node:os";
 import path from "node:path";
 import { wavBuffer } from "../src/renderer.js";
 import {
+  assertSfizzCoverage,
   SfizzEngineError,
   openSfizzSession,
   resolveSfizzBinary,
   resolveSfzPath,
   sfzStatus
 } from "../src/sfizz-engine.js";
+import { assignSfizzChannels, MAX_SFIZZ_MIDI_CHANNELS } from "../src/sfizz-channels.js";
 
 let passed = 0;
 function check(name, fn) {
@@ -100,10 +102,38 @@ try {
     "<group> sw_last=20",
     "<region> sample=soft.wav key=60",
     "<group> sw_last=21",
-    "<region> sample=loud.wav key=60"
+    "<region> sample=loud.wav key=60 hivel=80"
   ].join("\n"));
 
   console.log("sfizz CLI sidecar adapter tests");
+
+  check("shared channel planner counts permanent bends and reusable straight-note lanes", () => {
+    const bent = Array.from({ length: 15 }, (_, index) => ({
+      startSample:index * 100, endSample:index * 100 + 50,
+      key:60 + index % 12, bend:2, controls:[]
+    }));
+    const overlapping = assignSfizzChannels([
+      ...structuredClone(bent),
+      { startSample:0, endSample:200, key:84, bend:0, controls:[] },
+      { startSample:100, endSample:300, key:84, bend:0, controls:[] }
+    ]);
+    assert.equal(overlapping.requiredChannels, 17);
+    assert.ok(overlapping.requiredChannels > MAX_SFIZZ_MIDI_CHANNELS);
+
+    const reusable = assignSfizzChannels([
+      ...structuredClone(bent),
+      { startSample:0, endSample:100, key:84, bend:0, controls:[] },
+      { startSample:100, endSample:200, key:84, bend:0, controls:[] }
+    ]);
+    assert.equal(reusable.requiredChannels, 16);
+
+    const differentKeys = assignSfizzChannels([
+      ...structuredClone(bent),
+      { startSample:0, endSample:200, key:84, bend:0, controls:[] },
+      { startSample:0, endSample:200, key:85, bend:0, controls:[] }
+    ]);
+    assert.equal(differentKeys.requiredChannels, 16);
+  });
 
   check("resolves and verifies the pinned installed sfizz_render binary", () => {
     const binary = resolveSfizzBinary();
@@ -298,13 +328,28 @@ try {
       });
       const staccato = session.renderTrack({
         preset, track: { articulation: "staccato" }, length: 2000,
-        notes: [{ startSample: 0, endSample: 600, key: 60, velocity: 100 }]
+        notes: [{ startSample: 0, endSample: 600, key: 60, velocity: 70 }]
       });
       assert.equal(sustain.diagnostics.articulation, "sustain");
       assert.equal(staccato.diagnostics.articulation, "staccato");
       assert.ok(peak(staccato.left) > peak(sustain.left) * 4,
         "keyswitch selection must reach the separately recorded layer");
     } finally { session.close(); }
+
+    assert.equal(assertSfizzCoverage(preset, [{
+      articulation: "sustain", notes: [{ key: 60, velocity: 100 }]
+    }]).notes, 1);
+    assert.throws(() => assertSfizzCoverage(preset, [{
+      articulation: "staccato", notes: [{ key: 60, velocity: 100 }]
+    }]), error => {
+      assert.ok(error instanceof SfizzEngineError);
+      assert.equal(error.code, "SAMPLE_MISSING");
+      assert.equal(error.details.reason, "attack-region-missing");
+      assert.equal(error.details.keyswitch, 21);
+      assert.equal(error.details.layerIndex, 0);
+      assert.equal(error.details.noteIndex, 0);
+      return true;
+    });
   });
 
   check("fails missing SFZ and missing referenced samples without fallback", () => {

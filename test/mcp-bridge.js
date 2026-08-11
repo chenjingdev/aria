@@ -104,8 +104,9 @@ try {
   await client.connect(transport);
 
   const listed = await client.listTools();
-  ok(listed.tools.length === 44 && listed.tools.some(tool => tool.name === "new_song"),
-    "브리지가 최신 MCP 도구 44개를 그대로 노출");
+  ok(listed.tools.length === 45 && listed.tools.some(tool => tool.name === "new_song") &&
+    listed.tools.some(tool => tool.name === "set_region_articulation"),
+    "브리지가 구간 주법을 포함한 최신 MCP 도구 45개를 그대로 노출");
 
   const created = await client.callTool({
     name: "new_song",

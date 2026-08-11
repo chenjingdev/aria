@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { assignSfizzChannels, MAX_SFIZZ_MIDI_CHANNELS } from "./sfizz-channels.js";
 
 export const SFIZZ_ENGINE_ID = "sfizz";
 export const SFIZZ_BLOCK_SIZE = 128;
@@ -18,7 +19,6 @@ const ENGINE_MANIFEST_PATH = path.join(ROOT, "engines", "sfizz.json");
 const PACK_MANIFEST_DIR = path.join(ROOT, "packs");
 const MAX_SFZ_FILE_BYTES = 32 * 1024 * 1024;
 const MAX_SFZ_INCLUDE_FILES = 256;
-const MAX_MIDI_CHANNELS = 16;
 const MAX_GAIN = 16;
 const verifiedBinaries = new Map();
 const packManifestCache = new Map();
@@ -464,6 +464,7 @@ function inspectSfz(resolved) {
   let scope = "none";
   let global = {}, master = {}, group = {}, region = null;
   let defaultRoot = path.dirname(resolved.file);
+  let defaultKeyswitch = null;
   const regions = [];
   const samples = new Set();
   const finishRegion = () => {
@@ -491,8 +492,14 @@ function inspectSfz(resolved) {
         });
       return { controller, lo, hi };
     });
+    const swLast = region.sw_last === undefined ? null : noteNameToMidi(region.sw_last);
+    if (region.sw_last !== undefined && swLast === null)
+      fail("ASSET_CORRUPT", "SFZ region의 sw_last keyswitch를 해석할 수 없습니다", {
+        sfz: resolved.file, swLast: region.sw_last
+      });
     regions.push({
       lokey, hikey, lovel, hivel, ccRanges,
+      swLast,
       trigger: region.trigger ?? "attack", sample: region.__sample ?? null
     });
     region = null;
@@ -509,6 +516,18 @@ function inspectSfz(resolved) {
       continue;
     }
     const value = cleanValue(token.value);
+    if (token.name === "sw_default") {
+      const key = noteNameToMidi(value);
+      if (key === null)
+        fail("ASSET_CORRUPT", "SFZ sw_default keyswitch를 해석할 수 없습니다", {
+          sfz: resolved.file, swDefault: value
+        });
+      if (defaultKeyswitch !== null && defaultKeyswitch !== key)
+        fail("ASSET_CORRUPT", "SFZ에 서로 다른 sw_default keyswitch가 선언되어 있습니다", {
+          sfz: resolved.file, previous: defaultKeyswitch, next: key
+        });
+      defaultKeyswitch = key;
+    }
     if (token.name === "default_path") {
       const normalized = value.replaceAll("\\", "/");
       const candidate = path.isAbsolute(normalized) ? path.resolve(normalized) : path.resolve(token.baseDir, normalized);
@@ -543,6 +562,7 @@ function inspectSfz(resolved) {
     fail("ASSET_CORRUPT", `SFZ에 region이 하나도 없습니다: ${resolved.file}`, { sfz: resolved.file });
   return Object.freeze({
     regions: Object.freeze(regions),
+    defaultKeyswitch,
     sampleFiles: Object.freeze([...samples]),
     includeFiles: Object.freeze([...includedFiles]),
     bytes: totalBytes
@@ -652,31 +672,39 @@ function normalizeNoteControls(value, where) {
   return controls.sort((left, right) => left.controller - right.controller);
 }
 
+function normalizePerformanceNote(note, index, where = `notes[${index}]`) {
+  if (!note || typeof note !== "object" || Array.isArray(note))
+    fail("INVALID_RENDER_REQUEST", `${where}는 노트 객체여야 합니다`, { note });
+  return {
+    index,
+    key: integer(note.key, `${where}.key`, 0, 127),
+    velocity: integer(note.velocity, `${where}.velocity`, 1, 127),
+    controls: normalizeNoteControls(note.controls, where)
+  };
+}
+
 function normalizeNotes(notes, length) {
   if (!Array.isArray(notes)) fail("INVALID_RENDER_REQUEST", "notes는 배열여야 합니다", { notes });
   return notes.map((note, index) => {
     const where = `notes[${index}]`;
-    if (!note || typeof note !== "object" || Array.isArray(note))
-      fail("INVALID_RENDER_REQUEST", `${where}는 노트 객체여야 합니다`, { note });
+    const performance = normalizePerformanceNote(note, index, where);
     const startSample = integer(note.startSample, `${where}.startSample`, 0, Math.max(0, length - 1));
     const endSample = integer(note.endSample, `${where}.endSample`, 1, length);
     if (endSample <= startSample)
       fail("INVALID_RENDER_REQUEST", `${where}.endSample은 startSample보다 커야 합니다`, { startSample, endSample });
     return {
-      index,
+      ...performance,
       startSample,
       endSample,
-      key: integer(note.key, `${where}.key`, 0, 127),
-      velocity: integer(note.velocity, `${where}.velocity`, 1, 127),
       bend: finite(note.bend ?? 0, `${where}.bend`, -SFIZZ_PITCH_RANGE, SFIZZ_PITCH_RANGE),
       gain: finite(note.gain ?? 1, `${where}.gain`, 0, MAX_GAIN),
-      controls: normalizeNoteControls(note.controls, where),
       channel: 0
     };
   }).sort((a, b) => a.startSample - b.startSample || a.endSample - b.endSample || a.index - b.index);
 }
 
 function ensureCoverage(index, notes, sfzPath, articulation) {
+  const activeKeyswitch = articulation.keyswitch?.key ?? index.defaultKeyswitch;
   for (const note of notes) {
     const controllerValues = new Map(articulation.cc.map(control => [control.controller, control.value]));
     for (const control of note.controls) {
@@ -687,49 +715,79 @@ function ensureCoverage(index, notes, sfzPath, articulation) {
           });
       controllerValues.set(control.controller, control.value);
     }
+    // 고정 sfizz f5c6e29는 sw_lokey/sw_hikey를 sw_last 선택 판정에 쓰지 않고,
+    // region의 sw_last 값 자체를 sticky keyswitch slot로 등록한다. 범위 밖이라는
+    // 이유로 여기서 거부하면 실제 renderer가 내는 소리를 preflight만 거짓 거부한다.
     const matches = index.regions.some(region =>
       !region.trigger.startsWith("release") && note.key >= region.lokey && note.key <= region.hikey &&
       note.velocity >= region.lovel && note.velocity <= region.hivel && region.sample !== null &&
+      (region.swLast === null || region.swLast === activeKeyswitch) &&
       region.ccRanges.every(range => {
         const value = controllerValues.get(range.controller) ?? 0;
         return value >= range.lo && value <= range.hi;
       }));
     if (!matches)
       fail("SAMPLE_MISSING",
-        `SFZ ${path.basename(sfzPath)}에 MIDI ${note.key}, velocity ${note.velocity}, 요청한 CC 상태를 재생할 attack region/sample이 없습니다 — 무음으로 넘기지 않았습니다`,
-        { sfz: sfzPath, key: note.key, velocity: note.velocity, controls: note.controls });
+        `SFZ ${path.basename(sfzPath)}에 MIDI ${note.key}, velocity ${note.velocity}, 요청한 Keyswitch/CC 상태를 재생할 attack region/sample이 없습니다 — 무음으로 넘기지 않았습니다`,
+        {
+          reason: "attack-region-missing",
+          sfz: sfzPath,
+          noteIndex: note.index,
+          key: note.key,
+          velocity: note.velocity,
+          keyswitch: activeKeyswitch,
+          articulation: articulation.id,
+          controls: note.controls
+        });
   }
 }
 
-function assignChannels(notes) {
-  const lanes = [];
-  // MIDI pitch wheel은 channel 전체에 적용된다. ramp bend 노트는 gate와 release
-  // tail 동안 channel을 단독 소유하고, bend가 없는 노트만 same-key gate가
-  // 겹치지 않을 때 channel을 공유한다.
-  for (const note of notes) {
-    const controlsKey = note.controls.map(control => `${control.controller}:${control.value}`).join(",");
-    let lane;
-    if (note.bend !== 0) {
-      lane = { permanent: true, controlsKey, controls: note.controls, endsByKey: new Map() };
-      lanes.push(lane);
-    } else {
-      lane = lanes.find(item => !item.permanent && item.controlsKey === controlsKey &&
-        (item.endsByKey.get(note.key) ?? -1) <= note.startSample);
-      if (!lane) {
-        lane = { permanent: false, controlsKey, controls: note.controls, endsByKey: new Map() };
-        lanes.push(lane);
-      }
+// 편집 시점의 호환성 검사. sfizz_render를 실행하거나 임시 MIDI/WAV를 만들지 않고,
+// 실제 렌더와 같은 SFZ parser·Articulation/Keyswitch/CC·Velocity coverage 판정을 쓴다.
+// layers: [{ articulation, notes:[{key, velocity, controls?}, ...] }, ...]
+export function assertSfizzCoverage(spec, layers, options = {}) {
+  if (!spec || typeof spec !== "object" || Array.isArray(spec) || spec.engine !== SFIZZ_ENGINE_ID)
+    fail("ASSET_SPEC_INVALID", "SFZ coverage 검사는 engine:'sfizz' preset 객체가 필요합니다", { spec });
+  if (!Array.isArray(layers))
+    fail("INVALID_RENDER_REQUEST", "SFZ coverage layers는 배열이어야 합니다", { layers });
+  const resolved = resolveSfzPath(spec, options);
+  const index = inspectSfz(resolved);
+  let checkedNotes = 0;
+  for (let layerIndex = 0; layerIndex < layers.length; layerIndex++) {
+    const layer = layers[layerIndex];
+    if (!layer || typeof layer !== "object" || Array.isArray(layer))
+      fail("INVALID_RENDER_REQUEST", `layers[${layerIndex}]는 객체여야 합니다`, { layer });
+    if (!Array.isArray(layer.notes))
+      fail("INVALID_RENDER_REQUEST", `layers[${layerIndex}].notes는 배열이어야 합니다`, { notes: layer.notes });
+    const articulation = normalizeArticulation(spec, { articulation: layer.articulation });
+    const notes = layer.notes.map((note, noteIndex) =>
+      normalizePerformanceNote(note, noteIndex, `layers[${layerIndex}].notes[${noteIndex}]`));
+    try {
+      ensureCoverage(index, notes, resolved.file, articulation);
+    } catch (error) {
+      if (error instanceof SfizzEngineError && error.details?.reason === "attack-region-missing")
+        error.details = { ...error.details, layerIndex };
+      throw error;
     }
-    note.channel = lanes.indexOf(lane);
-    lane.endsByKey.set(note.key, note.endSample);
+    checkedNotes += notes.length;
   }
-  if (lanes.length > MAX_MIDI_CHANNELS)
-    fail("CAPABILITY_UNSUPPORTED",
-      `동시/개별 bend를 정확히 보존하려면 MIDI channel ${lanes.length}개가 필요하지만 sfizz CLI는 ${MAX_MIDI_CHANNELS}개까지 사용합니다`,
-      { requestedChannels: lanes.length, maximumChannels: MAX_MIDI_CHANNELS });
   return {
-    channelCount: Math.max(1, lanes.length),
-    channelControls: lanes.length ? lanes.map(lane => lane.controls) : [[]]
+    engine: SFIZZ_ENGINE_ID,
+    sfz: resolved.file,
+    layers: layers.length,
+    notes: checkedNotes
+  };
+}
+
+function assignChannels(notes) {
+  const planned = assignSfizzChannels(notes);
+  if (planned.requiredChannels > MAX_SFIZZ_MIDI_CHANNELS)
+    fail("CAPABILITY_UNSUPPORTED",
+      `동시/개별 bend를 정확히 보존하려면 MIDI channel ${planned.requiredChannels}개가 필요하지만 sfizz CLI는 ${MAX_SFIZZ_MIDI_CHANNELS}개까지 사용합니다`,
+      { requestedChannels: planned.requiredChannels, maximumChannels: MAX_SFIZZ_MIDI_CHANNELS });
+  return {
+    channelCount: planned.channelCount,
+    channelControls: planned.channelControls
   };
 }
 

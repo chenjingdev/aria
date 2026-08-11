@@ -86,7 +86,7 @@ try {
     "<region> sample=loud.wav key=60"
   ].join("\n"));
 
-  const { renderRange } = await import("../src/sampler-renderer.js");
+  const { assertSfizzSongCoverage, renderRange } = await import("../src/sampler-renderer.js");
   const { validateSong } = await import("../src/song.js");
   const neutralMaster = Object.freeze({
     comp: false, limiter: false, softClip: false, inGain: 1, makeup: 1, wetGain: 0
@@ -170,6 +170,24 @@ try {
     assert.equal(first.diagnostics[0].invocations, 1);
   });
 
+  check("rejects unsupported legacy track controls in SFZ preflight before rendering", () => {
+    // validateSong no longer persists these fields. Inject them afterward to cover
+    // an old in-memory track or an internal caller reaching preflight directly.
+    const song = inject(songOf([baseTrack("Legacy SFZ controls", [note()])]));
+    Object.assign(song.tracks[0], {
+      attack: 0.1,
+      release: 1,
+      vibrato: 0.5,
+      ensemble: 2
+    });
+    assert.throws(() => assertSfizzSongCoverage(song, { samplerPresets }), error => {
+      assert.equal(error.code, "CAPABILITY_UNSUPPORTED");
+      assert.deepEqual(error.controls, ["attack", "release", "vibrato", "ensemble"]);
+      assert.match(error.message, /자동으로 흉내 내지 않습니다/);
+      return true;
+    });
+  });
+
   check("routes SFZ and SF2 tracks to separate exact engines in one mix", () => {
     const song = songOf([
       baseTrack("SFZ", [note("C4")]),
@@ -218,6 +236,41 @@ try {
       "different keyswitch articulations must produce different PCM");
     assert.ok(peak(staccato.left, staccato.right) > peak(sustain.left, sustain.right) * 4,
       "the production renderer did not reach the separately recorded keyswitch layer");
+  });
+
+  check("renders bar-scoped articulation overrides with the note-on articulation and one track mix", () => {
+    const song = inject(songOf([baseTrack("Regional Keyswitch", [
+      note("C4", { bar: 1 }),
+      note("C4", { bar: 2 })
+    ])]), ["test-sfz-keyswitch"]);
+    song.tracks[0].articulationRegions = [{ from: 2, to: 2, articulation: "staccato" }];
+
+    const rendered = renderRange(song, 1, 2, options());
+    assert.equal(rendered.diagnostics.length, 1, "one authored track should keep one diagnostic entry");
+    assert.deepEqual(rendered.diagnostics[0].articulations.map(layer => [layer.id, layer.notes]), [
+      ["sustain", 1], ["staccato", 1]
+    ]);
+    assert.equal(rendered.diagnostics[0].invocations, 2);
+    assert.equal(rendered.diagnostics[0].engine, "sfizz");
+    assert.equal(rendered.diagnostics[0].sfz, "keyswitch.sfz");
+    assert.equal(rendered.diagnostics[0].notes, 2);
+    assert.equal(rendered.diagnostics[0].sourceEncoding, "pcm16");
+    assert.ok(rendered.diagnostics[0].nonzeroSamples > 0);
+    assert.ok(rendered.diagnostics[0].stereoMeanDifference > 0);
+
+    const firstPeak = peak(
+      rendered.left.subarray(0, 1500), rendered.right.subarray(0, 1500));
+    const secondStart = 2 * sampleRate;
+    const secondPeak = peak(
+      rendered.left.subarray(secondStart, secondStart + 1500),
+      rendered.right.subarray(secondStart, secondStart + 1500));
+    assert.ok(secondPeak > firstPeak * 4,
+      "bar 2 did not switch from the quiet sustain layer to the loud staccato layer");
+
+    const selected = renderRange(song, 2, 2, options());
+    assert.equal(selected.diagnostics.length, 1);
+    assert.equal(selected.diagnostics[0].articulation, "staccato",
+      "a partial render must retain the override active at the selected note onset");
   });
 
   check("routes a declared SFZ drum piece without an SF2 drum fallback", () => {

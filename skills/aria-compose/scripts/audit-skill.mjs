@@ -89,8 +89,8 @@ if (toolsStart < 0 || toolsEnd < 0) {
     if (new Set(documentedTools).size !== documentedTools.length) {
       fail("references/aria-capabilities.md: 도구 목록에 중복이 있음");
     }
-    if (actualTools.length !== 44) {
-      fail(`src/mcp.js: 예상한 44개가 아니라 ${actualTools.length}개 도구가 감지됨`);
+    if (actualTools.length !== 45) {
+      fail(`src/mcp.js: 예상한 45개가 아니라 ${actualTools.length}개 도구가 감지됨`);
     }
     if (actualTools.join(",") !== documentedTools.join(",")) {
       const missing = actualTools.filter((name) => !documentedTools.includes(name));
@@ -145,6 +145,6 @@ if (errors.length) {
 }
 
 console.log(
-  `aria-compose 구조 감사 통과: ${markdownFiles.length}개 문서, ${definedIds.size}개 출처 ID, 44개 Aria 도구`,
+  `aria-compose 구조 감사 통과: ${markdownFiles.length}개 문서, ${definedIds.size}개 출처 ID, 45개 Aria 도구`,
 );
 console.log("주의: 이 검사는 링크·ID·도구 표면·폐기 문구를 확인하며, source-to-claim 의미 적합성은 별도 수동 검토 대상입니다.");

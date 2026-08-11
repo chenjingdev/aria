@@ -35,7 +35,7 @@ Route vague sensory language twice: first interpret the phrase, then load the re
 ## Start safely
 
 1. Call `get_song` and `list_feedback` before any Aria edit, including a new-song request. `new_song` replaces the current live song.
-2. Call `list_presets` before creating a song or adding, replacing, or choosing instruments. With no filters it returns a compact source/family summary, not every ID; follow it with `query`, `family`, or `source` and normally `available_only:true` to retrieve actual choices. Treat the result as current and do not assume an SF2/SFZ sample preset is installed.
+2. Call `list_presets` before creating a song or adding, replacing, or choosing instruments. With no filters it returns a compact source/family summary, not every ID; follow it with `query`, `family`, or `source` and normally `available_only:true` to retrieve actual choices. Treat the result as current and do not assume an SF2/SFZ sample preset is installed. `available`/`설치됨` means that the asset can be opened; it does not promise **Sample Coverage (샘플 대응 — the selected recording contains every Pitch, Velocity, and Articulation used by the current score)**. Let `add_track`, `set_track`, and regional articulation edits run their atomic preflight, and treat a rejection as a request to choose a genuinely recorded range/layer—not as permission to delete, transpose, reassign, silence, or substitute notes without telling the user.
 3. Preserve meaningful existing work before `new_song` or a broad rewrite with `save_song` or `ab_save`. Do not create a preservation copy of an empty throwaway song.
 4. Inspect `edit_history` before a risky revision. Prefer reversible, bounded edits over replacing the whole song.
 5. If a request is ambiguous but low-risk, choose a coherent interpretation and state it briefly. Ask only when alternatives would produce materially different songs.
@@ -96,7 +96,7 @@ Use `play` on the prototype. Listen when audio is available and also inspect the
 - Use `set_velocity` ramps, `set_region_gain` ramps, track volume, arrangement density, and register as distinct dynamic controls. Do not treat any one control as the sole correct method.
 - Apply `swing`, `humanize`, or partial `quantize` only for a musical reason. Audition a straight version against the altered version when pocket matters.
 - Add pitch bends selectively to instruments that can plausibly sustain expressive pitch. For vibrato, choose an installed sample preset that already contains that performed or programmed behavior.
-- When `list_presets` exposes `articulation` choices, pass the exact returned ID to `add_track` or `set_track`; do not type a translated label or imitate the technique with a generic effect. Declared key switches and CC values select the actual mapped samples.
+- When `list_presets` exposes `articulation` choices, pass the exact returned ID to `add_track` or `set_track` for a track-wide choice, or to `set_region_articulation` for selected bars. Do not type a translated label or imitate the technique with a generic effect. Declared key switches and CC values select the actual mapped samples. A regional change applies to notes that start in the region; a sustained note is not replaced midway through its sound.
 - Do not invent removed track controls: `attack` (어택, 소리가 시작되는 성질), `release` (릴리스, 음을 놓은 뒤 남는 여운), `vibrato` (비브라토, 음높이의 주기적인 떨림), or `ensemble` (앙상블, 여러 연주자가 함께 내는 편성). Choose a matching recorded/programmed preset, articulation, note duration, and arrangement instead.
 - Treat `Recorded Clip` entries as one-shot recordings, not pitched instruments. True legato (실제 전이 레가토) requires recorded transitions and a dedicated mapping; longer release or an isolated legato phrase does not create it.
 - Keep repeated humanization passes from accumulating accidentally.
@@ -125,7 +125,7 @@ Check `check_key` for accidental pitch mistakes, but do not let it erase deliber
 ## Revise an existing song
 
 1. Inspect the current song, open feedback, section labels, and recent history.
-2. When preservation is explicit, snapshot the intended invariants—total bars, tempo map, sections, tracks/presets, mute/solo, gains, and notes outside the edit range—and save a collision-free named backup before using the global A/B slots.
+2. When preservation is explicit, snapshot the intended invariants—total bars, tempo map, sections, tracks/presets, mute/solo, gains, regional articulations, and notes outside the edit range—and save a collision-free named backup before using the global A/B slots.
 3. Restate the user's complaint as an audible contrast: too loud, too busy, late, static, harsh, weak, muddy, predictable, abrupt, or emotionally wrong.
 4. Localize the smallest relevant bar range and tracks.
 5. Save the untouched version to A when the change is subjective. Remember that A/B slots are global and overwritten; record the question and comparison range separately.

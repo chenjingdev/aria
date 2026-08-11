@@ -9,9 +9,12 @@ import {
 import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
 import {
   createSong, validateSong, validateNote, findTrack, songText, songSummary, totalBars, beatsPerBar,
-  tempoSegments, beatToSec, notePlaybackEndBeat, TRACK_OVERRIDES, MAX_TEMPO_POINTS, MAX_SECTIONS
+  tempoSegments, beatToSec, notePlaybackEndBeat, TRACK_OVERRIDES, MAX_TEMPO_POINTS, MAX_SECTIONS,
+  MAX_ARTICULATION_REGIONS, noteToMidi, effectiveArticulation
 } from "./song.js";
-import { renderRange } from "./sampler-renderer.js";
+import { assignSfizzChannels, MAX_SFIZZ_MIDI_CHANNELS } from "./sfizz-channels.js";
+import { resolveSfzPath } from "./sfizz-engine.js";
+import { assertSfizzSongCoverage, renderRange } from "./sampler-renderer.js";
 import { wavBuffer } from "./renderer.js";
 import { lufs } from "./master.js";
 import { midiBuffer } from "./midi.js";
@@ -94,6 +97,7 @@ export function loadAutosave() {
   try {
     if (fs.existsSync(AUTOSAVE)) {
       state.song = validateSong(JSON.parse(fs.readFileSync(AUTOSAVE, "utf8")));
+      adoptLegacySfizzCompatibility(state.song);
       lastWriteMs = fs.statSync(AUTOSAVE).mtimeMs; // 복원 시점 기준 — 이후 남이 갱신하면 내 쓰기가 양보한다
       return true;
     }
@@ -101,9 +105,194 @@ export function loadAutosave() {
   return false;
 }
 
-function mutated() {
-  autosave();
+const SFIZZ_ASSET_UNAVAILABLE_CODES = new Set([
+  "PACK_MISSING", "PACK_ROOT_MISSING", "PACK_UNVERIFIED",
+  "ASSET_MISSING", "ASSET_UNREADABLE", "ASSET_CORRUPT",
+  "SAMPLE_MISSING", "SAMPLE_CORRUPT"
+]);
+
+const cloneSong = song => JSON.parse(JSON.stringify(song));
+
+function fileIdentity(file) {
+  try {
+    const stat = fs.statSync(file, { bigint: true });
+    return `${file}:${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+  } catch (error) {
+    return `${file}:!${error.code ?? error.name}`;
+  }
+}
+
+// Coverage cache가 설치 교체·SFZ 수정 뒤의 옛 판정을 재사용하지 않게, 빠른 stat identity를
+// 곡 필드와 함께 묶는다. managed pack은 publish marker도 포함해 atomic 재설치를 감지한다.
+function sfizzAssetIdentity(preset) {
+  try {
+    const resolved = resolveSfzPath(preset, { verifyEntryChecksum: false });
+    return [
+      fileIdentity(resolved.file),
+      resolved.root ? fileIdentity(path.join(resolved.root, ".aria-pack.json")) : null
+    ];
+  } catch (error) {
+    return [`!${error.code ?? error.name}`, error.details?.file ?? error.details?.root ?? null];
+  }
+}
+
+function sfizzCompatibilityFingerprint(song) {
+  return JSON.stringify({
+    bpm: song.bpm,
+    timeSig: song.timeSig,
+    tempoMap: song.tempoMap ?? [],
+    tracks: song.tracks.flatMap(track => {
+      const preset = SF_PRESETS[track.preset] ?? SF_DRUM_KITS[track.preset];
+      if (preset?.engine !== "sfizz" || !track.notes.length) return [];
+      return [[
+        track.seed ?? track.name,
+        track.preset,
+        sfizzAssetIdentity(preset),
+        track.velRange ?? null,
+        track.articulation ?? null,
+        track.articulationRegions ?? null,
+        // renderer의 SFZ control 지원 여부에도 영향을 주는 정확한 필드 집합.
+        track.attack ?? null, track.release ?? null,
+        track.vibrato ?? null, track.ensemble ?? null,
+        track.notes.map(note => [
+          note.bar, note.beat, note.dur, note.pitch, note.vel, note.bend ?? 0
+        ])
+      ]];
+    })
+  });
+}
+
+function engineVelocity(track, preset, note) {
+  const range = track.velRange ?? preset.velRange ?? (isDrumPreset(track.preset) ? 0.6 : 0.65);
+  return Math.max(1, Math.min(127, Math.round(64 + (note.vel - 64) * range)));
+}
+
+function resolvedArticulation(track, preset, note) {
+  return effectiveArticulation(track, note.bar) ?? preset.defaultArticulation ?? null;
+}
+
+function coverageIssueKey(track, preset, note) {
+  return JSON.stringify([
+    track.seed ?? track.name, track.preset, note.bar, note.beat, note.pitch,
+    engineVelocity(track, preset, note), resolvedArticulation(track, preset, note)
+  ]);
+}
+
+// assertSfizzSongCoverage는 첫 누락에서 멈춘다. 실패한 performance 조합의 노트를 한꺼번에
+// 걷어 내며 반복해 legacy 곡의 모든 누락을 수집한다. 그래야 첫 음을 고친 뒤 두 번째 옛
+// 누락이 드러나도 "새 결함"으로 오판하지 않고 부분 수리를 허용할 수 있다.
+function collectSfizzCoverageIssues(song) {
+  const issues = [];
+  for (const track of song.tracks) {
+    const preset = SF_PRESETS[track.preset] ?? SF_DRUM_KITS[track.preset];
+    if (preset?.engine !== "sfizz" || !track.notes.length) continue;
+    let remaining = track.notes.slice();
+    while (remaining.length) {
+      try {
+        assertSfizzSongCoverage({ ...song, tracks: [{ ...track, notes: remaining }] });
+        break;
+      } catch (error) {
+        if (error?.attackCoverageMismatch === true) {
+          let failed = remaining.filter(note =>
+            String(note.pitch) === String(error.pitch) &&
+            engineVelocity(track, preset, note) === error.velocity &&
+            resolvedArticulation(track, preset, note) === error.articulation);
+          if (!failed.length) {
+            const exact = remaining.find(note => note.bar === error.bar && note.beat === error.beat &&
+              String(note.pitch) === String(error.pitch));
+            if (exact) failed = [exact];
+          }
+          if (!failed.length) throw error;
+          const failedSet = new Set(failed);
+          for (const note of failed)
+            issues.push({ key: coverageIssueKey(track, preset, note), error });
+          remaining = remaining.filter(note => !failedSet.has(note));
+          continue;
+        }
+        // 설치되지 않았거나 외부 asset이 손상된 트랙 하나 때문에 뒤 트랙의 실제
+        // coverage mismatch를 마스킹하지 않는다. 그 트랙만 건너뛰고 다음 트랙을 검사한다.
+        if (error?.engine === "sfizz" && SFIZZ_ASSET_UNAVAILABLE_CODES.has(error.code)) break;
+        throw error;
+      }
+    }
+  }
+  return issues;
+}
+
+function issueCounts(issues) {
+  const counts = new Map();
+  for (const issue of issues) counts.set(issue.key, (counts.get(issue.key) ?? 0) + 1);
+  return counts;
+}
+
+function compatibilityReport(song) {
+  return {
+    coverage: collectSfizzCoverageIssues(song),
+    bends: collectSongSfizzBendIssues(song)
+  };
+}
+
+function assertReportNotWorse(previous, candidate) {
+  const coverage = issueCounts(previous.coverage);
+  for (const issue of candidate.coverage) {
+    const left = coverage.get(issue.key) ?? 0;
+    if (!left) throw issue.error;
+    coverage.set(issue.key, left - 1);
+  }
+  const bend = new Map(previous.bends.map(issue => [issue.key, issue]));
+  for (const issue of candidate.bends) {
+    const before = bend.get(issue.key);
+    if (!before || issue.requestedChannels > before.requestedChannels) throw issue.error;
+  }
+}
+
+let acceptedSfizzCompatibility = null; // {song, fingerprint, report?}
+
+function adoptLegacySfizzCompatibility(song) {
+  acceptedSfizzCompatibility = {
+    song: cloneSong(song),
+    fingerprint: sfizzCompatibilityFingerprint(song),
+    report: null
+  };
+}
+
+function syncSfizzCompatibilityBaseline(song) {
+  const fingerprint = sfizzCompatibilityFingerprint(song);
+  if (!acceptedSfizzCompatibility || acceptedSfizzCompatibility.fingerprint !== fingerprint) {
+    adoptLegacySfizzCompatibility(song);
+    return;
+  }
+  // runOp 밖에서 테스트/복구 코드가 이름 같은 coverage 비의존 필드를 바꿨을 수도 있다.
+  acceptedSfizzCompatibility = { song: cloneSong(song), fingerprint, report: null };
+}
+
+// 상태나 history를 건드리지 않는 candidate 검증. caller가 실제 commit한 뒤 반환값을
+// acceptedSfizzCompatibility에 넣는다.
+function prepareSfizzCompatibility(song) {
+  const fingerprint = sfizzCompatibilityFingerprint(song);
+  if (!acceptedSfizzCompatibility)
+    return { song: cloneSong(song), fingerprint, report: compatibilityReport(song) };
+  if (fingerprint === acceptedSfizzCompatibility.fingerprint)
+    return { ...acceptedSfizzCompatibility, song: cloneSong(song) };
+  const previous = acceptedSfizzCompatibility.report ??
+    compatibilityReport(acceptedSfizzCompatibility.song);
+  const candidate = compatibilityReport(song);
+  assertReportNotWorse(previous, candidate);
+  return { song: cloneSong(song), fingerprint, report: candidate };
+}
+
+function broadcastState() {
   broadcast({ type: "state", song: state.song, playing: playInfo(), songs: libraryNames(), ...keyInfo() });
+}
+
+function publishMutation() {
+  autosave();
+  broadcastState();
+}
+
+function mutated() {
+  if (state.song) acceptedSfizzCompatibility = prepareSfizzCompatibility(state.song);
+  publishMutation();
 }
 
 // 조성 판정과 "벗어난 음" 목록 — 화면이 표시하는 데 쓴다.
@@ -183,14 +372,29 @@ function pushUndo(label, json) {
 
 // 되돌리기/다시하기 공용 — from에서 꺼내 현재 상태를 to에 넣고 곡을 교체한다
 function stepHistory(from, to, verb) {
-  needSong();
-  const entry = from.pop();
+  const current = needSong();
+  const entry = from.at(-1);
   if (!entry) throw new Error(`${verb}할 편집이 없습니다`);
   const restored = validateSong(JSON.parse(entry.json));
-  to.push({ label: entry.label, json: JSON.stringify(state.song) });
-  if (to.length > UNDO_DEPTH) to.shift();
-  state.song = restored;
-  mutated();
+  // candidate의 SFZ compatibility를 history/state 변경 전에 끝낸다. 과거 snapshot이
+  // 현재 설치된 asset과 더는 맞지 않아도 실패한 undo/redo가 stack을 pop하지 않는다.
+  const prepared = prepareSfizzCompatibility(restored);
+  const fromBefore = from.slice(), toBefore = to.slice();
+  const acceptedBefore = acceptedSfizzCompatibility;
+  try {
+    from.pop();
+    to.push({ label: entry.label, json: JSON.stringify(current) });
+    if (to.length > UNDO_DEPTH) to.shift();
+    state.song = restored;
+    acceptedSfizzCompatibility = prepared;
+    mutated();
+  } catch (error) {
+    from.splice(0, from.length, ...fromBefore);
+    to.splice(0, to.length, ...toBefore);
+    state.song = current;
+    acceptedSfizzCompatibility = acceptedBefore;
+    throw error;
+  }
   return entry.label;
 }
 
@@ -198,7 +402,7 @@ function stepHistory(from, to, verb) {
 const MUTATING = new Set([
   "new_song", "set_song", "load_song", "add_track", "remove_track", "set_track",
   "set_tempo", "clear_tempo", "set_section", "remove_section", "add_notes", "clear_notes", "delete_note", "move_note",
-  "resize_note", "split_note", "move_notes", "delete_notes", "set_region_gain", "set_velocity", "set_bend",
+  "resize_note", "split_note", "move_notes", "delete_notes", "set_region_gain", "set_region_articulation", "set_velocity", "set_bend",
   "insert_bars", "delete_bars", "copy_bars", "humanize", "swing", "quantize", "import_midi", "ab_load",
   "add_feedback", "resolve_feedback"
 ]);
@@ -212,7 +416,8 @@ const OP_LABELS = {
   move_note: "노트 이동", resize_note: "노트 길이 변경", split_note: "노트 자르기",
   move_notes: "노트 여러 개 이동", delete_notes: "노트 여러 개 삭제", set_velocity: "노트 세기 변경",
   set_bend: "음 휘기",
-  set_region_gain: "구간 음량", insert_bars: "빈 마디 삽입", delete_bars: "마디 잘라내기",
+  set_region_gain: "구간 음량", set_region_articulation: "구간 연주법",
+  insert_bars: "빈 마디 삽입", delete_bars: "마디 잘라내기",
   copy_bars: "구간 복제", humanize: "무작위 편차", swing: "스윙", quantize: "박자 정리",
   import_midi: "MIDI 가져오기", ab_load: "A/B 안 불러오기",
   add_feedback: "메모 추가", resolve_feedback: "메모 완료"
@@ -273,6 +478,33 @@ function rejectPartialFixedClipDelete(song, from, to, rangeStart, rangeEnd, bpb)
   }
 }
 
+// validateSong 밖의 편집 연산도 같은 정규형을 만든다. 구간을 덮어쓰거나 구조 편집을
+// 하면 한 region이 둘로 갈라질 수 있고, 반대로 같은 주법 조각이 다시 맞닿을 수 있다.
+function canonicalArticulationRegions(regions) {
+  const sorted = regions.slice().sort((a, b) =>
+    a.from - b.from || a.to - b.to || a.articulation.localeCompare(b.articulation));
+  const out = [];
+  for (const region of sorted) {
+    const previous = out.at(-1);
+    if (previous && previous.articulation === region.articulation && previous.to + 1 === region.from)
+      previous.to = region.to;
+    else out.push({ ...region });
+  }
+  return out;
+}
+
+// [from,to] 안의 override만 걷어내고 양옆의 살아 있는 조각은 보존한다. set/remove와
+// copy overwrite가 같은 의미를 공유해, 기존 region과 다른 범위도 부분 교체할 수 있다.
+function cutArticulationRegions(regions, from, to) {
+  const out = [];
+  for (const region of regions ?? []) {
+    if (region.to < from || region.from > to) { out.push({ ...region }); continue; }
+    if (region.from < from) out.push({ ...region, to: from - 1 });
+    if (region.to > to) out.push({ ...region, from: to + 1 });
+  }
+  return out;
+}
+
 // at마디 앞에 count마디만큼의 빈 시간을 끼워 넣은 곡을 만든다(검증 전).
 // 노트·구간 게인·템포 변화·피드백을 함께 밀고, 삽입 지점을 걸친 긴 노트는 그만큼 늘린다 —
 // 게인·피드백 처리와 대칭이라 마디 잘라내기와 왕복했을 때 원래대로 돌아온다.
@@ -294,6 +526,10 @@ function shiftBars(song, at, count, bpb) {
         return n;
       }) };
       if (t.gains) tr.gains = t.gains.map(g => ({ ...g, from: shift(g.from), to: shift(g.to) }));
+      if (t.articulationRegions)
+        tr.articulationRegions = canonicalArticulationRegions(
+          t.articulationRegions.map(region => ({ ...region, from: shift(region.from), to: shift(region.to) }))
+        );
       return tr;
     })
   };
@@ -319,6 +555,59 @@ function pickNote(t, { bar, beat, pitch, dur }) {
       throw new Error(`"${t.name}" ${b}마디에 ${pitch} 노트가 ${matches.length}개 있습니다 — beat·dur로 특정하세요 (후보: ${matches.map(n => `beat ${n.beat}/dur ${n.dur}`).join(", ")})`);
   }
   return matches[0];
+}
+
+// 실제 sfizz renderer와 같은 articulation 분할·channel planner로 모든 초과 층을
+// 수집한다. legacy 곡은 열 수 있게 하되 새 편집이 기존 channel 요구량을 더 키우지는
+// 못하게 compatibility report가 severity를 비교한다.
+function sfizzBendCapacityIssues(song, track, notes) {
+  const preset = SF_PRESETS[track.preset];
+  if (preset?.engine !== "sfizz" || !notes.some(note => (note.bend ?? 0) !== 0)) return [];
+  const sampleRate = 44100;
+  const segs = tempoSegments(song);
+  const bpb = beatsPerBar(song);
+  const groups = new Map();
+  for (const note of notes) {
+    const startBeat = (note.bar - 1) * bpb + note.beat;
+    const startSample = Math.round(beatToSec(segs, startBeat) * sampleRate);
+    const gateSec = beatToSec(segs, startBeat + note.dur) - beatToSec(segs, startBeat);
+    const endSample = Math.max(startSample + 1, Math.round(startSample + gateSec * sampleRate));
+    const articulation = effectiveArticulation(track, note.bar);
+    if (!groups.has(articulation)) groups.set(articulation, []);
+    groups.get(articulation).push({
+      startSample, endSample, key:noteToMidi(note.pitch), bend:note.bend ?? 0, controls:[]
+    });
+  }
+  const issues = [];
+  for (const [articulation, layerNotes] of groups) {
+    const planned = assignSfizzChannels(layerNotes);
+    if (planned.requiredChannels <= MAX_SFIZZ_MIDI_CHANNELS) continue;
+    const definition = articulation === undefined
+      ? "트랙/음원 기본 Articulation (아티큘레이션)"
+      : presetArticulations(track.preset)?.[articulation]?.label ?? String(articulation);
+    const error = new Error(
+      `Pitch Bend (피치 벤드)를 적용하면 "${track.name}"의 ${definition} 렌더 층에 MIDI 채널 ${planned.requiredChannels}개가 필요해 SFZ 한도 ${MAX_SFIZZ_MIDI_CHANNELS}개를 넘습니다` +
+      ` — 선택 밖의 기존 Pitch Bend와 같은 음높이의 겹침도 함께 계산했습니다. 더 적은 음표에 적용하거나 Pitch Bend 0으로 기존 굴곡을 지우세요`
+    );
+    error.code = "CAPABILITY_UNSUPPORTED";
+    error.requestedChannels = planned.requiredChannels;
+    error.maximumChannels = MAX_SFIZZ_MIDI_CHANNELS;
+    issues.push({
+      key: JSON.stringify([track.seed ?? track.name, track.preset, articulation ?? null]),
+      requestedChannels: planned.requiredChannels,
+      error
+    });
+  }
+  return issues;
+}
+
+function assertSfizzBendCapacity(song, track, notes) {
+  const issue = sfizzBendCapacityIssues(song, track, notes)[0];
+  if (issue) throw issue.error;
+}
+
+function collectSongSfizzBendIssues(song) {
+  return song.tracks.flatMap(track => sfizzBendCapacityIssues(song, track, track.notes));
 }
 
 const MAX_RENDER_SEC = 600;
@@ -546,14 +835,24 @@ export const ops = {
     }
     if (preset !== undefined) {
       requirePresetAvailable(preset);
-      const wasDrum = isDrumPreset(t.preset), isDrum = isDrumPreset(preset);
-      if (wasDrum !== isDrum && t.notes.length)
-        throw new Error(`"${t.name}"에 노트가 있어 ${wasDrum ? "드럼→멜로디" : "멜로디→드럼"} 전환이 불가합니다 — clear_notes 후 바꾸세요`);
-      updated.preset = preset;
-      // 프리셋마다 articulation ID 체계가 다르다. 호출자가 새 값을 함께 주지 않았다면
-      // 옛 프리셋의 선택을 새 음원에 억지로 적용하지 않고 새 프리셋 기본값으로 되돌린다.
-      if (articulation === undefined) delete updated.articulation;
-      changes.push(`프리셋→${presetLabel(preset)}`);
+      // MCP가 현재 preset을 다른 설정과 함께 반복해서 보내도 같은 ID namespace의
+      // 주법 자동화를 지우지 않는다. 실제 preset이 바뀔 때만 옛 선택을 초기화한다.
+      if (preset !== t.preset) {
+        const wasDrum = isDrumPreset(t.preset), isDrum = isDrumPreset(preset);
+        if (wasDrum !== isDrum && t.notes.length)
+          throw new Error(`"${t.name}"에 노트가 있어 ${wasDrum ? "드럼→멜로디" : "멜로디→드럼"} 전환이 불가합니다 — clear_notes 후 바꾸세요`);
+        updated.preset = preset;
+        // 프리셋마다 articulation ID 체계가 다르다. 호출자가 새 값을 함께 주지 않았다면
+        // 옛 프리셋의 선택을 새 음원에 억지로 적용하지 않고 새 프리셋 기본값으로 되돌린다.
+        if (articulation === undefined) delete updated.articulation;
+        // 구간 주법 ID도 preset별 namespace다. 새 preset에 같은 문자열이 우연히 있어도
+        // 자동 승계하지 않고 새 음원에서 다시 명시적으로 선택하게 한다.
+        const clearedArticulationRegions = updated.articulationRegions?.length ?? 0;
+        delete updated.articulationRegions;
+        changes.push(`프리셋→${presetLabel(preset)}`);
+        if (clearedArticulationRegions)
+          changes.push(`구간 주법 ${clearedArticulationRegions}곳 초기화`);
+      }
     }
     if (articulation !== undefined) {
       if (articulation === null) {
@@ -781,12 +1080,14 @@ export const ops = {
     if (!targets.length) throw new Error("바꿀 노트가 없습니다");
     const set = new Set(targets);
     const rounded = Math.round(b * 100) / 100;
-    t.notes = t.notes.map(n => {
+    const nextNotes = t.notes.map(n => {
       if (!set.has(n)) return n;
       const next = { ...n };
       if (rounded === 0) delete next.bend; else next.bend = rounded;
       return next;
     });
+    assertSfizzBendCapacity(song, t, nextNotes);
+    t.notes = nextNotes;
     mutated();
     return rounded === 0
       ? `"${t.name}" 노트 ${targets.length}개를 곧게 폈습니다`
@@ -1033,7 +1334,48 @@ export const ops = {
       : `"${t.name}" ${from}~${to}마디 게인 ${d > 0 ? "+" : ""}${d}dB ${exact.length ? "갱신" : "설정"} — 이 구간의 노트만 음량이 바뀝니다 (undo_edit으로 되돌리기)\n현재 게인: ${list}`;
   },
 
-  // 빈 마디 삽입 — at_bar 앞에 count개를 끼워 넣고, 전 트랙의 노트·구간 게인·템포 변화·피드백을 함께 뒤로 민다
+  // 구간 주법: 문자열이면 선택 범위를 덮어쓰고 null이면 그 범위의 override만 제거한다.
+  // 범위 밖 조각은 보존하므로 큰 region 한가운데만 다른 주법으로 바꾸거나 되돌릴 수 있다.
+  set_region_articulation({ track, from_bar, to_bar, articulation } = {}) {
+    const song = needSong();
+    const t = findTrack(song, track);
+    const from = Number(from_bar), to = Number(to_bar ?? from_bar);
+    if (!Number.isInteger(from) || from < 1 || from > 999) throw new Error("from_bar는 1~999 정수여야 합니다");
+    if (!Number.isInteger(to) || to < from || to > 999) throw new Error("to_bar는 from_bar 이상 999 이하 정수여야 합니다");
+    if (articulation === undefined)
+      throw new Error("articulation 연주법 ID가 필요합니다 — 구간 override를 제거하려면 null을 주세요");
+
+    let id = null;
+    let label = null;
+    if (articulation !== null) {
+      id = typeof articulation === "string" ? articulation.trim() : "";
+      const definitions = presetArticulations(t.preset);
+      if (!id || !definitions || !Object.hasOwn(definitions, id))
+        throw new Error(`articulation ${JSON.stringify(articulation)}을 ${t.preset}에서 찾을 수 없습니다 — list_presets로 선택 가능한 원래 연주법을 확인하세요`);
+      label = definitions[id].label ?? id;
+    }
+
+    let nextRegions = cutArticulationRegions(t.articulationRegions, from, to);
+    if (id !== null) nextRegions.push({ from, to, articulation: id });
+    nextRegions = canonicalArticulationRegions(nextRegions);
+    if (nextRegions.length > MAX_ARTICULATION_REGIONS)
+      throw new Error(`구간을 나누면 주법 override가 ${nextRegions.length}개가 되어 최대 ${MAX_ARTICULATION_REGIONS}개를 넘습니다`);
+    if (JSON.stringify(nextRegions) === JSON.stringify(t.articulationRegions ?? []))
+      return id === null
+        ? `"${t.name}" ${from}~${to}마디에는 제거할 구간 주법이 없습니다`
+        : `"${t.name}" ${from}~${to}마디는 이미 ${label} 주법입니다`;
+
+    const updated = { ...t, notes: t.notes };
+    if (nextRegions.length) updated.articulationRegions = nextRegions;
+    else delete updated.articulationRegions;
+    state.song = validateSong({ ...song, tracks: song.tracks.map(item => item === t ? updated : item) });
+    mutated();
+    return id === null
+      ? `"${t.name}" ${from}~${to}마디의 구간 주법 override를 제거했습니다 — 이 범위는 트랙/프리셋 기본 주법을 따릅니다`
+      : `"${t.name}" ${from}~${to}마디 주법을 ${label}(으)로 설정했습니다`;
+  },
+
+  // 빈 마디 삽입 — at_bar 앞에 count개를 끼워 넣고, 전 트랙의 노트·구간 게인·구간 주법·템포 변화·피드백을 함께 뒤로 민다
   insert_bars({ at_bar, count } = {}) {
     const song = needSong();
     const at = Number(at_bar), c = Number(count ?? 1);
@@ -1041,7 +1383,10 @@ export const ops = {
     if (!Number.isInteger(c) || c < 1 || c > 64) throw new Error("count는 1~64 정수여야 합니다");
     const maxUsed = Math.max(totalBars(song),
       ...(song.tempoMap ?? []).map(tp => tp.bar),
-      ...song.tracks.flatMap(t => (t.gains ?? []).map(g => g.to)));
+      ...song.tracks.flatMap(t => [
+        ...(t.gains ?? []).map(g => g.to),
+        ...(t.articulationRegions ?? []).map(region => region.to)
+      ]));
     if (maxUsed + c > 999) throw new Error(`삽입하면 999마디 한도를 넘습니다 (현재 최대 ${maxUsed}마디 사용 중)`);
     const { song: next, moved, stretched } = shiftBars(song, at, c, beatsPerBar(song));
     const validated = validateSong(next);
@@ -1074,13 +1419,26 @@ export const ops = {
 
     const maxUsed = Math.max(totalBars(song), at + total - 1,
       ...(song.tempoMap ?? []).map(tp => tp.bar),
-      ...song.tracks.flatMap(t => (t.gains ?? []).map(g => g.to)));
+      ...song.tracks.flatMap(t => [
+        ...(t.gains ?? []).map(g => g.to),
+        ...(t.articulationRegions ?? []).map(region => region.to)
+      ]));
     if (maxUsed + (how === "insert" ? total : 0) > 999)
       throw new Error(`복제하면 999마디 한도를 넘습니다 (현재 최대 ${maxUsed}마디 사용 중)`);
 
     // 붙일 자리 뒤를 밀어내는 경우, 원본 구간도 함께 밀릴 수 있으므로 복사본은 "미루기 전" 원본에서 뜬다
     const picked = song.tracks.map(t => targeted(t)
       ? t.notes.filter(n => n.bar >= from && n.bar <= to).map(n => ({ ...n }))
+      : []);
+    // source region이 복사 범위 바깥에서 시작/끝나도 범위 안에서 적용되는 조각은
+    // 함께 복사한다. destination의 baseline gap도 보존할 수 있게 상대좌표로 뜬다.
+    const pickedArticulations = song.tracks.map(t => targeted(t)
+      ? (t.articulationRegions ?? []).filter(region => region.to >= from && region.from <= to)
+          .map(region => ({
+            from: Math.max(region.from, from) - from,
+            to: Math.min(region.to, to) - from,
+            articulation: region.articulation
+          }))
       : []);
 
     let base = song;
@@ -1104,7 +1462,24 @@ export const ops = {
             added.push({ ...n, bar: n.bar - from + at + k * span });
             copied++;
           }
-        return { ...t, notes: [...notes, ...added] };
+        let articulationRegions = t.articulationRegions ?? [];
+        // destination의 기존 주법뿐 아니라 source에서 baseline이던 빈틈도 그대로
+        // 재현해야 한다. insert seam이 기존 region 안이면 shiftBars가 새 시간을 늘여
+        // 채우므로, 두 mode 모두 대상 범위를 먼저 걷어낸 뒤 source 조각을 얹는다.
+        articulationRegions = cutArticulationRegions(articulationRegions, at, at + total - 1);
+        const addedArticulations = [];
+        for (let k = 0; k < rep; k++)
+          for (const region of pickedArticulations[i])
+            addedArticulations.push({
+              ...region,
+              from: at + region.from + k * span,
+              to: at + region.to + k * span
+            });
+        articulationRegions = canonicalArticulationRegions([...articulationRegions, ...addedArticulations]);
+        const tr = { ...t, notes: [...notes, ...added] };
+        if (articulationRegions.length) tr.articulationRegions = articulationRegions;
+        else delete tr.articulationRegions;
+        return tr;
       })
     };
     state.song = validateSong(next);
@@ -1150,6 +1525,15 @@ export const ops = {
       if (t.gains) {
         const gains = t.gains.map(g => ({ ...g, from: mapF(g.from), to: mapT(g.to) })).filter(g => g.to >= g.from);
         if (gains.length) tr.gains = gains; else delete tr.gains;
+      }
+      if (t.articulationRegions) {
+        const articulationRegions = canonicalArticulationRegions(
+          t.articulationRegions
+            .map(region => ({ ...region, from: mapF(region.from), to: mapT(region.to) }))
+            .filter(region => region.to >= region.from)
+        );
+        if (articulationRegions.length) tr.articulationRegions = articulationRegions;
+        else delete tr.articulationRegions;
       }
       return tr;
     });
@@ -1227,7 +1611,7 @@ export const ops = {
     const song = needSong();
     const n = typeof name === "string" && name.trim() ? name.trim().slice(0, 120) : song.title;
     saveToLibrary(n, song);
-    mutated();
+    broadcastState();
     return `라이브러리에 "${n}" 보관 (총 ${libraryNames().length}곡)`;
   },
 
@@ -1237,7 +1621,7 @@ export const ops = {
     const song = needSong();
     const s = abSlot(slot);
     saveToLibrary(abName(s), song);
-    mutated();
+    broadcastState();
     return `지금 곡을 ${s}안에 담았습니다 ("${song.title}") — 반대쪽을 담은 뒤 ab_load로 번갈아 들어 보세요`;
   },
 
@@ -1249,7 +1633,8 @@ export const ops = {
     const target = validateSong(readFromLibrary(name));
     stopPlayback(broadcast);
     state.song = target;
-    mutated();
+    adoptLegacySfizzCompatibility(target);
+    publishMutation();
     return `${s}안을 불러왔습니다.\n${songSummary(target)}`;
   },
 
@@ -1259,7 +1644,8 @@ export const ops = {
     if (state.song?.tracks.some(t => t.notes.length)) saveToLibrary(state.song.title, state.song); // 현재 곡 자동 보존
     stopPlayback(broadcast);
     state.song = target;
-    mutated();
+    adoptLegacySfizzCompatibility(target);
+    publishMutation();
     return `불러왔습니다.\n${songSummary(target)}`;
   },
 
@@ -1392,7 +1778,10 @@ export function runOp(name, args = {}, source = "mcp") {
   const op = Object.hasOwn(ops, name) ? ops[name] : undefined;
   if (!op) throw new Error(`알 수 없는 명령: ${name}`);
   // 실행 전 스냅숏 — 예외가 나면 아래로 내려오지 않으므로 실패한 연산은 이력을 건드리지 않는다
-  const before = MUTATING.has(name) && state.song ? JSON.stringify(state.song) : null;
+  const mutating = MUTATING.has(name);
+  if (state.song && (mutating || name === "undo_edit" || name === "redo_edit"))
+    syncSfizzCompatibilityBaseline(state.song);
+  const before = mutating && state.song ? JSON.stringify(state.song) : null;
   try {
     const result = op(args);
     // 인자만 다르고 결과가 같은 연산(같은 값으로 set_track 등)은 이력을 채우지 않는다
@@ -1400,6 +1789,13 @@ export function runOp(name, args = {}, source = "mcp") {
     addLog(source, opLogLine(name, args));
     return result;
   } catch (e) {
+    // 일부 op는 후보 배열을 트랙에 붙인 뒤 mutated()에서 전곡 불변식을 검사한다.
+    // 검사가 실패하면 broadcast/autosave 전에 여기로 오므로 원래 스냅숏을 되돌려
+    // 붙여넣기·구조 편집·주법 변경도 set_bend와 똑같이 원자적으로 거부한다.
+    if (mutating) {
+      if (before === null) state.song = null;
+      else if (JSON.stringify(state.song) !== before) state.song = validateSong(JSON.parse(before));
+    }
     addLog(source, `✗ ${name}: ${e.message}`);
     throw e;
   }
@@ -1437,6 +1833,7 @@ function opLogLine(name, args) {
     case "add_notes": return `add_notes ${args.track} ${Array.isArray(args.notes) ? args.notes.length : 0}개`;
     case "clear_notes": return `clear_notes ${args.track} ${args.from_bar ?? 1}~${args.to_bar ?? "끝"}`;
     case "set_region_gain": return `set_region_gain ${args.track} ${args.from_bar}~${args.to_bar ?? args.from_bar}마디 ${args.db > 0 ? "+" : ""}${args.db}dB${args.to_db !== undefined ? `→${args.to_db}dB` : ""}`;
+    case "set_region_articulation": return `set_region_articulation ${args.track} ${args.from_bar}~${args.to_bar ?? args.from_bar}마디 ${args.articulation ?? "기본"}`;
     case "set_bend": return `set_bend ${args.track} ${args.bend > 0 ? "+" : ""}${args.bend}반음`;
     case "set_velocity": return `set_velocity ${args.track} ${args.vel !== undefined ? (args.to_vel !== undefined ? `${args.vel}→${args.to_vel}` : args.vel) : args.by !== undefined ? `${args.by > 0 ? "+" : ""}${args.by}` : `×${args.scale}`}`;
     case "copy_bars": return `copy_bars ${args.from_bar}~${args.to_bar ?? args.from_bar}마디 → ${args.at_bar}마디${args.times > 1 ? ` ×${args.times}` : ""}`;

@@ -145,6 +145,10 @@ try {
   const healthBefore = await getJson(web.url, "/api/health");
   const metaBefore = await getJson(web.url, "/api/meta");
   const packsBefore = await getJson(web.url, "/api/packs");
+  const appResponse = await fetch(web.url, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
+  assert.equal(appResponse.status, 200, `/ returned HTTP ${appResponse.status}`);
+  assert.match(appResponse.headers.get("content-type") ?? "", /^text\/html\b/i, "/ did not return HTML");
+  const appHtml = await appResponse.text();
 
   check("runtime, HOME, pack storage, and port are isolated", () => {
     assert.notEqual(web.port, 7788);
@@ -153,6 +157,47 @@ try {
     assert.equal(healthBefore.baseUrl, web.url);
     assert.ok(fs.existsSync(runtimeFile), "isolated runtime descriptor was not published");
     assert.ok(!fs.existsSync(path.join(dataDir, "song.json")), "HTTP metadata reads wrote a song autosave");
+  });
+
+  check("GUI exposes bar-scoped articulation controls and invalidates rendered stems", () => {
+    assert.match(appHtml, /id="feArt"/);
+    assert.match(appHtml, /set_region_articulation/);
+    assert.match(appHtml, /t\.articulationRegions \?\? null/);
+    assert.match(appHtml, /Articulation \(아티큘레이션\) — 전체 트랙/);
+  });
+
+  check("GUI distinguishes installed assets from sample coverage and preserves actionable failures", () => {
+    assert.match(appHtml, /preset-availability"><strong>설치됨<\/strong>/);
+    assert.match(appHtml, /preset-availability unavailable"><strong>설치 안 됨/);
+    assert.doesNotMatch(appHtml, /preset-availability"><strong>사용 가능<\/strong>/);
+    assert.match(appHtml, /Sample Coverage \(샘플 대응 — 선택한 음원이 현재 악보의 음높이·연주 세기·실제 연주법/);
+    assert.match(appHtml, /function isSampleCoverageError\(message\)/);
+    assert.match(appHtml, /SAMPLE_MISSING\|Attack Region\|어택 리전/);
+    assert.match(appHtml, /const sampleCoverage = isSampleCoverageError\(detail\)/);
+    assert.match(appHtml, /sampleCoverage:isSampleCoverageError\(message\)/);
+    assert.match(appHtml, /state\.changeError =/);
+    assert.match(appHtml, /Instrument Change \(인스트루먼트 변경 — 악기 음원을 바꾸는 편집\)/);
+    assert.match(appHtml, /updatePlaybackFailure\(message, playGuard\)/);
+    assert.match(appHtml, /sound-status critical/);
+    assert.match(appHtml, /showRegionArticulationError/);
+    assert.match(appHtml, /Articulation Change \(아티큘레이션 변경 — 실제 연주 주법을 바꾸는 편집\)/);
+    assert.match(appHtml, /기존 연주법을 유지했습니다/);
+  });
+
+  check("selected-note controls expose exact music terms, audible meaning, and regional scope", () => {
+    assert.match(appHtml, /Velocity \(벨로시티\)/);
+    assert.match(appHtml, /Velocity Range \(강약 전달 폭\)에 따라 64 쪽으로 완화되어 음원에 전달될 수 있습니다/);
+    assert.match(appHtml, /값이 커지면 대체로 더 크고 단단하거나 밝게 들리며, 음원에 따라 샘플 음색 층도 달라집니다/);
+    assert.match(appHtml, /Pitch Bend \(피치 벤드\)/);
+    assert.match(appHtml, /시작 음높이에서 목표까지 연속으로 미끄러집니다/);
+    assert.match(appHtml, /Articulation \(아티큘레이션\) — 실제 연주법/);
+    assert.match(appHtml, /현재 선택한 음표만 바꾸는 기능은 아닙니다/);
+    assert.match(appHtml, /주법 지원 음원 찾기/);
+    assert.match(appHtml, /query:"keyswitch"/);
+    assert.match(appHtml, /\.\.\.\(n\.bend !== undefined \? \{ bend:n\.bend \} : \{\}\)/);
+    assert.match(appHtml, /선택 밖의 기존 Pitch Bend와 같은 음높이의 겹침까지 서버가 함께 계산/);
+    assert.match(appHtml, /flex-direction:column/);
+    assert.match(appHtml, /\.then\(hideFbPop\)/);
   });
 
   const presetEntries = Object.entries(metaBefore.presets ?? {});

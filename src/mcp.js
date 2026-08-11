@@ -149,7 +149,7 @@ const TOOLS = [
     at_bar: z.number().int().min(1).max(999).describe("자를 위치의 마디"),
     at_beat: z.number().min(0).optional().describe("자를 위치의 beat(4분음표 단위, 기본 0) — 노트 시작과 끝 사이여야 한다")
   }],
-  ["insert_bars", "빈 마디를 끼워 넣는다(DAW의 insert time) — at_bar 앞에 count개, 전 트랙의 노트·구간 게인·템포 변화가 함께 뒤로 밀린다. undo_edit으로 되돌릴 수 있다.", {
+  ["insert_bars", "빈 마디를 끼워 넣는다(DAW의 insert time) — at_bar 앞에 count개, 전 트랙의 노트·구간 게인·구간 주법·템포 변화가 함께 뒤로 밀린다. undo_edit으로 되돌릴 수 있다.", {
     at_bar: z.number().int().min(1).max(999).describe("이 마디 앞에 빈 마디가 들어간다"),
     count: z.number().int().min(1).max(64).optional().describe("넣을 마디 수 (기본 1)")
   }],
@@ -205,6 +205,12 @@ const TOOLS = [
     to_bar: z.number().int().min(1).max(999).optional().describe("구간 끝 마디(포함, 기본 from_bar)"),
     db: z.number().min(-60).max(12).describe("데시벨 — -6이면 약 절반 크기, +6이면 약 두 배, 0이면 제거. to_db와 같이 주면 이 값이 시작점이 된다"),
     to_db: z.number().min(-60).max(12).optional().describe("주면 구간에 걸쳐 db에서 이 값으로 서서히 변한다 — 페이드아웃은 {db:0, to_db:-60}, 페이드인은 {db:-60, to_db:0}. 노트 단위가 아니라 샘플 단위라 길게 끄는 화음 하나짜리 엔딩도 실제로 사그라든다. 구간 앞에는 db가, 구간 뒤에는 to_db가 계속 걸린다")
+  }],
+  ["set_region_articulation", "키스위치·CC 주법이 선언된 트랙의 특정 마디 구간에 실제 녹음 연주법을 설정한다. list_presets가 돌려준 정확한 articulation ID를 쓴다. 새 값은 겹친 기존 구간을 필요한 만큼 나눠 덮어쓰며, null이면 선택 구간의 override만 지워 트랙 전체 또는 프리셋 기본 주법으로 돌아간다. 주법은 각 노트가 시작되는 마디에서 결정되며 이미 울리는 긴 음의 중간 샘플을 바꾸지 않는다.", {
+    track: z.string().describe("대상 트랙 이름 — articulation 목록이 있는 키스위치/CC 프리셋이어야 함"),
+    from_bar: z.number().int().min(1).max(999).describe("구간 시작 마디"),
+    to_bar: z.number().int().min(1).max(999).optional().describe("구간 끝 마디(포함, 기본 from_bar)"),
+    articulation: z.string().min(1).nullable().describe("list_presets가 표시한 정확한 articulation ID. null이면 이 구간의 override를 제거")
   }],
   ["undo_edit", "편집을 되돌린다. 곡을 바꾸는 모든 연산(노트·트랙·템포·게인·마디·곡 교체까지)이 최대 30단계까지 쌓이며, steps로 여러 단계를 한 번에 되돌릴 수 있다. 되돌린 것은 redo_edit으로 다시 적용된다.", {
     steps: z.number().int().min(1).max(30).optional().describe("되돌릴 단계 수(기본 1)")
@@ -281,7 +287,7 @@ const INSTRUCTIONS = `aria는 작곡 앱이다. 사용자가 곡을 만들어 �
 - velRange는 악보 velocity를 원본 샘플 음원의 강약 레이어와 변조에 얼마나 그대로 보낼지 정한다. 0이면 모두 중간 세기, 1이면 악보 값을 그대로 보낸다. 크레셴도는 velocity·구간 gain·편성·음역·음색 중 필요한 축을 나눠 쓴다
 - 트랙 volume은 음량에 선형이라 파트 간 밸런스용으로 쓴다. 1.0이 0dB이고 2.0까지 올릴 수 있다
 - 특정 구간만 음량을 바꾸려면 set_region_gain — "하이라이트 전까지 심벌 -8dB", "브리지에서 패드 -4dB"처럼 구간 믹싱에 쓴다. 사용자도 GUI에서 구간을 드래그해 직접 조절할 수 있다
-- 레가토(Legato)·스타카토(Staccato)·피치카토(Pizzicato) 같은 주법은 해당 주법을 녹음한 음원·프리셋으로 선택한다. 단순한 여운 효과로 실제 주법인 것처럼 숨기지 않는다
+- 레가토(Legato)·스타카토(Staccato)·피치카토(Pizzicato) 같은 주법은 해당 주법을 녹음한 키스위치·CC 프리셋으로 선택한다. 트랙 전체는 set_track의 articulation, 특정 마디만은 set_region_articulation을 쓴다. 정확한 ID는 list_presets에서 확인하며 단순한 여운 효과로 실제 주법인 것처럼 숨기지 않는다
 - 리버브는 트랙마다 reverb로 조절한다(0.5~0.8이면 넓은 공간)
 - rit./accel.은 set_tempo(bpm, from_bar, ramp:true). 램프는 "직전 변화점부터" 걸리므로 끝 4마디만 늘어지게 하려면 앵커를 먼저 둔다:
   set_tempo({bpm:92, from_bar:13}) → set_tempo({bpm:58, from_bar:16, ramp:true})  (13마디까지는 92, 13→16마디에서 58로)

@@ -29,6 +29,15 @@ export function noteStartBeat(song, note) { return (note.bar - 1) * beatsPerBar(
 // ramp:true면 직전 변화점부터 이 마디까지 템포가 선형으로 변한다(rit./accel.).
 export const MAX_TEMPO_POINTS = 64;
 export const MAX_SECTIONS = 64;
+export const MAX_ARTICULATION_REGIONS = 100;
+
+// 한 음의 주법은 note-on이 놓인 마디에서 결정한다. 구간 override가 없으면 기존
+// track.articulation으로 돌아가고, 그것도 없으면 sampler가 preset 기본 주법을 고른다.
+export function effectiveArticulation(track, bar) {
+  const regions = Array.isArray(track?.articulationRegions) ? track.articulationRegions : [];
+  const region = regions.find(item => item && bar >= item.from && bar <= item.to);
+  return region?.articulation ?? track?.articulation;
+}
 
 // 렌더·내보내기 전에 한 번 만들어 두고 재사용하는 구간 테이블.
 // 각 구간: [startBeat, endBeat)에서 bpm이 bpm0 → bpm1로 선형 변화, startSec에서 시작.
@@ -233,6 +242,42 @@ export function validateSong(raw) {
       }
       track.articulation = articulation;
     }
+    // 마디 구간별 실제 녹음 주법. 서로 겹치면 어느 주법을 쓸지 모호하므로 허용하지
+    // 않고, 같은 주법이 바로 이어지는 항목은 한 구간으로 합쳐 저장 표현을 고정한다.
+    if (rt.articulationRegions !== undefined && rt.articulationRegions !== null) {
+      if (!Array.isArray(rt.articulationRegions))
+        err(`트랙 "${name}"의 articulationRegions는 배열이어야 합니다 — [{from,to,articulation}, ...]`);
+      if (rt.articulationRegions.length > MAX_ARTICULATION_REGIONS)
+        err(`트랙 "${name}"의 구간 주법은 최대 ${MAX_ARTICULATION_REGIONS}개입니다`);
+      const definitions = presetArticulations(rt.preset);
+      const regions = [];
+      for (const rawRegion of rt.articulationRegions) {
+        if (!rawRegion || typeof rawRegion !== "object" || Array.isArray(rawRegion))
+          err(`트랙 "${name}"의 articulationRegions 항목은 {from,to,articulation} 객체여야 합니다`);
+        const from = Number(rawRegion.from), to = Number(rawRegion.to ?? rawRegion.from);
+        const articulation = typeof rawRegion.articulation === "string" ? rawRegion.articulation.trim() : "";
+        if (!Number.isInteger(from) || from < 1 || from > 999)
+          err(`트랙 "${name}" 구간 주법의 from은 1~999 정수여야 합니다`);
+        if (!Number.isInteger(to) || to < from || to > 999)
+          err(`트랙 "${name}" 구간 주법의 to는 from 이상 999 이하 정수여야 합니다`);
+        if (!articulation || !definitions || !Object.hasOwn(definitions, articulation)) {
+          const choices = definitions ? Object.keys(definitions).join(", ") : "(이 프리셋은 별도 연주법 선택 없음)";
+          err(`트랙 "${name}"의 구간 articulation ${JSON.stringify(rawRegion.articulation)}을 ${rt.preset}에서 찾을 수 없습니다 — 선택 가능: ${choices}`);
+        }
+        regions.push({ from, to, articulation });
+      }
+      regions.sort((a, b) => a.from - b.from || a.to - b.to || a.articulation.localeCompare(b.articulation));
+      const canonical = [];
+      for (const region of regions) {
+        const previous = canonical.at(-1);
+        if (previous && region.from <= previous.to)
+          err(`트랙 "${name}"의 구간 주법 ${previous.from}~${previous.to}마디와 ${region.from}~${region.to}마디가 겹칩니다 — 한 시점에는 주법 하나만 선택할 수 있습니다`);
+        if (previous && previous.articulation === region.articulation && previous.to + 1 === region.from)
+          previous.to = region.to;
+        else canonical.push(region);
+      }
+      if (canonical.length) track.articulationRegions = canonical;
+    }
     // 프리셋 상수를 덮어쓰는 선택적 음색 파라미터 — 값이 없으면 키 자체를 남기지 않는다
     for (const [key, lo, hi, label] of TRACK_OVERRIDES) {
       if (rt[key] === undefined || rt[key] === null) continue;
@@ -368,10 +413,13 @@ export function songSummary(song) {
   const notes = song.tracks.reduce((s, t) => s + t.notes.length, 0);
   const trackList = song.tracks.map(t => {
     const ov = TRACK_OVERRIDES.filter(([k]) => t[k] !== undefined).map(([k]) => `${k}=${t[k]}`);
+    const articulation = t.articulation ? `, articulation=${t.articulation}` : "";
+    const articulationRegions = t.articulationRegions?.length
+      ? `, 구간 주법 ${t.articulationRegions.length}곳` : "";
     const gains = !t.gains ? "" : t.gains.length <= 3
       ? `, 🎚${t.gains.map(g => `${g.from}${g.to !== g.from ? `~${g.to}` : ""}마디 ${g.db > 0 ? "+" : ""}${g.db}dB`).join(" · ")}`
       : `, 🎚구간 게인 ${t.gains.length}개`;
-    return `${t.mute ? "🔇" : ""}${t.name}(${presetLabel(t.preset)}, 노트 ${t.notes.length}개${ov.length ? `, ${ov.join(" ")}` : ""}${gains})`;
+    return `${t.mute ? "🔇" : ""}${t.name}(${presetLabel(t.preset)}, 노트 ${t.notes.length}개${ov.length ? `, ${ov.join(" ")}` : ""}${articulation}${articulationRegions}${gains})`;
   }).join(" · ");
   const tm = song.tempoMap ?? [];
   const tempoLine = tm.length
