@@ -10,11 +10,11 @@ Aria는 말로 부탁하면 AI가 노트·악기·구간을 직접 고치고 그
 - 재생은 설치된 외부 샘플 팩(SF2/SFZ) → 검증된 오픈소스 엔진 → 오프라인 PCM/WAV 렌더 → macOS `afplay` 순서입니다
 - MIDI/WAV 내보내기 (기본 위치 `~/Music/aria/`)
 
-## 공동개발 브리프
+## 플랫폼 문서
 
-처음 보는 사람은 [1분 소개](https://chenjingdev.github.io/aria/)부터 읽어 주세요. 무엇을 만드는지, 지금 되는 일, 왜 음악가·개발자와 같이 만들려는지, 첫 공동 과제를 쉬운 말로 정리했습니다.
+처음 보는 사람은 [플랫폼 개요](https://chenjingdev.github.io/aria/)부터 읽어 주세요. Aria가 정확히 무엇인지, 외부 AI와 브라우저가 어떻게 하나의 곡을 공유하는지, 입력부터 재생·내보내기까지 어떤 경로로 처리되는지 설명합니다.
 
-제품 방향, 12개 요구사항, 아키텍처, 설치, 음악 작업 흐름과 기술적 한계는 [상세 공동개발 브리프](https://chenjingdev.github.io/aria/ARIA_CO_DEVELOPMENT_BRIEF_KO_PUBLIC_HUMANIZED.html)에 있습니다. [원문과 Humanize KR 적용본 비교](https://chenjingdev.github.io/aria/ARIA_CO_DEVELOPMENT_COMPARISON_KO.html)는 문서 작성 과정의 검수용 화면입니다.
+설치와 사용법은 이 README에, SF2·SFZ 렌더러의 책임과 검증 규칙은 [오디오 엔진 문서](docs/ENGINE_BACKENDS.md)에, 외부 샘플 팩의 출처·라이선스·설치 상태는 [샘플 음원 감사](docs/SOUND_LIBRARY_AUDIT.md)에 정리되어 있습니다.
 
 ## 설치·등록
 

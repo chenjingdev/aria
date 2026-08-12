@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
-  <meta name="description" content="Aria를 처음 보는 음악가·개발자를 위한 1분 소개. 무엇을 만들었고 왜 함께 개발하려는지 쉽게 설명합니다.">
+  <meta name="description" content="Aria는 MCP로 연결된 외부 AI와 브라우저 UI가 하나의 편집 가능한 곡을 공유하는 macOS 로컬 음악 제작 플랫폼입니다. 노트·트랙·구간 편집, 실제 샘플 재생, Undo와 WAV·MIDI·스템 내보내기를 제공합니다.">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23245bd7'/%3E%3Cpath d='M24 13v29c0 6-4 9-10 9-5 0-9-3-9-7s4-7 9-7c2 0 4 .4 6 1.4V13h4zm27 8v21c0 6-4 9-10 9-5 0-9-3-9-7s4-7 9-7c2 0 4 .4 6 1.4V21h4z' fill='white'/%3E%3C/svg%3E">
-  <title>Aria — 처음 보는 사람을 위한 1분 소개</title>
+  <title>Aria — AI와 사람이 같은 곡을 편집하는 로컬 음악 플랫폼</title>
   <style>
     :root {
       --paper: #f4f8f7;
@@ -396,47 +396,73 @@
     .difference li::before { content: ""; position: absolute; left: 2px; top: 19px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
     .difference article:last-child li::before { background: var(--blue); }
 
-    .invite {
+    .architecture-layout {
       display: grid;
       grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
       gap: clamp(30px, 6vw, 80px);
       align-items: start;
     }
-    .invite-copy { position: sticky; top: 96px; }
-    .invite-copy .letter {
+    .architecture-copy { position: sticky; top: 96px; }
+    .architecture-note {
       margin: 24px 0 0;
       padding: 20px 0 0 24px;
       border-left: 3px solid var(--coral);
       color: var(--ink-2);
-      font-size: 18px;
+      font-size: 16px;
     }
-    .role-stack { display: grid; gap: 12px; }
-    .role-card {
-      display: grid;
-      grid-template-columns: 94px minmax(0, 1fr);
-      gap: 18px;
-      padding: 22px;
+    .architecture-note strong { color: var(--ink); }
+    .platform-map {
+      margin: 0;
+      padding: clamp(18px, 3vw, 28px);
       border: 1px solid var(--line);
       background: var(--sheet);
+      box-shadow: var(--shadow);
     }
-    .role-card .who { color: var(--blue-ink); font: 800 11px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
-    .role-card p { margin: 0; color: var(--ink-2); }
-    .role-card strong { color: var(--ink); }
+    .map-kicker { margin-bottom: 16px; color: var(--muted); font: 800 10px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .input-grid, .output-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .platform-node {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background: color-mix(in srgb, var(--paper) 62%, var(--sheet));
+    }
+    .platform-node .node-label { display: block; margin-bottom: 9px; color: var(--blue-ink); font: 800 10px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .platform-node h3 { margin-bottom: 6px; }
+    .platform-node p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.55; }
+    .platform-node code { white-space: nowrap; }
+    .merge-label { position: relative; padding: 21px 0 18px; color: var(--muted); font: 750 11px/1.4 var(--mono); text-align: center; }
+    .merge-label::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--line-strong); }
+    .merge-label span { position: relative; z-index: 1; padding: 4px 10px; background: var(--sheet); }
+    .core-node {
+      padding: clamp(20px, 4vw, 30px);
+      border: 2px solid var(--blue);
+      color: #eef4ff;
+      background: #183462;
+    }
+    .core-node .node-label { display: block; margin-bottom: 8px; color: #a8c0ff; font: 800 10px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .core-node h3 { margin-bottom: 8px; color: white; font: 650 clamp(25px, 3vw, 34px)/1.15 var(--display); }
+    .core-node > p { margin: 0; color: #d5e0f8; font-size: 14px; }
+    .core-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 20px; }
+    .core-features span { padding: 8px 10px; border: 1px solid #456397; color: #e4ebfb; background: rgba(255,255,255,.06); font-size: 12px; }
+    .render-node { border-color: color-mix(in srgb, var(--green) 55%, var(--line)); background: var(--green-soft); }
+    .render-node .node-label { color: var(--green); }
+    .output-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .output-node { padding: 13px 8px; border: 1px solid var(--line); color: var(--ink); background: var(--sheet); font: 800 11px/1.3 var(--mono); text-align: center; }
 
     .status-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
     .status-card { min-width: 0; padding: 24px; border: 1px solid var(--line); background: var(--sheet); }
     .status-card.now { border-top: 4px solid var(--green); }
     .status-card.next { border-top: 4px solid var(--blue); }
-    .status-card.agree { border-top: 4px solid var(--gold); }
+    .status-card.scope { border-top: 4px solid var(--gold); }
     .status-card .status-label { display: block; margin-bottom: 18px; font: 800 11px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
     .status-card.now .status-label { color: var(--green); }
     .status-card.next .status-label { color: var(--blue-ink); }
-    .status-card.agree .status-label { color: var(--gold); }
+    .status-card.scope .status-label { color: var(--gold); }
     .clean-list { margin: 0; padding: 0; list-style: none; }
     .clean-list li { position: relative; padding: 10px 0 10px 20px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 14px; }
     .clean-list li::before { content: ""; position: absolute; left: 1px; top: 20px; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .55; }
 
-    .first-task {
+    .pipeline {
       display: grid;
       grid-template-columns: minmax(260px, .72fr) minmax(0, 1.28fr);
       gap: clamp(28px, 6vw, 72px);
@@ -445,12 +471,12 @@
       background: var(--sheet);
       box-shadow: var(--shadow);
     }
-    .task-title .badge { display: inline-block; margin-bottom: 18px; padding: 6px 9px; color: var(--green); background: var(--green-soft); font: 800 11px/1 var(--mono); }
-    .task-title h3 { font: 650 clamp(28px, 4vw, 44px)/1.12 var(--display); }
-    .task-title p { color: var(--ink-2); }
-    .task-steps { counter-reset: task; display: grid; gap: 0; }
-    .task-steps div {
-      counter-increment: task;
+    .pipeline-intro .badge { display: inline-block; margin-bottom: 18px; padding: 6px 9px; color: var(--green); background: var(--green-soft); font: 800 11px/1 var(--mono); }
+    .pipeline-intro h3 { font: 650 clamp(28px, 4vw, 44px)/1.12 var(--display); }
+    .pipeline-intro p { color: var(--ink-2); }
+    .pipeline-steps { counter-reset: pipeline; display: grid; gap: 0; }
+    .pipeline-steps div {
+      counter-increment: pipeline;
       display: grid;
       grid-template-columns: 42px minmax(0, 1fr);
       gap: 14px;
@@ -458,13 +484,13 @@
       padding: 15px 0;
       border-top: 1px solid var(--line);
     }
-    .task-steps div::before {
-      content: counter(task, decimal-leading-zero);
+    .pipeline-steps div::before {
+      content: counter(pipeline, decimal-leading-zero);
       color: var(--coral);
       font: 800 12px/1.5 var(--mono);
     }
-    .task-steps p { margin: 0; color: var(--ink-2); }
-    .task-steps strong { color: var(--ink); }
+    .pipeline-steps p { margin: 0; color: var(--ink-2); }
+    .pipeline-steps strong { color: var(--ink); }
 
     .trust-strip {
       margin-top: 24px;
@@ -510,6 +536,14 @@
     .term { padding: 14px 0; border-top: 1px solid var(--line); }
     .term dt { color: var(--ink); font-weight: 800; }
     .term dd { margin: 4px 0 0; }
+    .requirement-summary { counter-reset: requirement; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 0; padding: 0; list-style: none; }
+    .requirement-summary li { counter-increment: requirement; position: relative; min-width: 0; padding: 16px 14px 14px 52px; border: 1px solid var(--line); background: var(--sheet); }
+    .requirement-summary li::before { content: counter(requirement, decimal-leading-zero); position: absolute; top: 18px; left: 14px; color: var(--coral); font: 800 11px/1 var(--mono); }
+    .requirement-summary strong { display: block; color: var(--ink); font-size: 14px; line-height: 1.45; }
+    .requirement-summary p { margin: 7px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .req-status { display: inline-block; margin-top: 10px; padding: 4px 6px; color: var(--green); background: var(--green-soft); font: 800 9px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; }
+    .req-status.partial { color: var(--gold); background: var(--gold-soft); }
+    .req-status.next { color: var(--blue-ink); background: var(--blue-soft); }
     code { padding: .12em .32em; color: var(--blue-ink); background: var(--blue-soft); font-family: var(--mono); font-size: .9em; }
     .link-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
     .link-card { min-height: 98px; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; border: 1px solid var(--line); color: var(--ink); background: var(--sheet); text-decoration: none; }
@@ -535,10 +569,10 @@
       .flow-step:nth-child(2) { border-right: 0; }
       .flow-step:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
       .flow-step:nth-child(2)::after { display: none; }
-      .invite { grid-template-columns: 1fr; }
-      .invite-copy { position: static; }
+      .architecture-layout { grid-template-columns: 1fr; }
+      .architecture-copy { position: static; }
       .status-grid { grid-template-columns: 1fr; }
-      .first-task { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: 1fr; }
       .trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .trust-item:nth-child(2) { border-right: 0; }
       .trust-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
@@ -574,12 +608,15 @@
       .example-line { grid-template-columns: 1fr; gap: 5px; padding: 18px; }
       .difference { grid-template-columns: 1fr; }
       .difference .versus { width: auto; height: 1px; }
-      .role-card { grid-template-columns: 1fr; gap: 7px; }
-      .first-task { padding: 22px 18px; }
+      .input-grid { grid-template-columns: 1fr; }
+      .core-features { grid-template-columns: 1fr; }
+      .output-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .pipeline { padding: 22px 18px; }
       .trust-strip { grid-template-columns: 1fr; }
       .trust-item { border-right: 0; border-bottom: 1px solid var(--line); }
       .trust-item:last-child { border-bottom: 0; }
       .glossary { grid-template-columns: 1fr; }
+      .requirement-summary { grid-template-columns: 1fr; }
       .link-grid { grid-template-columns: 1fr; }
       .footer-note { flex-direction: column; gap: 6px; }
     }
@@ -606,11 +643,11 @@
   <header class="topbar">
     <a class="brand" href="#top" aria-label="Aria 소개 첫 화면으로 이동">
       <b>aria</b>
-      <span>처음 보는 사람을 위한 1분 소개</span>
+      <span>local AI music editing platform</span>
     </a>
     <nav class="topnav" aria-label="핵심 목차">
       <a href="#flow">어떻게 쓰나</a>
-      <a href="#together">같이 할 일</a>
+      <a href="#architecture">플랫폼 구조</a>
       <a href="#status">지금 상태</a>
       <a href="#technical">기술 참고</a>
     </nav>
@@ -620,17 +657,18 @@
   <main id="top">
     <section class="hero" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <span class="eyebrow">음악가 × 개발자 공동개발 제안</span>
-        <h1 id="hero-title">말로 부탁하고,<br>듣고, 다시 고친다.</h1>
-        <p class="lead"><strong>Aria는 AI가 곡 편집기를 직접 다루도록 만든 Mac용 작곡 앱이다.</strong> 사람과 AI가 같은 곡을 계속 다듬기 때문에 마음에 안 드는 부분이 생겨도 처음부터 다시 만들 필요가 없다.</p>
+        <span class="eyebrow">Local AI music editing platform</span>
+        <h1 id="hero-title">AI와 사람이<br>같은 곡을 편집한다.</h1>
+        <p class="lead"><strong>Aria는 외부 AI와 브라우저 편집 화면이 하나의 곡 원본을 공유하는 macOS용 로컬 음악 제작 플랫폼이다.</strong> AI는 말로 받은 요청을 실제 노트·트랙·마디 편집으로 바꾸고, 사람은 그 결과를 화면에서 보고 듣고 다시 고친다.</p>
         <div class="plain-tags" aria-label="Aria 핵심 특징">
-          <span class="plain-tag">말로 곡을 편집</span>
-          <span class="plain-tag">원하는 구간만 다시 듣기</span>
-          <span class="plain-tag">되돌릴 수 있는 원본</span>
+          <span class="plain-tag">외부 AI와 MCP 연결</span>
+          <span class="plain-tag">브라우저에서 직접 편집</span>
+          <span class="plain-tag">실제 샘플 악기 재생</span>
+          <span class="plain-tag">Undo·저장·내보내기</span>
         </div>
         <div class="actions">
-          <a class="button primary" href="#flow">30초 사용 흐름 보기 ↓</a>
-          <a class="button" href="#together">이번에 같이 할 일</a>
+          <a class="button primary" href="#architecture">플랫폼 구조 보기 ↓</a>
+          <a class="button" href="#status">현재 기능 보기</a>
         </div>
       </div>
 
@@ -638,7 +676,7 @@
         <div class="demo-bar"><span>ARIA · SELECTED BARS 9–16</span><span class="recording">LISTEN</span></div>
         <div class="chat">
           <div class="bubble person">“9–16마디 후렴이 조금 약해. 드럼은 더 밀고 현악은 넓혀 줘.”</div>
-          <div class="bubble aria"><strong>선택한 8마디를 고쳤어요.</strong><br>달라진 부분만 다시 재생할게요.</div>
+          <div class="bubble aria"><strong>연결된 AI가 Aria 편집 도구로 9–16마디를 수정했습니다.</strong><br>변경된 곡 상태를 화면에 반영하고 같은 구간을 다시 재생합니다.</div>
         </div>
         <div class="mini-score" aria-hidden="true">
           <span class="bar-label" style="left:3%">09</span><span class="bar-label" style="left:15%">10</span><span class="bar-label" style="left:28%">11</span><span class="bar-label" style="left:40%">12</span><span class="bar-label" style="left:53%">13</span><span class="bar-label" style="left:65%">14</span><span class="bar-label" style="left:78%">15</span><span class="bar-label" style="left:90%">16</span>
@@ -652,8 +690,8 @@
 
     <aside class="one-line" aria-label="Aria 핵심 한 문장">
       <div class="one-line-inner">
-        <b>이것만 기억하면 됩니다</b>
-        <p>AI가 편집하는 손이 되고, 사람은 직접 듣고 문제 구간과 최종안을 고른다.</p>
+        <b>먼저 풀어야 할 오해</b>
+        <p>Aria 안에 AI 모델이나 채팅이 들어 있는 것은 아니다. 외부 AI가 Aria의 편집 도구를 쓰며, 브라우저만으로도 곡을 직접 고칠 수 있다.</p>
       </div>
     </aside>
 
@@ -692,27 +730,54 @@
       </div>
     </section>
 
-    <section class="section" id="together" aria-labelledby="together-title">
-      <div class="invite">
-        <div class="invite-copy">
-          <span class="eyebrow">왜 너와 같이 만들고 싶은가</span>
-          <h2 id="together-title">코드와 귀가<br>둘 다 필요하다.</h2>
-          <p class="section-intro">나는 AI가 곡을 직접 고치고 다시 들려주는 기술 기반을 만들었다. 이제 “기능이 된다”를 넘어 “음악이 실제로 좋아졌다”까지 확인하고 싶다.</p>
-          <p class="letter">네가 음악가이면서 개발자라서 부탁하고 싶다. 좋은 소리를 귀로 판단하고, 그 판단을 다시 실행할 수 있는 기능과 테스트로 옮기는 일을 같이 해보자.</p>
+    <section class="section" id="architecture" aria-labelledby="architecture-title">
+      <div class="architecture-layout">
+        <div class="architecture-copy">
+          <span class="eyebrow">플랫폼 구조</span>
+          <h2 id="architecture-title">두 개의 입구,<br>하나의 곡 원본.</h2>
+          <p class="section-intro">사용자는 브라우저에서 직접 편집하고, 연결된 AI는 MCP 도구로 편집한다. 입구는 달라도 둘 다 Aria Core의 같은 연산을 사용하므로 서로 다른 복사본이 생기지 않는다.</p>
+          <p class="architecture-note"><strong>AI 모델은 Aria 밖에 있다.</strong> Aria는 AI가 사용할 음악 편집 도구와 실행 환경을 제공한다. 연결 어댑터인 MCP Bridge는 외부 AI의 도구 호출을 실행 중인 앱으로 전달할 뿐, 별도의 곡을 보관하지 않는다.</p>
         </div>
-        <div class="role-stack" aria-label="공동개발 역할">
-          <article class="role-card"><div class="who">내가 먼저<br>만든 것</div><p><strong>곡을 만들고 고치는 편집 엔진</strong>, 브라우저 화면, 실제 악기 샘플 재생, 되돌리기·저장·내보내기의 기본 뼈대.</p></article>
-          <article class="role-card"><div class="who">네 판단이<br>필요한 것</div><p><strong>무엇이 음악적으로 어색한지</strong>, 어떤 차이가 의미 있는지, 기능으로 만들 때 어느 정도면 통과인지에 대한 판단.</p></article>
-          <article class="role-card"><div class="who">함께 만들<br>결과</div><p><strong>“좋아졌다”를 우연에 맡기지 않는 작업 방식.</strong> 같은 구간을 듣고, 문제를 좁히고, 수정하고, 다시 확인하는 기준.</p></article>
-        </div>
+        <figure class="platform-map" aria-labelledby="platform-map-caption">
+          <figcaption class="map-kicker" id="platform-map-caption">입력 → 곡 상태 → 소리와 파일</figcaption>
+          <div class="input-grid">
+            <article class="platform-node">
+              <span class="node-label">입구 01 · 사람</span>
+              <h3>브라우저 편집 화면</h3>
+              <p>피아노롤을 보며 노트·트랙·악기·구간을 직접 고치고 재생한다. 화면에서 생긴 편집은 앱의 공통 요청 통로로 Core에 전달된다.</p>
+            </article>
+            <article class="platform-node">
+              <span class="node-label">입구 02 · 연결된 AI</span>
+              <h3>외부 AI 연결</h3>
+              <p>AI가 자연어 요청을 Aria의 조회·편집 기능 호출로 바꾼다. MCP Bridge가 그 호출을 브라우저와 같은 요청 통로로 Core에 전달한다.</p>
+            </article>
+          </div>
+          <div class="merge-label"><span>같은 편집 연산으로 모인다</span></div>
+          <article class="core-node">
+            <span class="node-label">Aria Core · 단 하나의 현재 곡</span>
+            <h3>편집 가능한 곡 상태</h3>
+            <p>곡·트랙·노트·마디·연주법을 검증하고 성공한 변경만 반영한다. 실패한 편집은 이전 상태로 돌아간다.</p>
+            <div class="core-features"><span>입력 검증</span><span>Undo / Redo</span><span>자동 저장·곡 보관</span><span>브라우저 화면 갱신</span></div>
+          </article>
+          <div class="merge-label"><span>검증된 현재 곡을 소리로 계산한다</span></div>
+          <article class="platform-node render-node">
+            <span class="node-label">샘플 렌더러</span>
+            <h3>SF2·DLS → SpessaSynth · SFZ → sfizz</h3>
+            <p>지정한 프리셋과 실제 녹음 샘플을 공통 믹스·마스터 경로로 렌더한다. 필요한 소리가 없으면 비슷한 악기로 몰래 바꾸지 않고 오류를 낸다.</p>
+          </article>
+          <div class="merge-label"><span>듣거나 다른 도구로 옮긴다</span></div>
+          <div class="output-grid" aria-label="Aria 출력">
+            <div class="output-node">스피커 재생</div><div class="output-node">WAV</div><div class="output-node">MIDI</div><div class="output-node">트랙별 스템</div>
+          </div>
+        </figure>
       </div>
     </section>
 
     <section class="section" id="status" aria-labelledby="status-title">
       <div class="section-head">
         <span class="eyebrow">지금 상태</span>
-        <h2 id="status-title">되는 것, 만들 것,<br>먼저 정할 것.</h2>
-        <p class="section-intro">모든 기능이 완성된 제품은 아니다. 지금 작동하는 기반과 다음 실험, 공동개발 전에 합의할 내용을 분리했다.</p>
+        <h2 id="status-title">현재 구현, 다음 확장,<br>분명한 경계.</h2>
+        <p class="section-intro">지금 작동하는 기능과 다음 제품 과제, 현재 버전이 책임지지 않는 범위를 섞지 않고 나눴다.</p>
       </div>
       <div class="status-grid">
         <article class="status-card now">
@@ -725,39 +790,41 @@
           <h3>비교와 설치를 훨씬 쉽게 만든다</h3>
           <ul class="clean-list"><li>선택 구간의 후보 3–5개</li><li>앞뒤 음악과 함께 빠른 A/B</li><li>새 Mac에서도 막히지 않는 설치</li><li>이상한 음량·타이밍을 찾는 화면</li><li>8–16마디 음악 품질 기준</li></ul>
         </article>
-        <article class="status-card agree">
-          <span class="status-label">먼저 합의할 것</span>
-          <h3>같이 만드는 조건을 분명히 한다</h3>
-          <ul class="clean-list"><li>Aria 코드의 소유권과 라이선스</li><li>샘플 음원의 사용·배포 범위</li><li>처음 지원할 컴퓨터 환경</li><li>서로의 역할과 코드 리뷰 방식</li><li>첫 과제의 완료 기준</li></ul>
+        <article class="status-card scope">
+          <span class="status-label">현재 지원 범위</span>
+          <h3>로컬 작곡·편집 플랫폼에 집중한다</h3>
+          <ul class="clean-list"><li>macOS 로컬 실행과 <code>afplay</code> 재생</li><li>외부 AI 필요 · 내장 채팅 없음</li><li>한 앱 인스턴스와 하나의 현재 곡</li><li>샘플 음원은 별도 설치</li><li>MIDI는 실제 음색을 근사해 전달</li></ul>
         </article>
       </div>
+      <div class="example-line"><b>현재 포함되지 않음</b><p>클라우드 프로젝트 동기화, 실시간 다중 사용자 편집, 오디오 녹음 중심 DAW 기능, 내장 생성형 AI 모델은 현재 Aria의 범위가 아니다.</p></div>
     </section>
 
-    <section class="section" aria-labelledby="task-title">
+    <section class="section" aria-labelledby="pipeline-title">
       <div class="section-head">
-        <span class="eyebrow">추천 첫 공동 과제</span>
-        <h2 id="task-title">새 Mac 한 대와<br>8마디 곡 하나에서 시작한다.</h2>
+        <span class="eyebrow">입력부터 출력까지</span>
+        <h2 id="pipeline-title">요청은 설명에서 끝나지 않고<br>곡 데이터와 소리까지 바뀐다.</h2>
       </div>
-      <div class="first-task">
-        <div class="task-title">
-          <span class="badge">FIRST WEEK</span>
-          <h3>설치부터 실제 소리까지 같이 확인하기</h3>
-          <p>시스템 전체를 안전하게 훑으면서도 문서 작업으로 끝나지 않는다. 개발 역량과 음악적 판단을 동시에 쓰는 첫 과제다.</p>
+      <div class="pipeline">
+        <div class="pipeline-intro">
+          <span class="badge">END-TO-END</span>
+          <h3>한 번의 요청이 소리가 되기까지</h3>
+          <p>브라우저에서 직접 편집하면 AI의 조회·명령 변환 없이 바로 Core 검증으로 들어간다. 그 뒤 저장·화면 갱신·렌더 경로는 동일하다.</p>
           <div class="actions"><a class="button primary" href="https://github.com/chenjingdev/aria">GitHub에서 코드 보기 ↗</a></div>
         </div>
-        <div class="task-steps">
-          <div><p><strong>새 폴더에 저장소를 받는다.</strong> 기존 개발 컴퓨터의 숨은 파일을 복사하지 않는다.</p></div>
-          <div><p><strong>앱과 필요한 음원을 설치한다.</strong> 막힌 단계와 이유를 그대로 기록한다.</p></div>
-          <div><p><strong>8마디 기준곡을 재생하고 내보낸다.</strong> 같은 범위를 같은 조건으로 듣는다.</p></div>
-          <div><p><strong>둘 다 가장 거슬리는 지점 하나를 고른다.</strong> 설치 문제든 소리 문제든 우선 하나만 좁힌다.</p></div>
-          <div><p><strong>코드 검사와 청취 A/B를 함께 남긴다.</strong> 기능 통과와 음악 통과를 한 변경에서 확인한다.</p></div>
+        <div class="pipeline-steps">
+          <div><p><strong>사용자가 요청한다.</strong> “9–16마디 후렴에서 드럼을 더 밀고 현악은 넓혀 줘”처럼 범위와 방향을 말한다.</p></div>
+          <div><p><strong>외부 AI가 현재 상태를 조회한다.</strong> 곡·트랙·노트와 실제로 설치된 악기 프리셋을 먼저 확인한다.</p></div>
+          <div><p><strong>Aria 편집 명령으로 바꾼다.</strong> 필요한 노트, 트랙 설정, 구간 음량 또는 연주법 도구를 호출한다.</p></div>
+          <div><p><strong>Core가 검증하고 한 번에 반영한다.</strong> 규칙이나 음원 검증이 실패하면 일부만 남기지 않고 변경 전 상태를 유지한다.</p></div>
+          <div><p><strong>같은 곡이 화면에서 갱신된다.</strong> Core가 새 상태를 보내면 피아노롤·트랙·작업 기록이 즉시 달라진다.</p></div>
+          <div><p><strong>샘플로 렌더해 듣고 결정한다.</strong> 같은 구간을 재생하고, 이어서 수정하거나 Undo·저장·WAV·MIDI·스템 내보내기를 고른다.</p></div>
         </div>
       </div>
       <div class="trust-strip" aria-label="현재 프로젝트 근거">
-        <div class="trust-item"><b>199</b><span>자동 검사 통과</span></div>
-        <div class="trust-item"><b>macOS</b><span>현재 중심 실행 환경</span></div>
-        <div class="trust-item"><b>Public</b><span>chenjingdev/aria 코드 공개</span></div>
-        <div class="trust-item"><b>별도 설치</b><span>샘플 음원은 저장소에 미포함</span></div>
+        <div class="trust-item"><b>45</b><span>AI가 호출하는 MCP 도구</span></div>
+        <div class="trust-item"><b>1 live song</b><span>UI와 AI가 공유하는 현재 곡</span></div>
+        <div class="trust-item"><b>SF2 · SFZ</b><span>두 샘플 포맷의 렌더 경로</span></div>
+        <div class="trust-item"><b>WAV · MIDI</b><span>완성 믹스와 이동용 출력</span></div>
       </div>
     </section>
 
@@ -786,20 +853,40 @@
           </div>
         </details>
         <details class="tech">
-          <summary>사람·AI·Aria 앱은 각각 무엇을 하나</summary>
+          <summary>사용자·외부 AI·Aria Core는 각각 무엇을 하나</summary>
           <div class="tech-body">
             <p><strong>사람</strong>은 듣고, 문제 구간을 고르고, 취향과 최종안을 결정한다. <strong>AI</strong>는 요청을 편집 행동으로 바꾸고 곡·트랙·노트를 수정한다. <strong>Aria 앱</strong>은 하나의 현재 곡, 검증, Undo, 저장, 실제 악기 소리 생성을 맡는다.</p>
             <p>여기서 “같은 곡을 함께 고친다”는 말은 Google Docs처럼 여러 사람이 실시간 동시 입력한다는 뜻이 아니다. 현재 Aria는 한 앱 인스턴스와 하나의 현재 곡을 GUI와 AI가 함께 사용한다.</p>
           </div>
         </details>
         <details class="tech">
-          <summary>현재 구조와 요구사항 전체 보기</summary>
+          <summary>개발 방향을 정한 12개 요구사항 보기</summary>
           <div class="tech-body">
-            <p>상세 브리프에는 제품 방향, 12개 요구사항, 런타임과 오디오 구조, 곡 데이터 모델, 설치 과정, 공동개발 역할, 우선순위, 알려진 한계를 모두 정리했다.</p>
+            <p>요구사항을 기능 이름이 아니라 사용자가 확인할 수 있는 결과로 적었다. ‘부분 구현’은 방향은 정했지만 경험이나 배포 조건이 덜 완성됐고, ‘다음 실험’은 아직 제품 가설을 검증해야 한다는 뜻이다.</p>
+            <ol class="requirement-summary">
+              <li><strong>말로 요청한 내용이 실제 곡 편집으로 이어진다.</strong><p>설명만 반환하지 않고 곡·트랙·노트·구조를 바꾼다.</p><span class="req-status">현재 구현</span></li>
+              <li><strong>브라우저와 AI는 같은 곡과 같은 편집 규칙을 쓴다.</strong><p>입구에 따라 Undo·저장·검증 결과가 달라지지 않는다.</p><span class="req-status">현재 구현</span></li>
+              <li><strong>음악 용어를 몰라도 들리는 문제를 직접 다룬다.</strong><p>문제 트랙·구간을 찾고 작은 수정이나 AI 요청으로 이어 간다.</p><span class="req-status partial">부분 구현</span></li>
+              <li><strong>구간에 남긴 피드백이 실제 AI 작업으로 이어진다.</strong><p>범위와 트랙이 보존되고 수정이 끝난 뒤에만 닫힌다.</p><span class="req-status">현재 구현</span></li>
+              <li><strong>선택 구간의 여러 후보를 문맥 속에서 듣고 고른다.</strong><p>원곡을 건드리지 않은 3–5개 안을 빠르게 비교하는 것이 목표다.</p><span class="req-status next">다음 실험</span></li>
+              <li><strong>임시 대체음보다 실제 샘플 악기의 표현을 보존한다.</strong><p>필요한 프리셋·샘플·연주법이 없으면 원인을 드러낸다.</p><span class="req-status">현재 구현</span></li>
+              <li><strong>정확한 음악 용어와 쉬운 감각 언어를 함께 제공한다.</strong><p>설명과 가능한 경우의 미리듣기·A/B를 한 세트로 다룬다.</p><span class="req-status partial">부분 구현</span></li>
+              <li><strong>편집은 되돌릴 수 있고 실패는 곡을 반쯤 바꾸지 않는다.</strong><p>검증에 실패하면 곡·Undo·자동저장·화면을 모두 이전 상태로 유지한다.</p><span class="req-status">현재 구현</span></li>
+              <li><strong>결과를 Aria 원본·WAV·MIDI·스템으로 옮긴다.</strong><p>형식마다 보존되는 정보와 손실되는 정보를 명시한다.</p><span class="req-status partial">부분 구현</span></li>
+              <li><strong>음원 출처와 라이선스를 제품 기능처럼 관리한다.</strong><p>새 컴퓨터도 비공개 파일 복사 없이 같은 음원을 검증해 설치해야 한다.</p><span class="req-status partial">부분 구현</span></li>
+              <li><strong>작곡 지식과 앱의 실행 책임을 분리한다.</strong><p>AI 스킬은 음악 판단을, Aria 앱은 편집·검증·렌더를 맡는다.</p><span class="req-status">현재 구현</span></li>
+              <li><strong>음악가의 귀를 반복 가능한 품질 기준으로 바꾼다.</strong><p>같은 8–16마디를 같은 조건으로 듣고 차이와 통과 기준을 기록한다.</p><span class="req-status next">다음 실험</span></li>
+            </ol>
+          </div>
+        </details>
+        <details class="tech">
+          <summary>구현 문서와 코드 근거 보기</summary>
+          <div class="tech-body">
+            <p>처음 설치하는 방법은 README에서, 오디오 백엔드의 책임과 검증 규칙은 엔진 문서에서, 외부 샘플 팩의 출처와 배포 조건은 음원 감사 문서에서 확인할 수 있다.</p>
             <div class="link-grid">
-              <a class="link-card" href="ARIA_CO_DEVELOPMENT_BRIEF_KO_PUBLIC_HUMANIZED.html"><strong>상세 공동개발 브리프</strong><span>5분 이후 · 읽기 쉽게 다듬은 버전 ↗</span></a>
-              <a class="link-card" href="ARIA_CO_DEVELOPMENT_COMPARISON_KO.html"><strong>문장 원본과 적용본 비교</strong><span>작성 과정 검수용 A/B 화면 ↗</span></a>
-              <a class="link-card" href="https://github.com/chenjingdev/aria"><strong>GitHub 저장소</strong><span>코드·README·이슈의 기준점 ↗</span></a>
+              <a class="link-card" href="https://github.com/chenjingdev/aria#readme"><strong>설치와 사용법</strong><span>README · 앱과 MCP 연결 방법 ↗</span></a>
+              <a class="link-card" href="https://github.com/chenjingdev/aria/blob/main/docs/ENGINE_BACKENDS.md"><strong>오디오 엔진 구조</strong><span>SF2·SFZ 백엔드 계약과 검증 ↗</span></a>
+              <a class="link-card" href="https://github.com/chenjingdev/aria/blob/main/docs/SOUND_LIBRARY_AUDIT.md"><strong>샘플 음원 감사</strong><span>음원 출처·라이선스·설치 상태 ↗</span></a>
             </div>
           </div>
         </details>
@@ -807,7 +894,7 @@
           <summary>공개 전 꼭 알아야 할 현재 한계 보기</summary>
           <div class="tech-body">
             <p>현재 재생은 macOS의 <code>afplay</code>를 사용한다. 샘플 음원은 저장소에 포함되지 않아 별도로 설치해야 한다. Aria 자체 코드의 <code>LICENSE</code>도 아직 정해지지 않았다. MIDI 내보내기의 CC7 범위 문제와 팩 설치 명령 연결도 먼저 고칠 기술 부채로 남아 있다.</p>
-            <p>이 항목들은 제품을 이해하기 위한 선행 지식은 아니지만 공동 소유, 재배포, 첫 개발 과제를 결정할 때는 반드시 함께 확인해야 한다.</p>
+            <p>이 제약은 새 컴퓨터에서의 설치 재현성과 공개 배포 범위, 다른 제작 도구로 결과를 옮길 때 보존되는 정보를 판단하는 기준이다.</p>
           </div>
         </details>
       </div>
@@ -819,11 +906,11 @@
       <div>
         <span class="eyebrow">한 문장으로 다시 말하면</span>
         <h2>사람의 귀와 AI의 손이<br>같은 곡을 계속 고치는 앱.</h2>
-        <p>이 방향이 재미있다면 첫 주에는 새 Mac 설치와 8마디 청취 검증부터 같이 해보자. 거기서 가장 먼저 막히는 문제 하나가 우리의 첫 공동 과제가 된다.</p>
+        <p>외부 AI의 편집, 사람의 직접 조작, 곡 상태 검증, 실제 샘플 재생과 파일 내보내기를 하나의 Core 위에 연결한다.</p>
       </div>
       <a class="button" href="https://github.com/chenjingdev/aria">코드 저장소 열기 ↗</a>
     </div>
-    <div class="footer-note"><span>ARIA · NEWCOMER BRIEF · 2026-08-12</span><span>상세 기술 문서는 필요한 순간에만 펼쳐 보세요.</span></div>
+    <div class="footer-note"><span>ARIA · PLATFORM OVERVIEW · 2026-08-12</span><span>상세 기술 문서는 필요한 순간에만 펼쳐 보세요.</span></div>
   </footer>
 
   <script>
