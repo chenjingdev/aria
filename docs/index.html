@@ -1,0 +1,876 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Aria를 처음 보는 음악가·개발자를 위한 1분 소개. 무엇을 만들었고 왜 함께 개발하려는지 쉽게 설명합니다.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23245bd7'/%3E%3Cpath d='M24 13v29c0 6-4 9-10 9-5 0-9-3-9-7s4-7 9-7c2 0 4 .4 6 1.4V13h4zm27 8v21c0 6-4 9-10 9-5 0-9-3-9-7s4-7 9-7c2 0 4 .4 6 1.4V21h4z' fill='white'/%3E%3C/svg%3E">
+  <title>Aria — 처음 보는 사람을 위한 1분 소개</title>
+  <style>
+    :root {
+      --paper: #f4f8f7;
+      --sheet: #ffffff;
+      --ink: #162228;
+      --ink-2: #3e5058;
+      --muted: #687a80;
+      --line: #c8d5d5;
+      --line-strong: #90a4a6;
+      --blue: #245bd7;
+      --blue-ink: #173f99;
+      --blue-soft: #dce7ff;
+      --coral: #e55038;
+      --coral-soft: #ffe1db;
+      --green: #18765b;
+      --green-soft: #d9eee7;
+      --gold: #9a5a0b;
+      --gold-soft: #f8e7c8;
+      --night: #142025;
+      --night-2: #1d2c32;
+      --shadow: 0 22px 70px rgba(30, 54, 60, .12);
+      --display: "Iowan Old Style", "AppleMyungjo", "Palatino Linotype", serif;
+      --body: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      --content: 1160px;
+      --reading: 720px;
+      --tap: 44px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #0c1519;
+        --sheet: #111d22;
+        --ink: #edf3f2;
+        --ink-2: #c3d0d0;
+        --muted: #93a5a8;
+        --line: #2d4045;
+        --line-strong: #52686c;
+        --blue: #86aaff;
+        --blue-ink: #b9ccff;
+        --blue-soft: #1c3157;
+        --coral: #ff8068;
+        --coral-soft: #4a251f;
+        --green: #6bc8a9;
+        --green-soft: #183a31;
+        --gold: #efb464;
+        --gold-soft: #3e301d;
+        --night: #e8efee;
+        --night-2: #d4e0df;
+        --shadow: 0 24px 76px rgba(0, 0, 0, .36);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --paper: #0c1519;
+      --sheet: #111d22;
+      --ink: #edf3f2;
+      --ink-2: #c3d0d0;
+      --muted: #93a5a8;
+      --line: #2d4045;
+      --line-strong: #52686c;
+      --blue: #86aaff;
+      --blue-ink: #b9ccff;
+      --blue-soft: #1c3157;
+      --coral: #ff8068;
+      --coral-soft: #4a251f;
+      --green: #6bc8a9;
+      --green-soft: #183a31;
+      --gold: #efb464;
+      --gold-soft: #3e301d;
+      --night: #e8efee;
+      --night-2: #d4e0df;
+      --shadow: 0 24px 76px rgba(0, 0, 0, .36);
+    }
+
+    :root[data-theme="light"] {
+      --paper: #f4f8f7;
+      --sheet: #ffffff;
+      --ink: #162228;
+      --ink-2: #3e5058;
+      --muted: #687a80;
+      --line: #c8d5d5;
+      --line-strong: #90a4a6;
+      --blue: #245bd7;
+      --blue-ink: #173f99;
+      --blue-soft: #dce7ff;
+      --coral: #e55038;
+      --coral-soft: #ffe1db;
+      --green: #18765b;
+      --green-soft: #d9eee7;
+      --gold: #9a5a0b;
+      --gold-soft: #f8e7c8;
+      --night: #142025;
+      --night-2: #1d2c32;
+      --shadow: 0 22px 70px rgba(30, 54, 60, .12);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 78px; }
+    body {
+      margin: 0;
+      min-width: 0;
+      overflow-x: hidden;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, transparent calc(50% - .5px), color-mix(in srgb, var(--line) 24%, transparent) 50%, transparent calc(50% + .5px)),
+        var(--paper);
+      font-family: var(--body);
+      font-size: 16px;
+      line-height: 1.68;
+      word-break: keep-all;
+      overflow-wrap: break-word;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--blue-ink); text-underline-offset: .2em; }
+    button { color: inherit; font: inherit; }
+    :focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+    ::selection { color: var(--ink); background: var(--blue-soft); }
+
+    .progress {
+      position: fixed;
+      z-index: 100;
+      inset: 0 0 auto;
+      height: 3px;
+      transform: scaleX(0);
+      transform-origin: 0 50%;
+      background: linear-gradient(90deg, var(--blue), var(--coral));
+    }
+    .topbar {
+      position: sticky;
+      z-index: 50;
+      top: 0;
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 8px max(18px, env(safe-area-inset-left)) 8px max(18px, env(safe-area-inset-right));
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+      background: color-mix(in srgb, var(--paper) 90%, transparent);
+      backdrop-filter: blur(18px) saturate(130%);
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .brand b { font: 700 22px/1 var(--display); letter-spacing: .08em; }
+    .brand span { color: var(--muted); font: 700 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .topnav { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .topnav a {
+      min-height: var(--tap);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 11px;
+      border-radius: 4px;
+      color: var(--ink-2);
+      font-size: 13px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .topnav a:hover { background: var(--blue-soft); color: var(--blue-ink); }
+    .theme-button {
+      min-width: var(--tap);
+      min-height: var(--tap);
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--sheet);
+      cursor: pointer;
+    }
+
+    main { width: 100%; }
+    .section {
+      width: min(var(--content), calc(100% - 32px));
+      margin: 0 auto;
+      padding: clamp(64px, 9vw, 112px) 0;
+    }
+    .section + .section { border-top: 1px solid var(--line); }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      color: var(--blue-ink);
+      font: 800 11px/1.2 var(--mono);
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { content: ""; width: 18px; height: 3px; background: var(--coral); }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2 { font-family: var(--display); text-wrap: balance; }
+    h1 {
+      max-width: 780px;
+      margin: 18px 0 20px;
+      font-size: clamp(46px, 7.6vw, 92px);
+      font-weight: 650;
+      line-height: .99;
+      letter-spacing: -.048em;
+    }
+    h2 {
+      margin-bottom: 18px;
+      font-size: clamp(34px, 5vw, 58px);
+      font-weight: 650;
+      line-height: 1.06;
+      letter-spacing: -.038em;
+    }
+    h3 { margin-bottom: 8px; font-size: 18px; line-height: 1.35; }
+    .section-intro { max-width: var(--reading); color: var(--ink-2); font-size: clamp(17px, 1.8vw, 21px); }
+    .section-head { margin-bottom: clamp(30px, 5vw, 54px); }
+
+    .hero {
+      width: min(var(--content), calc(100% - 32px));
+      min-height: calc(100svh - 62px);
+      margin: 0 auto;
+      padding: clamp(46px, 7vw, 92px) 0 56px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(350px, .92fr);
+      align-items: center;
+      gap: clamp(36px, 6vw, 84px);
+    }
+    .hero-copy { min-width: 0; }
+    .hero .lead {
+      max-width: 700px;
+      margin-bottom: 28px;
+      color: var(--ink-2);
+      font-size: clamp(18px, 2vw, 23px);
+      line-height: 1.62;
+    }
+    .hero .lead strong { color: var(--ink); }
+    .plain-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 28px; }
+    .plain-tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      border: 1px solid color-mix(in srgb, var(--green) 40%, var(--line));
+      border-radius: 3px;
+      color: var(--green);
+      background: var(--green-soft);
+      font: 750 12px/1.2 var(--body);
+    }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .button {
+      min-height: 48px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 18px;
+      border: 1px solid var(--line-strong);
+      border-radius: 5px;
+      color: var(--ink);
+      background: var(--sheet);
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 6px 20px rgba(30, 54, 60, .06);
+    }
+    .button.primary { border-color: var(--blue); color: white; background: #245bd7; }
+    :root[data-theme="dark"] .button.primary { color: #111d22; background: #86aaff; }
+    @media (prefers-color-scheme: dark) { :root:not([data-theme]) .button.primary { color: #111d22; background: #86aaff; } }
+    .button:hover { transform: translateY(-1px); box-shadow: 0 9px 28px rgba(30, 54, 60, .13); }
+
+    .request-demo {
+      position: relative;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid #31444b;
+      border-radius: 8px;
+      color: #edf4f3;
+      background: #142126;
+      box-shadow: var(--shadow);
+    }
+    .demo-bar {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #31444b;
+      color: #9fb1b4;
+      font: 700 10px/1.2 var(--mono);
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .recording { display: inline-flex; align-items: center; gap: 7px; color: #ff8c75; }
+    .recording::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff6b52; box-shadow: 0 0 0 4px rgba(255,107,82,.15); }
+    .chat { display: grid; gap: 12px; padding: 18px; }
+    .bubble { max-width: 92%; padding: 12px 14px; border-radius: 5px; font-size: 14px; line-height: 1.55; }
+    .bubble.person { justify-self: end; border-bottom-right-radius: 0; color: #111d22; background: #f4f8f7; }
+    .bubble.aria { border: 1px solid #3c5259; border-bottom-left-radius: 0; color: #dbe7e6; background: #1d2d33; }
+    .bubble.aria strong { color: #8eafff; }
+    .mini-score {
+      position: relative;
+      height: 170px;
+      overflow: hidden;
+      border-top: 1px solid #31444b;
+      background:
+        repeating-linear-gradient(90deg, transparent 0 calc(12.5% - 1px), rgba(156,176,180,.20) calc(12.5% - 1px) 12.5%),
+        repeating-linear-gradient(0deg, transparent 0 27px, rgba(156,176,180,.12) 27px 28px),
+        #101a1e;
+    }
+    .mini-score .bar-label { position: absolute; top: 7px; color: #819397; font: 10px/1 var(--mono); }
+    .mini-score .note { position: absolute; height: 11px; border-radius: 2px; background: #648eff; }
+    .mini-score .note.coral { background: #ff735c; }
+    .mini-score .playhead { position: absolute; z-index: 2; top: 0; bottom: 0; left: 55%; width: 2px; background: #ff735c; box-shadow: 0 0 14px rgba(255,115,92,.72); }
+    .demo-result {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid #31444b;
+    }
+    .demo-result span { padding: 11px 10px; border-right: 1px solid #31444b; color: #a9b9bb; font-size: 11px; text-align: center; }
+    .demo-result span:last-child { border-right: 0; }
+    .demo-result b { display: block; color: #f2f7f6; font-size: 12px; }
+
+    .one-line {
+      width: 100%;
+      color: #eaf1f0;
+      background: #142126;
+    }
+    .one-line-inner {
+      width: min(var(--content), calc(100% - 32px));
+      min-height: 108px;
+      margin: auto;
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      align-items: center;
+      gap: 26px;
+      padding: 22px 0;
+    }
+    .one-line b { color: #93a5a8; font: 800 11px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .one-line p { margin: 0; font: 650 clamp(18px, 2.3vw, 27px)/1.45 var(--display); }
+
+    .flow-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line);
+    }
+    .flow-step { position: relative; min-width: 0; padding: 24px 22px 28px; border-right: 1px solid var(--line); }
+    .flow-step:last-child { border-right: 0; }
+    .flow-step .number { display: block; margin-bottom: 30px; color: var(--coral); font: 800 12px/1 var(--mono); }
+    .flow-step h3 { font-size: 19px; }
+    .flow-step p { margin: 0; color: var(--ink-2); font-size: 14px; }
+    .flow-step:not(:last-child)::after {
+      content: "→";
+      position: absolute;
+      z-index: 2;
+      top: 21px;
+      right: -12px;
+      width: 24px;
+      color: var(--blue);
+      background: var(--paper);
+      font: 700 18px/1 var(--body);
+      text-align: center;
+    }
+    .example-line {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 20px;
+      padding: 20px 22px;
+      border-left: 4px solid var(--coral);
+      background: var(--coral-soft);
+    }
+    .example-line b { font-size: 13px; }
+    .example-line p { margin: 0; color: var(--ink-2); }
+
+    .difference {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: stretch;
+      border: 1px solid var(--line);
+      background: var(--sheet);
+      box-shadow: var(--shadow);
+    }
+    .difference article { padding: clamp(24px, 4vw, 42px); }
+    .difference article:first-child { background: color-mix(in srgb, var(--line) 18%, transparent); }
+    .difference .versus { width: 1px; background: var(--line); }
+    .difference .label { display: inline-block; margin-bottom: 20px; color: var(--muted); font: 800 10px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .difference h3 { font: 650 clamp(23px, 3vw, 34px)/1.2 var(--display); }
+    .difference ul { margin: 18px 0 0; padding: 0; list-style: none; }
+    .difference li { position: relative; padding: 9px 0 9px 22px; border-top: 1px solid var(--line); color: var(--ink-2); }
+    .difference li::before { content: ""; position: absolute; left: 2px; top: 19px; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); }
+    .difference article:last-child li::before { background: var(--blue); }
+
+    .invite {
+      display: grid;
+      grid-template-columns: minmax(0, .94fr) minmax(0, 1.06fr);
+      gap: clamp(30px, 6vw, 80px);
+      align-items: start;
+    }
+    .invite-copy { position: sticky; top: 96px; }
+    .invite-copy .letter {
+      margin: 24px 0 0;
+      padding: 20px 0 0 24px;
+      border-left: 3px solid var(--coral);
+      color: var(--ink-2);
+      font-size: 18px;
+    }
+    .role-stack { display: grid; gap: 12px; }
+    .role-card {
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr);
+      gap: 18px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      background: var(--sheet);
+    }
+    .role-card .who { color: var(--blue-ink); font: 800 11px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .role-card p { margin: 0; color: var(--ink-2); }
+    .role-card strong { color: var(--ink); }
+
+    .status-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .status-card { min-width: 0; padding: 24px; border: 1px solid var(--line); background: var(--sheet); }
+    .status-card.now { border-top: 4px solid var(--green); }
+    .status-card.next { border-top: 4px solid var(--blue); }
+    .status-card.agree { border-top: 4px solid var(--gold); }
+    .status-card .status-label { display: block; margin-bottom: 18px; font: 800 11px/1 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+    .status-card.now .status-label { color: var(--green); }
+    .status-card.next .status-label { color: var(--blue-ink); }
+    .status-card.agree .status-label { color: var(--gold); }
+    .clean-list { margin: 0; padding: 0; list-style: none; }
+    .clean-list li { position: relative; padding: 10px 0 10px 20px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 14px; }
+    .clean-list li::before { content: ""; position: absolute; left: 1px; top: 20px; width: 7px; height: 7px; border-radius: 50%; background: currentColor; opacity: .55; }
+
+    .first-task {
+      display: grid;
+      grid-template-columns: minmax(260px, .72fr) minmax(0, 1.28fr);
+      gap: clamp(28px, 6vw, 72px);
+      padding: clamp(26px, 5vw, 48px);
+      border: 1px solid var(--line-strong);
+      background: var(--sheet);
+      box-shadow: var(--shadow);
+    }
+    .task-title .badge { display: inline-block; margin-bottom: 18px; padding: 6px 9px; color: var(--green); background: var(--green-soft); font: 800 11px/1 var(--mono); }
+    .task-title h3 { font: 650 clamp(28px, 4vw, 44px)/1.12 var(--display); }
+    .task-title p { color: var(--ink-2); }
+    .task-steps { counter-reset: task; display: grid; gap: 0; }
+    .task-steps div {
+      counter-increment: task;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+      padding: 15px 0;
+      border-top: 1px solid var(--line);
+    }
+    .task-steps div::before {
+      content: counter(task, decimal-leading-zero);
+      color: var(--coral);
+      font: 800 12px/1.5 var(--mono);
+    }
+    .task-steps p { margin: 0; color: var(--ink-2); }
+    .task-steps strong { color: var(--ink); }
+
+    .trust-strip {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-top: 1px solid var(--line-strong);
+      border-bottom: 1px solid var(--line);
+    }
+    .trust-item { min-width: 0; padding: 18px; border-right: 1px solid var(--line); }
+    .trust-item:last-child { border-right: 0; }
+    .trust-item b { display: block; font: 750 18px/1.2 var(--mono); }
+    .trust-item span { display: block; margin-top: 7px; color: var(--muted); font-size: 12px; }
+
+    .tech-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 24px; }
+    .tech-control {
+      min-height: var(--tap);
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      background: var(--sheet);
+      cursor: pointer;
+      font-weight: 750;
+    }
+    .tech-list { display: grid; border-top: 1px solid var(--line-strong); }
+    details.tech { border-bottom: 1px solid var(--line); }
+    details.tech summary {
+      min-height: 62px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 2px;
+      cursor: pointer;
+      font-weight: 800;
+      list-style: none;
+    }
+    details.tech summary::-webkit-details-marker { display: none; }
+    details.tech summary::after { content: "+"; width: 30px; color: var(--blue); font: 700 24px/1 var(--body); text-align: center; }
+    details.tech[open] summary::after { content: "−"; }
+    .tech-body { max-width: 900px; padding: 0 0 24px; color: var(--ink-2); }
+    .tech-body p:last-child { margin-bottom: 0; }
+    .glossary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 28px; }
+    .term { padding: 14px 0; border-top: 1px solid var(--line); }
+    .term dt { color: var(--ink); font-weight: 800; }
+    .term dd { margin: 4px 0 0; }
+    code { padding: .12em .32em; color: var(--blue-ink); background: var(--blue-soft); font-family: var(--mono); font-size: .9em; }
+    .link-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+    .link-card { min-height: 98px; display: flex; flex-direction: column; justify-content: space-between; padding: 16px; border: 1px solid var(--line); color: var(--ink); background: var(--sheet); text-decoration: none; }
+    .link-card span { color: var(--muted); font-size: 12px; }
+    .link-card:hover { border-color: var(--blue); background: var(--blue-soft); }
+
+    .closing {
+      padding: clamp(56px, 8vw, 94px) max(16px, env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      color: #eaf1f0;
+      background: #142126;
+    }
+    .closing-inner { width: min(var(--content), 100%); margin: auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: end; }
+    .closing h2 { max-width: 780px; margin: 0; color: #f4f8f7; }
+    .closing p { max-width: 720px; margin: 18px 0 0; color: #b7c5c6; }
+    .closing .button { color: #f4f8f7; border-color: #6b8084; background: #1d2d33; }
+    .footer-note { width: min(var(--content), 100%); margin: 48px auto 0; padding-top: 18px; border-top: 1px solid #31444b; display: flex; justify-content: space-between; gap: 20px; color: #839699; font: 700 10px/1.5 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+
+    @media (max-width: 900px) {
+      .topnav { display: none; }
+      .hero { min-height: auto; grid-template-columns: 1fr; padding-top: 54px; }
+      .request-demo { width: min(620px, 100%); }
+      .flow-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .flow-step:nth-child(2) { border-right: 0; }
+      .flow-step:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .flow-step:nth-child(2)::after { display: none; }
+      .invite { grid-template-columns: 1fr; }
+      .invite-copy { position: static; }
+      .status-grid { grid-template-columns: 1fr; }
+      .first-task { grid-template-columns: 1fr; }
+      .trust-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .trust-item:nth-child(2) { border-right: 0; }
+      .trust-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .closing-inner { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 620px) {
+      html { scroll-padding-top: 64px; }
+      body { font-size: 15px; }
+      .topbar { min-height: 58px; }
+      .brand span { display: none; }
+      .theme-button { padding: 0 10px; }
+      .section { width: min(100% - 24px, var(--content)); padding: 64px 0; }
+      .hero { width: min(100% - 24px, var(--content)); padding: 38px 0 48px; gap: 34px; }
+      h1 { font-size: clamp(43px, 14vw, 61px); }
+      h2 { font-size: clamp(33px, 10.5vw, 46px); }
+      .hero .lead { font-size: 18px; }
+      .actions { display: grid; grid-template-columns: 1fr; }
+      .button { width: 100%; }
+      .chat { padding: 14px; }
+      .bubble { max-width: 96%; }
+      .mini-score { height: 145px; }
+      .demo-result { grid-template-columns: 1fr; }
+      .demo-result span { border-right: 0; border-bottom: 1px solid #31444b; text-align: left; }
+      .demo-result span:last-child { border-bottom: 0; }
+      .demo-result b { display: inline; margin-right: 8px; }
+      .one-line-inner { width: calc(100% - 24px); grid-template-columns: 1fr; gap: 6px; padding: 24px 0; }
+      .flow-grid { grid-template-columns: 1fr; }
+      .flow-step { border-right: 0; border-bottom: 1px solid var(--line); }
+      .flow-step:last-child { border-bottom: 0; }
+      .flow-step:not(:last-child)::after { display: none; }
+      .flow-step .number { margin-bottom: 16px; }
+      .example-line { grid-template-columns: 1fr; gap: 5px; padding: 18px; }
+      .difference { grid-template-columns: 1fr; }
+      .difference .versus { width: auto; height: 1px; }
+      .role-card { grid-template-columns: 1fr; gap: 7px; }
+      .first-task { padding: 22px 18px; }
+      .trust-strip { grid-template-columns: 1fr; }
+      .trust-item { border-right: 0; border-bottom: 1px solid var(--line); }
+      .trust-item:last-child { border-bottom: 0; }
+      .glossary { grid-template-columns: 1fr; }
+      .link-grid { grid-template-columns: 1fr; }
+      .footer-note { flex-direction: column; gap: 6px; }
+    }
+
+    @media print {
+      .progress, .topbar, .tech-actions { display: none !important; }
+      body { background: white; color: #111; }
+      .hero { min-height: auto; }
+      details.tech { break-inside: avoid; }
+      details.tech > * { display: block !important; }
+      .closing { color: #111; background: white; border-top: 2px solid #111; }
+      .closing h2, .closing p { color: #111; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Aria 소개 첫 화면으로 이동">
+      <b>aria</b>
+      <span>처음 보는 사람을 위한 1분 소개</span>
+    </a>
+    <nav class="topnav" aria-label="핵심 목차">
+      <a href="#flow">어떻게 쓰나</a>
+      <a href="#together">같이 할 일</a>
+      <a href="#status">지금 상태</a>
+      <a href="#technical">기술 참고</a>
+    </nav>
+    <button class="theme-button" id="themeButton" type="button" aria-pressed="false">어둡게</button>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <span class="eyebrow">음악가 × 개발자 공동개발 제안</span>
+        <h1 id="hero-title">말로 부탁하고,<br>듣고, 다시 고친다.</h1>
+        <p class="lead"><strong>Aria는 AI가 곡 편집기를 직접 다루도록 만든 Mac용 작곡 앱이다.</strong> 사람과 AI가 같은 곡을 계속 다듬기 때문에 마음에 안 드는 부분이 생겨도 처음부터 다시 만들 필요가 없다.</p>
+        <div class="plain-tags" aria-label="Aria 핵심 특징">
+          <span class="plain-tag">말로 곡을 편집</span>
+          <span class="plain-tag">원하는 구간만 다시 듣기</span>
+          <span class="plain-tag">되돌릴 수 있는 원본</span>
+        </div>
+        <div class="actions">
+          <a class="button primary" href="#flow">30초 사용 흐름 보기 ↓</a>
+          <a class="button" href="#together">이번에 같이 할 일</a>
+        </div>
+      </div>
+
+      <div class="request-demo" aria-label="후렴을 고치는 Aria 사용 예시">
+        <div class="demo-bar"><span>ARIA · SELECTED BARS 9–16</span><span class="recording">LISTEN</span></div>
+        <div class="chat">
+          <div class="bubble person">“9–16마디 후렴이 조금 약해. 드럼은 더 밀고 현악은 넓혀 줘.”</div>
+          <div class="bubble aria"><strong>선택한 8마디를 고쳤어요.</strong><br>달라진 부분만 다시 재생할게요.</div>
+        </div>
+        <div class="mini-score" aria-hidden="true">
+          <span class="bar-label" style="left:3%">09</span><span class="bar-label" style="left:15%">10</span><span class="bar-label" style="left:28%">11</span><span class="bar-label" style="left:40%">12</span><span class="bar-label" style="left:53%">13</span><span class="bar-label" style="left:65%">14</span><span class="bar-label" style="left:78%">15</span><span class="bar-label" style="left:90%">16</span>
+          <span class="note" style="left:3%;top:48px;width:16%"></span><span class="note" style="left:22%;top:62px;width:11%"></span><span class="note coral" style="left:36%;top:48px;width:20%"></span><span class="note" style="left:59%;top:75px;width:14%"></span><span class="note coral" style="left:76%;top:48px;width:20%"></span>
+          <span class="note coral" style="left:3%;top:103px;width:8%"></span><span class="note coral" style="left:15%;top:103px;width:8%"></span><span class="note coral" style="left:28%;top:103px;width:8%"></span><span class="note coral" style="left:40%;top:103px;width:8%"></span><span class="note coral" style="left:53%;top:103px;width:8%"></span><span class="note coral" style="left:65%;top:103px;width:8%"></span><span class="note coral" style="left:78%;top:103px;width:8%"></span><span class="note coral" style="left:90%;top:103px;width:7%"></span>
+          <span class="playhead"></span>
+        </div>
+        <div class="demo-result"><span><b>확인</b> 바뀐 음과 악기</span><span><b>재생</b> 9–16마디만</span><span><b>결정</b> 이어가기 또는 되돌리기</span></div>
+      </div>
+    </section>
+
+    <aside class="one-line" aria-label="Aria 핵심 한 문장">
+      <div class="one-line-inner">
+        <b>이것만 기억하면 됩니다</b>
+        <p>AI가 편집하는 손이 되고, 사람은 직접 듣고 문제 구간과 최종안을 고른다.</p>
+      </div>
+    </aside>
+
+    <section class="section" id="flow" aria-labelledby="flow-title">
+      <div class="section-head">
+        <span class="eyebrow">실제로 어떻게 쓰나</span>
+        <h2 id="flow-title">한 곡을 두고<br>작은 수정을 반복한다.</h2>
+        <p class="section-intro">Aria의 핵심은 음악을 한 번 생성하는 데 있지 않다. 사람이 듣고 범위를 좁히면 AI가 같은 곡 안에서 필요한 부분만 고친다.</p>
+      </div>
+      <div class="flow-grid">
+        <article class="flow-step"><span class="number">01</span><h3>말한다</h3><p>원하는 분위기나 마음에 안 드는 부분을 평소 쓰는 말로 설명한다.</p></article>
+        <article class="flow-step"><span class="number">02</span><h3>AI가 고친다</h3><p>AI가 설명만 하는 것이 아니라 노트, 악기, 선택 구간을 실제로 편집한다.</p></article>
+        <article class="flow-step"><span class="number">03</span><h3>그 부분만 듣는다</h3><p>앞뒤 음악과 함께 필요한 마디를 다시 재생해 무엇이 달라졌는지 확인한다.</p></article>
+        <article class="flow-step"><span class="number">04</span><h3>고르거나 되돌린다</h3><p>마음에 들면 이어서 작업하고 아니면 되돌리거나 더 구체적으로 다시 요청한다.</p></article>
+      </div>
+      <div class="example-line"><b>한 가지 실제 장면</b><p>“후렴이 덜 벅차” → 9–16마디 선택 → 드럼과 현악 수정 → 같은 8마디 재생 → 이어가기 또는 Undo.</p></div>
+    </section>
+
+    <section class="section" aria-labelledby="difference-title">
+      <div class="section-head">
+        <span class="eyebrow">왜 따로 만드는가</span>
+        <h2 id="difference-title">완성 파일보다<br>고칠 수 있는 원본이 중요하다.</h2>
+      </div>
+      <div class="difference">
+        <article>
+          <span class="label">한 번 생성하는 방식</span>
+          <h3>결과가 마음에 안 들면 다시 뽑는다.</h3>
+          <ul><li>완성된 오디오가 중심이다.</li><li>작은 문제도 전체를 다시 만들기 쉽다.</li><li>무엇이 바뀌었는지 정확히 알기 어렵다.</li></ul>
+        </article>
+        <div class="versus" aria-hidden="true"></div>
+        <article>
+          <span class="label">Aria의 작업 방식</span>
+          <h3>노트와 악기가 남아 있어 계속 고친다.</h3>
+          <ul><li>편집 가능한 곡 원본이 중심이다.</li><li>문제 구간과 악기만 좁게 수정한다.</li><li>사람이 듣고 확인한 뒤 다음 결정을 내린다.</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="together" aria-labelledby="together-title">
+      <div class="invite">
+        <div class="invite-copy">
+          <span class="eyebrow">왜 너와 같이 만들고 싶은가</span>
+          <h2 id="together-title">코드와 귀가<br>둘 다 필요하다.</h2>
+          <p class="section-intro">나는 AI가 곡을 직접 고치고 다시 들려주는 기술 기반을 만들었다. 이제 “기능이 된다”를 넘어 “음악이 실제로 좋아졌다”까지 확인하고 싶다.</p>
+          <p class="letter">네가 음악가이면서 개발자라서 부탁하고 싶다. 좋은 소리를 귀로 판단하고, 그 판단을 다시 실행할 수 있는 기능과 테스트로 옮기는 일을 같이 해보자.</p>
+        </div>
+        <div class="role-stack" aria-label="공동개발 역할">
+          <article class="role-card"><div class="who">내가 먼저<br>만든 것</div><p><strong>곡을 만들고 고치는 편집 엔진</strong>, 브라우저 화면, 실제 악기 샘플 재생, 되돌리기·저장·내보내기의 기본 뼈대.</p></article>
+          <article class="role-card"><div class="who">네 판단이<br>필요한 것</div><p><strong>무엇이 음악적으로 어색한지</strong>, 어떤 차이가 의미 있는지, 기능으로 만들 때 어느 정도면 통과인지에 대한 판단.</p></article>
+          <article class="role-card"><div class="who">함께 만들<br>결과</div><p><strong>“좋아졌다”를 우연에 맡기지 않는 작업 방식.</strong> 같은 구간을 듣고, 문제를 좁히고, 수정하고, 다시 확인하는 기준.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="status" aria-labelledby="status-title">
+      <div class="section-head">
+        <span class="eyebrow">지금 상태</span>
+        <h2 id="status-title">되는 것, 만들 것,<br>먼저 정할 것.</h2>
+        <p class="section-intro">모든 기능이 완성된 제품은 아니다. 지금 작동하는 기반과 다음 실험, 공동개발 전에 합의할 내용을 분리했다.</p>
+      </div>
+      <div class="status-grid">
+        <article class="status-card now">
+          <span class="status-label">지금 된다</span>
+          <h3>한 곡을 만들고 실제로 편집한다</h3>
+          <ul class="clean-list"><li>말로 곡·트랙·노트 수정</li><li>브라우저 악보와 구간 재생</li><li>녹음된 악기 샘플로 소리 만들기</li><li>Undo·자동저장·곡 보관</li><li>WAV·MIDI·트랙별 오디오 저장</li></ul>
+        </article>
+        <article class="status-card next">
+          <span class="status-label">다음에 만들 것</span>
+          <h3>비교와 설치를 훨씬 쉽게 만든다</h3>
+          <ul class="clean-list"><li>선택 구간의 후보 3–5개</li><li>앞뒤 음악과 함께 빠른 A/B</li><li>새 Mac에서도 막히지 않는 설치</li><li>이상한 음량·타이밍을 찾는 화면</li><li>8–16마디 음악 품질 기준</li></ul>
+        </article>
+        <article class="status-card agree">
+          <span class="status-label">먼저 합의할 것</span>
+          <h3>같이 만드는 조건을 분명히 한다</h3>
+          <ul class="clean-list"><li>Aria 코드의 소유권과 라이선스</li><li>샘플 음원의 사용·배포 범위</li><li>처음 지원할 컴퓨터 환경</li><li>서로의 역할과 코드 리뷰 방식</li><li>첫 과제의 완료 기준</li></ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="task-title">
+      <div class="section-head">
+        <span class="eyebrow">추천 첫 공동 과제</span>
+        <h2 id="task-title">새 Mac 한 대와<br>8마디 곡 하나에서 시작한다.</h2>
+      </div>
+      <div class="first-task">
+        <div class="task-title">
+          <span class="badge">FIRST WEEK</span>
+          <h3>설치부터 실제 소리까지 같이 확인하기</h3>
+          <p>시스템 전체를 안전하게 훑으면서도 문서 작업으로 끝나지 않는다. 개발 역량과 음악적 판단을 동시에 쓰는 첫 과제다.</p>
+          <div class="actions"><a class="button primary" href="https://github.com/chenjingdev/aria">GitHub에서 코드 보기 ↗</a></div>
+        </div>
+        <div class="task-steps">
+          <div><p><strong>새 폴더에 저장소를 받는다.</strong> 기존 개발 컴퓨터의 숨은 파일을 복사하지 않는다.</p></div>
+          <div><p><strong>앱과 필요한 음원을 설치한다.</strong> 막힌 단계와 이유를 그대로 기록한다.</p></div>
+          <div><p><strong>8마디 기준곡을 재생하고 내보낸다.</strong> 같은 범위를 같은 조건으로 듣는다.</p></div>
+          <div><p><strong>둘 다 가장 거슬리는 지점 하나를 고른다.</strong> 설치 문제든 소리 문제든 우선 하나만 좁힌다.</p></div>
+          <div><p><strong>코드 검사와 청취 A/B를 함께 남긴다.</strong> 기능 통과와 음악 통과를 한 변경에서 확인한다.</p></div>
+        </div>
+      </div>
+      <div class="trust-strip" aria-label="현재 프로젝트 근거">
+        <div class="trust-item"><b>199</b><span>자동 검사 통과</span></div>
+        <div class="trust-item"><b>macOS</b><span>현재 중심 실행 환경</span></div>
+        <div class="trust-item"><b>Public</b><span>chenjingdev/aria 코드 공개</span></div>
+        <div class="trust-item"><b>별도 설치</b><span>샘플 음원은 저장소에 미포함</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="technical" aria-labelledby="technical-title">
+      <div class="section-head">
+        <span class="eyebrow">필요할 때만 읽는 기술 참고</span>
+        <h2 id="technical-title">용어를 몰라도<br>여기까지 이해하면 충분하다.</h2>
+        <p class="section-intro">아래 내용은 구현을 시작하거나 정확한 한계를 확인할 때 펼쳐 보면 된다. 처음부터 외울 필요는 없다.</p>
+      </div>
+      <div class="tech-actions">
+        <button class="tech-control" id="openTech" type="button">기술 참고 모두 펼치기</button>
+        <button class="tech-control" id="closeTech" type="button">모두 접기</button>
+      </div>
+      <div class="tech-list">
+        <details class="tech">
+          <summary>처음 나오는 기술 용어 6개만 쉽게 보기</summary>
+          <div class="tech-body">
+            <dl class="glossary">
+              <div class="term"><dt>MCP</dt><dd>AI가 Aria의 편집 기능을 직접 쓰도록 연결하는 방식이다.</dd></div>
+              <div class="term"><dt>Song JSON</dt><dd>노트와 악기 설정이 들어 있는 편집 가능한 곡 원본이다.</dd></div>
+              <div class="term"><dt>SF2 · SFZ</dt><dd>녹음된 악기 소리를 묶어 둔 샘플 음원 형식이다.</dd></div>
+              <div class="term"><dt>Articulation</dt><dd>같은 악기를 긋거나 뜯는 것처럼 소리 내는 방법을 바꾸는 연주법이다.</dd></div>
+              <div class="term"><dt>Render</dt><dd>악보와 악기 설정을 실제로 들을 수 있는 소리로 계산하는 과정이다.</dd></div>
+              <div class="term"><dt>No-fallback</dt><dd>요청한 소리나 연주법이 없을 때 비슷한 것으로 몰래 바꾸지 않는 원칙이다.</dd></div>
+            </dl>
+          </div>
+        </details>
+        <details class="tech">
+          <summary>사람·AI·Aria 앱은 각각 무엇을 하나</summary>
+          <div class="tech-body">
+            <p><strong>사람</strong>은 듣고, 문제 구간을 고르고, 취향과 최종안을 결정한다. <strong>AI</strong>는 요청을 편집 행동으로 바꾸고 곡·트랙·노트를 수정한다. <strong>Aria 앱</strong>은 하나의 현재 곡, 검증, Undo, 저장, 실제 악기 소리 생성을 맡는다.</p>
+            <p>여기서 “같은 곡을 함께 고친다”는 말은 Google Docs처럼 여러 사람이 실시간 동시 입력한다는 뜻이 아니다. 현재 Aria는 한 앱 인스턴스와 하나의 현재 곡을 GUI와 AI가 함께 사용한다.</p>
+          </div>
+        </details>
+        <details class="tech">
+          <summary>현재 구조와 요구사항 전체 보기</summary>
+          <div class="tech-body">
+            <p>상세 브리프에는 제품 방향, 12개 요구사항, 런타임과 오디오 구조, 곡 데이터 모델, 설치 과정, 공동개발 역할, 우선순위, 알려진 한계를 모두 정리했다.</p>
+            <div class="link-grid">
+              <a class="link-card" href="ARIA_CO_DEVELOPMENT_BRIEF_KO_PUBLIC_HUMANIZED.html"><strong>상세 공동개발 브리프</strong><span>5분 이후 · 읽기 쉽게 다듬은 버전 ↗</span></a>
+              <a class="link-card" href="ARIA_CO_DEVELOPMENT_COMPARISON_KO.html"><strong>문장 원본과 적용본 비교</strong><span>작성 과정 검수용 A/B 화면 ↗</span></a>
+              <a class="link-card" href="https://github.com/chenjingdev/aria"><strong>GitHub 저장소</strong><span>코드·README·이슈의 기준점 ↗</span></a>
+            </div>
+          </div>
+        </details>
+        <details class="tech">
+          <summary>공개 전 꼭 알아야 할 현재 한계 보기</summary>
+          <div class="tech-body">
+            <p>현재 재생은 macOS의 <code>afplay</code>를 사용한다. 샘플 음원은 저장소에 포함되지 않아 별도로 설치해야 한다. Aria 자체 코드의 <code>LICENSE</code>도 아직 정해지지 않았다. MIDI 내보내기의 CC7 범위 문제와 팩 설치 명령 연결도 먼저 고칠 기술 부채로 남아 있다.</p>
+            <p>이 항목들은 제품을 이해하기 위한 선행 지식은 아니지만 공동 소유, 재배포, 첫 개발 과제를 결정할 때는 반드시 함께 확인해야 한다.</p>
+          </div>
+        </details>
+      </div>
+    </section>
+  </main>
+
+  <footer class="closing">
+    <div class="closing-inner">
+      <div>
+        <span class="eyebrow">한 문장으로 다시 말하면</span>
+        <h2>사람의 귀와 AI의 손이<br>같은 곡을 계속 고치는 앱.</h2>
+        <p>이 방향이 재미있다면 첫 주에는 새 Mac 설치와 8마디 청취 검증부터 같이 해보자. 거기서 가장 먼저 막히는 문제 하나가 우리의 첫 공동 과제가 된다.</p>
+      </div>
+      <a class="button" href="https://github.com/chenjingdev/aria">코드 저장소 열기 ↗</a>
+    </div>
+    <div class="footer-note"><span>ARIA · NEWCOMER BRIEF · 2026-08-12</span><span>상세 기술 문서는 필요한 순간에만 펼쳐 보세요.</span></div>
+  </footer>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const progress = document.getElementById("progress");
+      const themeButton = document.getElementById("themeButton");
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      let storedTheme = null;
+      try { storedTheme = localStorage.getItem("aria-intro-theme"); } catch {}
+      if (storedTheme === "dark" || storedTheme === "light") root.dataset.theme = storedTheme;
+
+      const activeTheme = () => root.dataset.theme || (media.matches ? "dark" : "light");
+      const syncTheme = () => {
+        const dark = activeTheme() === "dark";
+        themeButton.textContent = dark ? "밝게" : "어둡게";
+        themeButton.setAttribute("aria-pressed", String(dark));
+      };
+      themeButton.addEventListener("click", () => {
+        root.dataset.theme = activeTheme() === "dark" ? "light" : "dark";
+        try { localStorage.setItem("aria-intro-theme", root.dataset.theme); } catch {}
+        syncTheme();
+      });
+      media.addEventListener?.("change", () => { if (!root.dataset.theme) syncTheme(); });
+      syncTheme();
+
+      const updateProgress = () => {
+        const max = document.documentElement.scrollHeight - innerHeight;
+        progress.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
+      };
+      addEventListener("scroll", updateProgress, { passive: true });
+      addEventListener("resize", updateProgress, { passive: true });
+      updateProgress();
+
+      const techDetails = [...document.querySelectorAll("details.tech")];
+      document.getElementById("openTech").addEventListener("click", () => {
+        techDetails.forEach(detail => { detail.open = true; });
+      });
+      document.getElementById("closeTech").addEventListener("click", () => {
+        techDetails.forEach(detail => { detail.open = false; });
+      });
+    })();
+  </script>
+  <!-- HUMANIZE-SUMMARY
+  source: Humanize KR v2.3.0 @ 53e24e8f92cf344efcb812103f7c2b203e7efffc
+  scope: newcomer-facing Korean prose only; facts, identifiers, numbers, dates, and direct quotes preserved
+  change_rate: 15.6%; golden PASS; overall OK
+  -->
+</body>
+</html>

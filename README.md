@@ -1,16 +1,20 @@
-# ◆ aria — LLM이 제어하는 상주 작곡 앱
+# ◆ aria — 말로 곡을 만들고 다시 고치는 작곡 앱
 
-"시티팝 느낌 곡 하나 작곡해줘"라고 하면, Claude Code(또는 다른 MCP 클라이언트)가 aria의 도구를 호출해
-실제로 곡을 만들고 · 스피커로 재생하고 · 피아노롤 GUI에 실시간으로 그려주는 앱입니다.
+Aria는 말로 부탁하면 AI가 노트·악기·구간을 직접 고치고 그 결과를 바로 들려주는 macOS용 로컬 작곡 앱입니다. 완성 음원 하나를 생성하고 끝내지 않고, 사람과 AI가 같은 편집 가능한 곡을 계속 다듬습니다.
 
-- 곡은 실행 중인 앱 안에 살고(자동 저장 `~/.aria/song.json`), LLM은 MCP 도구로 조작합니다
-- 사람은 브라우저 피아노롤 GUI에서 실시간으로 확인·재생·프리셋 변경
+예를 들어 “9–16마디 후렴이 약해. 드럼은 더 밀고 현악은 넓혀 줘”라고 말하면 AI가 그 구간의 실제 악보를 수정합니다. 사용자는 브라우저에서 달라진 부분을 보고 필요한 마디만 다시 들은 뒤, 이어서 작업하거나 되돌릴 수 있습니다.
+
+- 곡은 실행 중인 앱 안에 살고 자동 저장됩니다(`~/.aria/song.json`)
+- AI는 MCP로 같은 곡의 노트·트랙·구조를 실제 편집합니다
+- 사람은 브라우저 악보에서 변경 내용을 보고 재생·구간 반복·악기 변경을 합니다
 - 재생은 설치된 외부 샘플 팩(SF2/SFZ) → 검증된 오픈소스 엔진 → 오프라인 PCM/WAV 렌더 → macOS `afplay` 순서입니다
 - MIDI/WAV 내보내기 (기본 위치 `~/Music/aria/`)
 
 ## 공동개발 브리프
 
-음악가·개발자와 함께 시작할 때는 제품 방향, 기존 요구사항, 아키텍처, 설치, 음악 작업 흐름, 첫 기여 과제를 한 문서로 정리한 [모바일 A/B 브리프](https://chenjingdev.github.io/aria/ARIA_CO_DEVELOPMENT_COMPARISON_KO.html)를 먼저 읽어 주세요. 화면 안에서 초안과 [Humanize KR](https://github.com/epoko77-ai/im-not-ai) 적용본을 나란히 보거나 각각 열 수 있습니다.
+처음 보는 사람은 [1분 소개](https://chenjingdev.github.io/aria/)부터 읽어 주세요. 무엇을 만드는지, 지금 되는 일, 왜 음악가·개발자와 같이 만들려는지, 첫 공동 과제를 쉬운 말로 정리했습니다.
+
+제품 방향, 12개 요구사항, 아키텍처, 설치, 음악 작업 흐름과 기술적 한계는 [상세 공동개발 브리프](https://chenjingdev.github.io/aria/ARIA_CO_DEVELOPMENT_BRIEF_KO_PUBLIC_HUMANIZED.html)에 있습니다. [원문과 Humanize KR 적용본 비교](https://chenjingdev.github.io/aria/ARIA_CO_DEVELOPMENT_COMPARISON_KO.html)는 문서 작성 과정의 검수용 화면입니다.
 
 ## 설치·등록
 

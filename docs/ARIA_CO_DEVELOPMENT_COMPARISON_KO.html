@@ -138,6 +138,34 @@
       cursor: pointer;
     }
 
+    .newcomer-gate {
+      width: min(1180px, calc(100% - 28px));
+      margin: 24px auto 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 20px;
+      border: 1px solid var(--line-strong);
+      border-left: 4px solid var(--human);
+      background: var(--surface);
+    }
+    .newcomer-gate strong { display: block; margin-bottom: 3px; }
+    .newcomer-gate p { margin: 0; color: var(--ink-2); font-size: 14px; }
+    .newcomer-gate a {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 15px;
+      border-radius: 4px;
+      color: white;
+      background: #245bd7;
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
     .intro {
       width: min(1180px, calc(100% - 28px));
       margin: 0 auto;
@@ -338,6 +366,11 @@
       html { scroll-behavior: auto; }
       * { transition: none !important; }
     }
+
+    @media (max-width: 620px) {
+      .newcomer-gate { grid-template-columns: 1fr; margin-top: 14px; padding: 16px; }
+      .newcomer-gate a { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -350,6 +383,13 @@
   </header>
 
   <main>
+    <aside class="newcomer-gate" aria-label="처음 방문자를 위한 안내">
+      <div>
+        <strong>Aria가 처음인가요?</strong>
+        <p>이곳은 문장 원본과 윤문본을 비교하는 제작 검수 화면입니다. 제품과 공동개발 제안은 1분 소개부터 보는 편이 훨씬 쉽습니다.</p>
+      </div>
+      <a href="index.html">Aria 1분 소개부터 보기 →</a>
+    </aside>
     <section class="intro" aria-labelledby="page-title">
       <span class="session-label">Humanize KR comparison session</span>
       <h1 id="page-title">같은 내용,<br>다른 호흡.</h1>
