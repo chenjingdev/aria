@@ -14,7 +14,7 @@ import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./samp
 import { listPacks, startPackInstall } from "./packs.js";
 import { chooseExportDirectory as nativeChooseExportDirectory } from "./export-dialog.js";
 import { soundSetupStatus, chooseSoundFile as nativeChooseSoundFile, importBasicSoundfont, basicSoundPreview } from "./sound-setup.js";
-import { setupInfo } from "./setup.js";
+import { setupInfo, completeOnboarding } from "./setup.js";
 import { APP_VERSION } from "./version.js";
 import {
   PREFERRED_PORT,
@@ -100,6 +100,11 @@ export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory, 
       } else if (req.method === "GET" && url.pathname === "/api/setup") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify(setupInfo(ai)));
+      } else if (req.method === "POST" && url.pathname === "/api/setup/complete") {
+        if (crossOrigin(req)) { res.writeHead(403); res.end("교차 출처 요청은 허용되지 않습니다"); return; }
+        const onboarding = completeOnboarding();
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify({ ok: true, onboarding }));
       } else if (req.method === "GET" && url.pathname === "/api/sound-setup") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify(soundSetupStatus()));
@@ -317,7 +322,7 @@ export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory, 
         res.writeHead(404); res.end("not found");
       }
     } catch (e) {
-      if (url.pathname.startsWith("/api/sound-setup/") || url.pathname === "/api/packs/import") {
+      if (url.pathname.startsWith("/api/sound-setup/") || url.pathname.startsWith("/api/setup/") || url.pathname === "/api/packs/import") {
         if (!res.headersSent) res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ ok: false, error: e.message }));
       } else {

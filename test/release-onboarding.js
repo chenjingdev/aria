@@ -42,6 +42,7 @@ async function run() {
   const dataDir = path.join(fixture.root, "fresh-user-data");
   const soundDir = path.join(fixture.root, "fresh-soundfonts");
   const runtimeFile = path.join(dataDir, "runtime.json");
+  const onboardingFile = path.join(dataDir, "onboarding.json");
   fs.mkdirSync(soundDir);
   // Preserve HOME/CODEX_HOME, but remove inherited Aria routing/profile settings
   // so even a developer shell cannot direct this test to a real running app.
@@ -139,6 +140,13 @@ async function run() {
     const version = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version;
     ok(initial.version === version && initial.platform === process.platform && initial.ai.lastSeenAt === null,
       "새 앱은 버전·플랫폼과 아직 연결되지 않은 AI 상태를 표시");
+    ok(initial.onboarding.completed === false && initial.onboarding.completedAt === null
+      && !fs.existsSync(onboardingFile),
+    "첫 실행의 안내 완료 상태는 음원·AI 상태와 별개로 미완료이며 완료 기록이 없음");
+    const viewedAgain = await setup(app);
+    ok(viewedAgain.onboarding.completed === false && viewedAgain.onboarding.completedAt === null
+      && !fs.existsSync(onboardingFile),
+    "시작 안내를 반복 조회해도 완료 처리하거나 기록을 만들지 않음");
     ok(initial.basic.available === 0 && initial.basic.ready === false && initial.basic.total > 0 && initial.sfizz.ready === false,
       "사용자 음원을 참조하지 않는 빈 환경에서 기본·추가 음원 미설치를 감지");
     ok(fs.realpathSync(initial.mcpConfig.mcpServers.aria.command) === fs.realpathSync(process.execPath)
@@ -146,6 +154,11 @@ async function run() {
       && initial.commands.claude.includes(bridgePath) && initial.commands.codex.includes(bridgePath)
       && initial.firstPrompt.length > 0 && initial.verificationPrompt.includes("get_song"),
     "설치 위치에 맞는 Claude·Codex 연결 명령, MCP 설정과 첫 요청을 제공");
+    ok(typeof initial.agentPrompt === "string" && initial.agentPrompt.includes(JSON.stringify(root))
+      && initial.agentPrompt.includes(initial.commands.claude) && initial.agentPrompt.includes(initial.commands.codex)
+      && initial.agentPrompt.includes(JSON.stringify(initial.mcpConfig, null, 2))
+      && initial.agentPrompt.includes(initial.verificationPrompt),
+    "AI에 넘길 연결 요청은 실제 설치 경로·클라이언트별 정확한 명령·MCP 설정·확인 요청을 포함");
     const guiEmpty = await guiCall(app, "get_song");
     ok(guiEmpty.ok && guiEmpty.result.includes(app.url) && (await setup(app)).ai.lastSeenAt === null,
       "곡 없는 첫 실행에서도 GUI의 get_song은 성공하며 AI 연결로 오인하지 않음");
@@ -164,6 +177,9 @@ async function run() {
     const installedSetup = await setup(app);
     ok(installedSetup.basic.ready && installedSetup.basic.available === installedSetup.basic.total && !installedSetup.sfizz.ready,
       "추가 엔진 없이 기본 음원만으로 시작 준비 완료");
+    ok(installedSetup.onboarding.completed === false && installedSetup.onboarding.completedAt === null
+      && !fs.existsSync(onboardingFile),
+    "기본 음원 설치만으로 시작 안내를 완료 처리하지 않음");
     const previewResponse = await fetch(`${app.url}/api/sound-setup/preview`, { method: "POST" });
     const preview = Buffer.from(await previewResponse.arrayBuffer());
     assertAudibleWav(preview);
@@ -171,6 +187,42 @@ async function run() {
       "설치 확인 버튼이 실제 음성 샘플이 있는 WAV를 반환");
     ok((await guiCall(app, "get_song")).result === guiEmpty.result,
       "설치와 피아노 미리듣기가 현재 곡을 만들거나 변경하지 않음");
+
+    for (const headers of [
+      { Origin: "https://example.com" },
+      { Origin: app.url, "Sec-Fetch-Site": "cross-site" }
+    ]) {
+      const blocked = await fetch(`${app.url}/api/setup/complete`, {
+        method: "POST", headers, signal: AbortSignal.timeout(10000)
+      });
+      assert.equal(blocked.status, 403);
+    }
+    ok((await setup(app)).onboarding.completed === false && !fs.existsSync(onboardingFile),
+      "다른 출처의 안내 완료 요청은 Origin·브라우저 출처 헤더 모두에서 차단되고 기록을 남기지 않음");
+    const completeGet = await fetch(`${app.url}/api/setup/complete`, { signal: AbortSignal.timeout(10000) });
+    ok(completeGet.status === 404 && (await setup(app)).onboarding.completed === false && !fs.existsSync(onboardingFile),
+      "완료 주소를 GET으로 조회해도 안내를 완료하지 않음");
+    const completionResponse = await fetch(`${app.url}/api/setup/complete`, {
+      method: "POST", headers: { Origin: app.url, "Sec-Fetch-Site": "same-origin" },
+      signal: AbortSignal.timeout(10000)
+    });
+    const completion = await completionResponse.json();
+    const completedSetup = await setup(app);
+    const completionRecord = fs.readFileSync(onboardingFile, "utf8");
+    const completionMtime = fs.statSync(onboardingFile).mtimeMs;
+    ok(completionResponse.status === 200 && completion.ok && completion.onboarding.completed === true
+      && Number.isFinite(Date.parse(completion.onboarding.completedAt))
+      && completedSetup.onboarding.completedAt === completion.onboarding.completedAt
+      && JSON.parse(completionRecord).completedAt === completion.onboarding.completedAt
+      && completedSetup.ai.lastSeenAt === null,
+    "같은 출처의 명시적 완료 요청은 영구 기록을 저장하며 아직 연결하지 않은 AI 상태는 그대로 유지");
+    await delay(20);
+    const repeatedResponse = await fetch(`${app.url}/api/setup/complete`, { method: "POST", signal: AbortSignal.timeout(10000) });
+    const repeated = await repeatedResponse.json();
+    assert.deepEqual(repeated.onboarding, completion.onboarding);
+    ok(repeatedResponse.status === 200 && repeated.ok && fs.readFileSync(onboardingFile, "utf8") === completionRecord
+      && fs.statSync(onboardingFile).mtimeMs === completionMtime && (await setup(app)).ai.lastSeenAt === null,
+    "완료 요청을 반복해도 최초 완료 시각·파일·AI 상태를 바꾸지 않음");
 
     const release = await connect();
     const releaseList = (await release.client.listTools()).tools.map(tool => tool.name);
@@ -181,6 +233,9 @@ async function run() {
     const linked = await setup(app);
     ok(mcpEmpty === guiEmpty.result && Number.isFinite(Date.parse(linked.ai.lastSeenAt)),
       "곡이 없어도 실제 MCP의 get_song 성공으로 AI 연결 확인을 완료");
+    ok(linked.onboarding.completed === true && linked.onboarding.completedAt === completion.onboarding.completedAt
+      && fs.readFileSync(onboardingFile, "utf8") === completionRecord,
+    "실제 MCP 연결 성공은 AI 접속 상태만 갱신하고 안내 완료 기록은 유지");
     await guiCall(app, "get_song");
     ok((await setup(app)).ai.lastSeenAt === linked.ai.lastSeenAt,
       "연결 후 일반 GUI 조회는 마지막 AI 접속 시각을 갱신하지 않음");
@@ -248,6 +303,10 @@ async function run() {
     assert.deepEqual(songFrom(restored.result), song);
     ok(restoredSetup.basic.ready && restoredSetup.ai.lastSeenAt === null && app.child.pid !== originalPid,
       "앱 재시작 후 기본 음원과 곡이 유지되고 AI 연결은 새 세션 기준으로 표시");
+    ok(restoredSetup.onboarding.completed === true
+      && restoredSetup.onboarding.completedAt === completion.onboarding.completedAt
+      && fs.readFileSync(onboardingFile, "utf8") === completionRecord,
+    "앱 재시작 후 AI 접속 상태가 초기화돼도 안내 완료 여부와 최초 완료 시각은 유지");
     const duplicate = await fetch(`${app.url}/api/sound-setup/import`, { method: "POST" });
     ok(duplicate.status === 400 && fs.readFileSync(env.ARIA_SF2).equals(fs.readFileSync(fixture.defaultPath)),
       "재설치 시도는 기존 음원 파일을 덮어쓰지 않음");

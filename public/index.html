@@ -789,16 +789,23 @@
     <div class="pack-dialog-body">
       <p id="setupStatusMessage" role="status" aria-live="polite">설치 상태를 확인하고 있어요.</p>
       <section class="setup-step"><h3>1. 기본 악기 준비</h3><p id="setupSoundStatus" class="setup-status">확인 중</p><button id="setupSounds" type="button">음원 준비하기</button><p>GeneralUser GS 하나면 시작할 수 있어요. 추가 오케스트라 음원은 나중에 설치해도 됩니다.</p></section>
-      <section class="setup-step"><h3>2. 사용하는 AI 연결</h3><p>Aria 안에는 채팅 AI가 들어 있지 않습니다. Codex 또는 Claude Code를 별도로 설치·로그인한 뒤, 사용하는 AI의 등록 명령을 터미널에서 한 번 실행하세요.</p>
-        <details open><summary>Codex로 연결</summary><div class="setup-copy"><pre id="setupCodexCommand">명령을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupCodexCommand" disabled>복사</button></div><p>등록한 뒤 새 Codex 작업을 여세요. 앱 설정의 MCP 서버에도 aria가 나타납니다.</p></details>
-        <details><summary>Claude Code로 연결</summary><div class="setup-copy"><pre id="setupClaudeCommand">명령을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupClaudeCommand" disabled>복사</button></div><p>등록한 뒤 새 Claude Code 세션을 여세요.</p></details>
-        <details><summary>다른 MCP 지원 AI에서 연결</summary><p>사용하는 앱의 MCP 설정에 아래 stdio 서버 설정을 추가하세요.</p><div class="setup-copy"><pre id="setupMcpConfig">설정을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupMcpConfig" disabled>복사</button></div></details>
-        <p>새 AI 채팅에 아래 요청을 붙여넣어 연결을 확인하세요.</p><div class="setup-copy"><pre id="setupCheckPrompt">Aria의 get_song 도구를 호출해서 현재 곡과 연결 주소를 알려줘. 곡은 수정하지 마.</pre><button type="button" data-setup-copy="setupCheckPrompt">요청 복사</button></div>
+      <section class="setup-step"><h3>2. AI에게 연결 맡기기</h3>
+        <p>이 Mac에서 사용하는 Codex나 Claude Code 대화에 연결 요청을 붙여넣으세요. AI가 Aria 등록과 연결 확인을 진행합니다.</p>
+        <button class="primary" type="button" data-setup-copy="setupAgentPrompt" disabled>연결 요청 복사</button>
+        <p>로컬 파일과 설정을 다룰 수 있는 AI가 필요합니다. 로그인이나 새 대화가 필요하면 AI가 다음 행동을 알려줍니다.</p>
+        <details><summary>AI에게 전달되는 내용 보기</summary><div class="setup-copy"><pre id="setupAgentPrompt">이 Mac의 연결 요청을 준비하고 있습니다.</pre></div></details>
+        <details><summary>직접 연결하기 · 수동 설정</summary>
+          <p>직접 설정하려면 사용하는 AI에 해당하는 명령 하나를 터미널에서 실행하세요.</p>
+          <details><summary>Codex</summary><div class="setup-copy"><pre id="setupCodexCommand">명령을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupCodexCommand" disabled>명령 복사</button></div></details>
+          <details><summary>Claude Code</summary><div class="setup-copy"><pre id="setupClaudeCommand">명령을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupClaudeCommand" disabled>명령 복사</button></div></details>
+          <details><summary>다른 MCP 지원 AI</summary><div class="setup-copy"><pre id="setupMcpConfig">설정을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupMcpConfig" disabled>설정 복사</button></div></details>
+        </details>
+        <details><summary>등록 뒤 새 대화에서 연결 확인하기</summary><p>AI가 새 작업·대화가 필요하다고 안내했다면, 새 대화에 아래 요청을 보내세요.</p><div class="setup-copy"><pre id="setupCheckPrompt">Aria의 get_song 도구로 연결을 확인해 줘. 곡은 수정하지 마.</pre><button type="button" data-setup-copy="setupCheckPrompt">확인 요청 복사</button></div></details>
         <p id="setupAiStatus" class="setup-status" role="status">아직 이 실행에서 AI 도구 요청을 확인하지 못했습니다.</p><button id="setupRefresh" type="button">연결 상태 새로 확인</button>
       </section>
       <section class="setup-step"><h3>3. 첫 곡 부탁하기</h3><p>연결한 AI 채팅에 아래 요청을 붙여넣으세요. AI가 곡을 만들면 이 창을 닫고 재생을 눌러 들을 수 있어요.</p><div class="setup-copy"><pre id="setupFirstPrompt">Aria에서 현재 설치된 음원을 먼저 확인하고, 사용 가능한 기본 악기만 골라 비 오는 밤 느낌의 8마디 곡을 만들어줘. 피아노, 베이스, 드럼을 중심으로 멜로디와 반주를 넣고 재생해줘.</pre><button type="button" data-setup-copy="setupFirstPrompt">첫 요청 복사</button></div><p>마음에 드는 곡은 상단 보관 버튼으로 저장하세요. ⋯ 메뉴에서 WAV·MIDI로 내보낼 수 있고, MP3는 FFmpeg가 필요합니다.</p></section>
       <label class="setup-experimental"><input id="experimentalEditing" type="checkbox"><span>상세 직접 편집 켜기 · 실험 기능<small>노트·강약·마디 직접 편집, 두 안 비교, 메모 저장은 아직 사용성을 다듬는 중입니다. 이 탭에서만 켜지며 새로고침하면 꺼집니다. AI 작곡·재생·악기와 음량 조절·저장·내보내기는 기본으로 사용할 수 있습니다.</small></span></label>
-      <div class="sound-actions"><button id="setupFinish" class="primary" type="button">곡 화면으로</button></div>
+      <p>안내를 마치면 다음 실행부터 자동으로 열리지 않습니다. 상단 ‘시작 안내’에서 언제든 다시 볼 수 있어요. 지금만 닫으려면 오른쪽 위 ×를 누르세요.</p><div class="sound-actions"><button id="setupFinish" class="primary" type="button">안내 마치기</button></div>
     </div>
   </div>
 </dialog>
@@ -1047,10 +1054,10 @@ async function refreshMeta() {
   renderAll();
   return next;
 }
-refreshMeta().then(next => {
-  if (![...Object.values(next.presets), ...Object.values(next.drumKits)].some(p => p.available)) {
-    $("btnPacks").click();
-  }
+refreshMeta().then(async () => {
+  const info = await refreshSetup();
+  if (info && !info.onboarding?.completed && !$("setupDialog").open && !$("packDialog").open)
+    $("setupDialog").showModal();
 }).catch(error => {
   // 첫 bootstrap 실패도 설치 후 갱신 실패와 같은 복구 흐름에 태운다.
   // 팩 창을 열지 않아도 /api/packs를 확인한 뒤 /api/meta를 다시 시도한다.
@@ -1083,7 +1090,7 @@ async function refreshSetup() {
     $("setupSoundStatus").textContent = basic.ready ? `✓ 기본 악기 준비 완료 · ${basic.available}개 사용 가능` : "기본 악기가 아직 준비되지 않았어요. 음원을 설치하고 피아노 소리를 확인하세요.";
     $("setupSounds").textContent = basic.ready ? "음원 확인·추가하기" : "음원 준비하기";
     const commands = setupState.commands ?? {};
-    for (const [id, value] of [["setupCodexCommand", commands.codex], ["setupClaudeCommand", commands.claude], ["setupMcpConfig", setupState.mcpConfig ? JSON.stringify(setupState.mcpConfig, null, 2) : null]]) {
+    for (const [id, value] of [["setupAgentPrompt", setupState.agentPrompt], ["setupCodexCommand", commands.codex], ["setupClaudeCommand", commands.claude], ["setupMcpConfig", setupState.mcpConfig ? JSON.stringify(setupState.mcpConfig, null, 2) : null]]) {
       $(id).textContent = value || "설정을 불러오지 못했습니다. 연결 상태 새로 확인을 눌러 주세요.";
       document.querySelector(`[data-setup-copy="${id}"]`).disabled = !value;
     }
@@ -1093,11 +1100,13 @@ async function refreshSetup() {
     const date = seen ? new Date(seen) : null;
     $("setupAiStatus").textContent = date && Number.isFinite(date.getTime())
       ? `✓ 최근 AI 도구 요청 확인: ${date.toLocaleString("ko-KR")}. 현재 채팅에서 연결 확인 요청을 다시 보내면 이 시각이 갱신됩니다.`
-      : "아직 이 실행에서 AI 도구 요청을 확인하지 못했습니다. 위 확인 요청을 AI 채팅에 보내고 새로 확인을 누르세요.";
+      : "아직 이 실행에서 AI 도구 요청을 확인하지 못했습니다. 연결 요청을 AI 채팅에 보내고, 확인이 끝나면 새로 확인을 누르세요.";
     message.textContent = setupState.platform && setupState.platform !== "darwin" ? "이 버전의 재생과 파일 선택은 macOS에서 지원합니다." : "AI 작곡·듣기·저장·내보내기를 중심으로 공개한 미리보기 버전입니다.";
+    return setupState;
   } catch (error) {
     message.textContent = error.message;
     $("setupSoundStatus").textContent = "상태를 확인하지 못했습니다. 음원 준비하기에서 다시 확인할 수 있어요.";
+    return null;
   }
 }
 function openSetup() {
@@ -1108,16 +1117,35 @@ function openSetup() {
 $("btnSetup").onclick = openSetup;
 $("emptySetup").onclick = openSetup;
 $("emptySounds").onclick = () => $("btnPacks").click();
-for (const id of ["setupClose", "setupFinish"]) $(id).onclick = () => $("setupDialog").close();
+$("setupClose").onclick = () => $("setupDialog").close();
+$("setupFinish").onclick = async () => {
+  $("setupFinish").disabled = true;
+  try {
+    const response = await fetch("/api/setup/complete", { method:"POST" });
+    const result = await response.json();
+    if (!response.ok || !result.ok) throw new Error(result.error || "안내 완료 상태를 저장하지 못했습니다.");
+    if (setupState) setupState.onboarding = result.onboarding;
+    $("setupDialog").close();
+  } catch (error) { toast(`안내 완료를 저장하지 못했습니다: ${error.message}`, true); }
+  finally { $("setupFinish").disabled = false; }
+};
 $("setupSounds").onclick = () => { $("setupDialog").close(); $("btnPacks").click(); };
 $("setupRefresh").onclick = refreshSetup;
 for (const button of document.querySelectorAll("[data-setup-copy]")) button.onclick = async () => {
   const content = $(button.dataset.setupCopy).textContent;
-  try { await navigator.clipboard.writeText(content); toast("복사했습니다. 안내된 터미널 또는 AI 채팅에 붙여넣으세요."); }
+  try {
+    await navigator.clipboard.writeText(content);
+    const manual = ["setupCodexCommand", "setupClaudeCommand", "setupMcpConfig"].includes(button.dataset.setupCopy);
+    toast(manual ? "복사했습니다. 해당 AI의 터미널 또는 MCP 설정에 붙여넣으세요." : "복사했습니다. 이 Mac에서 사용하는 AI 채팅에 붙여넣으세요.");
+  }
   catch {
-    const range = document.createRange(); range.selectNodeContents($(button.dataset.setupCopy));
+    const target = $(button.dataset.setupCopy);
+    for (let parent = target.parentElement; parent; parent = parent.parentElement)
+      if (parent.tagName === "DETAILS") parent.open = true;
+    target.scrollIntoView({ block:"nearest" });
+    const range = document.createRange(); range.selectNodeContents(target);
     const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
-    toast("텍스트를 선택했습니다. ⌘C로 복사해 주세요.");
+    toast("요청 내용을 펼쳐 선택했습니다. ⌘C로 복사해 주세요.");
   }
 };
 $("experimentalEditing").onchange = event => {

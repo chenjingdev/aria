@@ -1,6 +1,6 @@
 {
   "name": "aria",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "description": "LLM이 MCP로 제어하는 상주 작곡 앱 — 피아노롤 GUI + 오픈소스 SF2·SFZ 샘플 재생 + MIDI/WAV 내보내기",
   "type": "module",
   "bin": {
