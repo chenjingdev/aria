@@ -12,6 +12,7 @@ import { totalBars, beatsPerBar, tempoSegments, beatToSec } from "./song.js";
 import { DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS } from "./presets.js";
 import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
 import { listPacks, startPackInstall } from "./packs.js";
+import { chooseExportDirectory as nativeChooseExportDirectory } from "./export-dialog.js";
 import {
   PREFERRED_PORT,
   PORT_ATTEMPTS,
@@ -28,8 +29,9 @@ function sseSend(res, ev) {
   res.write(`data: ${JSON.stringify(ev)}\n\n`);
 }
 
-export function startWeb() {
+export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory } = {}) {
   const identity = createRuntimeIdentity();
+  let exportDialogPending = false;
 
   const bridgeAuth = req => {
     const value = req.headers.authorization;
@@ -213,17 +215,50 @@ export function startWeb() {
           }
           parts.push(c);
         });
-        req.on("end", () => {
+        req.on("end", async () => {
           if (overflow) return;
           try {
             const { tool, args } = JSON.parse(Buffer.concat(parts).toString("utf8") || "{}");
             const safeArgs = args && typeof args === "object" && !Array.isArray(args) ? { ...args } : (args ?? {});
-            // HTTP 경유(GUI·터널)의 내보내기는 기본 폴더로만 — 임의 경로 쓰기 차단 (MCP 경로는 제한 없음)
-            if (tool === "export" && !auth.valid) delete safeArgs.path;
+            // GUI는 시스템 창에서 직접 고른 폴더만 사용한다. HTTP 입력의 임의 경로는 계속 차단한다.
+            if (tool === "export" && !auth.valid) {
+              delete safeArgs.path;
+              delete safeArgs.directory;
+              if (safeArgs.choose_folder === true) {
+                if (exportDialogPending) throw new Error("이미 저장 폴더를 선택하고 있습니다");
+                if (!state.song) throw new Error("곡이 없습니다");
+                if (!state.song.tracks.some(t => t.notes.length)) throw new Error("내보낼 노트가 없습니다");
+                if (!["midi", "wav", "mp3", "both"].includes(safeArgs.format ?? "both"))
+                  throw new Error("format은 midi|wav|mp3|both 중에서 선택하세요");
+                const songBefore = JSON.stringify(state.song);
+                const controller = new AbortController();
+                const abortDialog = () => controller.abort();
+                res.once("close", abortDialog);
+                exportDialogPending = true;
+                try {
+                  const directory = await chooseExportDirectory({ signal: controller.signal });
+                  if (res.destroyed) return;
+                  if (directory === null) {
+                    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+                    res.end(JSON.stringify({ ok: true, cancelled: true, result: "내보내기를 취소했습니다" }));
+                    return;
+                  }
+                  if (JSON.stringify(state.song) !== songBefore)
+                    throw new Error("폴더를 선택하는 동안 곡이 바뀌었습니다. 다시 내보내 주세요");
+                  if (typeof directory !== "string" || !path.isAbsolute(directory))
+                    throw new Error("선택한 저장 폴더 경로를 읽지 못했습니다");
+                  safeArgs.directory = directory;
+                } finally {
+                  exportDialogPending = false;
+                  res.off("close", abortDialog);
+                }
+              }
+            }
             const result = runOp(tool, safeArgs, auth.valid ? "mcp" : "gui");
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
             res.end(JSON.stringify({ ok: true, result }));
           } catch (e) {
+            if (res.destroyed) return;
             res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
             res.end(JSON.stringify({ ok: false, error: e.message }));
           }

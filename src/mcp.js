@@ -29,18 +29,21 @@ const toneShape = {
 
 // [이름, 설명, 입력 스키마 shape]
 const TOOLS = [
-  ["new_song", "새 곡을 만든다. template은 현재 구현의 편성·bpm 출발점을 준비할 뿐 장르의 정의나 완성곡이 아니다(list_presets에서 확인). 현재 라이브 곡은 교체되므로 먼저 고유 이름으로 보존한다.", {
+  ["new_song", "새 곡을 만든다. template은 편성·bpm 출발점만 준비한다(장르의 정의나 완성곡이 아니다). 노트가 있는 현재 곡은 자동으로 라이브러리에 보존된 뒤 교체된다.", {
     title: z.string().max(120).optional().describe("곡 제목"),
     bpm: z.number().min(20).max(300).optional().describe("템포(템플릿 기본값을 덮어씀)"),
     template: z.string().optional().describe("템플릿 id: citypop, lofi, ballad, bossa, edm, chiptune"),
     time_sig: z.tuple([z.number().int().min(1).max(16), z.number().int()]).optional()
       .describe("박자표 [박자수, 박자단위] — 기본 [4,4]. 변박 지원: [3,4] [6,8] [5,4] [7,8] [13,16]. 단위는 2·4·8·16만")
   }],
-  ["get_song", "현재 곡의 요약·재생 상태·GUI 주소와 곡 전체 JSON을 돌려준다. 작곡 전 현재 상태 파악에 사용.", {}],
+  ["get_song", "현재 곡의 요약·재생 상태·미처리 피드백 수·GUI 주소와 곡 전체 JSON을 돌려준다.", {}],
   ["set_song", "곡 전체를 JSON으로 통째로 교체한다. 대규모 수정(조옮김, 구조 재배치)은 get_song으로 받아 고친 뒤 이걸로 되돌려 넣는 게 빠르다.", {
     song_json: z.string().describe("곡 전체 JSON 문자열 — get_song이 돌려주는 형식과 동일")
   }],
-  ["list_presets", "외부 샘플 악기·주법·타악·녹음 클립을 찾는다. 인자 없이 호출하면 출처·악기군 요약을, 필터를 주면 실제 프리셋 ID와 피스 이름을 최대 limit개 돌려준다.", {
+  ["list_presets", "외부 샘플 악기·주법·타악·녹음 클립을 계층으로 찾는다. 인자 없이 호출하면 그룹→악기 트리 요약(ID 없음)을, instruments를 주면 악기별 독주/섹션 × 주법 × 출처 → 실제 프리셋 ID 표(★가 기본값)를, group을 주면 한 그룹의 악기·주법 이름을 돌려준다. query·family·source·kind는 기존 검색이며 녹음 클립은 kind:'clip'을 줄 때만 나온다. add_track/set_track의 preset에는 실제 ID 대신 계층 ID(예: violin/section/sustain)를 바로 줄 수 있다.", {
+    instruments: z.array(z.string().min(1)).min(1).max(12).optional()
+      .describe('악기 이름 1~12개 — 예: ["Violin","Flute","Timpani"]. 한국어·복수형·별칭(horn, sax, 콘트라베이스)도 받는다. 각 악기의 독주/섹션 × 주법 × 출처 → 실제 ID 표와 계층 ID를 돌려준다'),
+    group: z.string().optional().describe("그룹 이름 — 요약에 나온 것 그대로(예: 현악, 목관, 드럼 세트·타악 킷). 그 그룹의 악기와 주법 이름만"),
     query: z.string().optional().describe("이름·ID·설명·주법에서 찾을 말. 예: violin, 레가토, timpani"),
     family: z.string().optional().describe("정확한 악기군 필터. 예: Violin, Cello. 타악 전체는 family가 아니라 kind:'percussion'을 사용"),
     source: z.string().optional().describe("음원 출처 필터. 예: VSCO 2 CE, Philharmonia, GM"),
@@ -52,7 +55,7 @@ const TOOLS = [
   }],
   ["add_track", "트랙을 추가한다.", {
     name: z.string().describe("트랙 이름(고유)"),
-    preset: z.string().describe("프리셋 id — list_presets 참고"),
+    preset: z.string().describe("실제 프리셋 ID 또는 계층 ID(악기/독주|섹션/주법 — 예: violin/section/sustain, flute, cello/pizzicato, drum kit). 계층 ID는 설치된 대표 음원으로 해석되어 실제 ID가 저장된다. 표는 list_presets({instruments:[…]})"),
     volume: z.number().min(0).max(2).optional().describe("볼륨 0~2 (기본 0.8). 1.0이 원래 크기(0dB), 2.0이 약 +6dB. 음량에 선형으로 작용하는 축이다"),
     pan: z.number().min(-1).max(1).optional().describe("팬 -1(왼쪽)~1(오른쪽)"),
     articulation: z.string().optional().describe("아티큘레이션(Articulation, 연주법) ID — 이 프리셋에 list_presets가 표시한 정확한 ID. 생략하면 음원의 기본 연주법"),
@@ -61,7 +64,8 @@ const TOOLS = [
   ["remove_track", "트랙을 삭제한다.", { track: z.string().describe("트랙 이름") }],
   ["set_track", "트랙의 프리셋·볼륨·팬·이름과 음색 파라미터를 바꾼다. 음색 항목에 null을 주면 프리셋 기본값으로 되돌린다.", {
     track: z.string().describe("대상 트랙 이름"),
-    preset: z.string().optional(), volume: z.number().min(0).max(2).optional(),
+    preset: z.string().optional().describe("실제 프리셋 ID 또는 계층 ID(예: cello/section/pizzicato). 계층 ID는 설치된 대표 음원으로 해석되어 실제 ID가 저장된다"),
+    volume: z.number().min(0).max(2).optional(),
     pan: z.number().min(-1).max(1).optional(), new_name: z.string().optional(),
     articulation: z.string().nullable().optional().describe("아티큘레이션(Articulation, 연주법) ID. null이면 프리셋 기본 연주법으로 되돌림"),
     mute: z.boolean().optional().describe("true면 재생·WAV 완성본에서 이 트랙을 제외(노트는 유지). 현재 MIDI 내보내기는 mute/solo와 무관하게 모든 트랙을 기록한다"),
@@ -80,7 +84,7 @@ const TOOLS = [
   ["clear_tempo", "템포 변화를 삭제한다. from_bar를 주면 그 마디 것만, 안 주면 전부. 기준 템포는 남는다.", {
     from_bar: z.number().int().min(1).max(999).optional().describe("삭제할 템포 변화의 마디")
   }],
-  ["humanize", "선택한 트랙·구간의 각 음에 독립적인 난수 timing/velocity 편차를 기록한다. 사람다움이나 groove를 보장하지 않고 pulse 악기에는 오히려 나쁠 수 있으므로, 원본을 보존하고 작은 범위를 정렬 버전과 A/B한다. 재생 효과가 아니라 노트 데이터를 바꾸며, 다시 부르면 편차가 누적된다.", {
+  ["humanize", "선택한 트랙·구간의 각 음에 독립적인 난수 timing/velocity 편차를 기록한다. 재생 효과가 아니라 노트 데이터를 바꾸며, 다시 부르면 편차가 누적된다.", {
     track: z.string().describe("대상 트랙 이름"),
     from_bar: z.number().int().min(1).max(999).optional().describe("시작 마디(생략하면 트랙 전체)"),
     to_bar: z.number().int().min(1).max(999).optional().describe("끝 마디"),
@@ -88,7 +92,7 @@ const TOOLS = [
     velocity: z.number().int().min(0).max(40).optional().describe("세기를 흔들 최대 폭. 기본 8. 0이면 세기는 안 건드린다"),
     seed: z.number().int().optional().describe("결과를 고정하는 값. 같은 입력 상태·범위·seed에서 같은 편차가 나온다. 이미 바뀐 상태에 다시 부르면 편차가 누적된다")
   }],
-  ["swing", "선택한 8분 또는 16분 subdivision의 뒷박을 체계적으로 늦춘다. 장르명만으로 적용하지 말고 기준 격자와 A/B하며 정한다. 기존 swing 기준에서 다시 계산하므로 amount 변경이 누적되지는 않는다.", {
+  ["swing", "선택한 8분 또는 16분 subdivision의 뒷박을 체계적으로 늦춘다. 기존 swing 기준에서 다시 계산하므로 amount 변경이 누적되지는 않는다.", {
     track: z.string().describe("대상 트랙 이름"),
     amount: z.number().min(0).max(1).optional().describe("0=정박(스윙 없음), 0.5=적당한 셔플, 1=완전한 셋잇단 느낌. 기본 0.5"),
     unit: z.number().optional().describe("스윙을 걸 단위 — 0.5면 8분음표(재즈·스윙), 0.25면 16분음표(힙합·네오소울). 기본 0.5"),
@@ -199,7 +203,7 @@ const TOOLS = [
       dur: z.number().gt(0).max(64).optional()
     })).min(1).max(500).describe("지울 노트 목록 [{bar,beat,pitch}...]")
   }],
-  ["set_region_gain", "특정 트랙의 특정 마디 구간만 음량을 dB로 조절한다(구간 믹싱 — '여기서만 심벌 -6dB', 하이라이트 직전에 패드 낮추기 등). 같은 구간을 다시 부르면 값이 교체되고, db 0을 주면 정확히 그 구간의 게인만 제거된다(겹치기만 하는 항목은 안 건드림). 다른 구간과 겹치면 곱으로 누적.", {
+  ["set_region_gain", "특정 트랙의 특정 마디 구간만 음량을 dB로 조절한다. 같은 구간을 다시 부르면 값이 교체되고, db 0을 주면 정확히 그 구간의 게인만 제거된다(겹치기만 하는 항목은 안 건드림). 다른 구간과 겹치면 곱으로 누적.", {
     track: z.string().describe("대상 트랙 이름"),
     from_bar: z.number().int().min(1).max(999).describe("구간 시작 마디"),
     to_bar: z.number().int().min(1).max(999).optional().describe("구간 끝 마디(포함, 기본 from_bar)"),
@@ -225,11 +229,11 @@ const TOOLS = [
     loop: z.boolean().optional().describe("구간 반복 여부")
   }],
   ["stop", "재생을 멈춘다.", {}],
-  ["export", "곡을 MIDI/WAV 파일로 내보낸다. path를 안 주면 ~/Music/aria/<제목> 에 저장. WAV는 한 번에 10분까지라 긴 곡은 from_bar/to_bar로 나눈다. MIDI는 항상 곡 전체이며 현재 bend, region gain, 음색 덮어쓰기, mute/solo, 렌더 공간·마스터 처리를 보존하지 않는다.", {
-    format: z.enum(["midi", "wav", "both"]).optional().describe("기본 both"),
+  ["export", "곡을 MIDI/WAV/MP3 파일로 내보낸다. path를 안 주면 ~/Music/aria/<제목> 에 저장. WAV·MP3는 한 번에 10분까지라 긴 곡은 from_bar/to_bar로 나눈다. MP3는 FFmpeg로 320kbps 인코딩한다. MIDI는 항상 곡 전체이며 현재 bend, region gain, 음색 덮어쓰기, mute/solo, 렌더 공간·마스터 처리를 보존하지 않는다.", {
+    format: z.enum(["midi", "wav", "mp3", "both"]).optional().describe("기본 both(MIDI+WAV), mp3는 MP3만 저장"),
     path: z.string().optional().describe("확장자 없는 저장 경로 (예: ~/Desktop/mysong)"),
-    from_bar: z.number().int().min(1).optional().describe("WAV로 뽑을 시작 마디(기본 1)"),
-    to_bar: z.number().int().min(1).optional().describe("WAV로 뽑을 끝 마디 포함(기본 곡 끝)"),
+    from_bar: z.number().int().min(1).optional().describe("WAV·MP3로 뽑을 시작 마디(기본 1)"),
+    to_bar: z.number().int().min(1).optional().describe("WAV·MP3로 뽑을 끝 마디 포함(기본 곡 끝)"),
     stems: z.boolean().optional().describe("true면 완성본 대신 악기별 WAV를 폴더에 하나씩 내보낸다(다른 DAW에서 다시 믹싱할 때). 스템에는 트랙 볼륨·음소거와 마스터 처리가 빠지고 팬·리버브·구간 게인은 담긴다. format은 무시된다")
   }],
   ["import_midi", "다른 도구에서 만든 표준 MIDI 파일(.mid)을 읽어 현재 곡으로 가져온다. 트랙 이름·템포 변화·박자표·드럼 채널을 살리고, 악기(program change)는 가장 가까운 aria 프리셋으로 추정한다. 기존 곡은 교체되지만 undo_edit으로 되돌아간다. 참고: 480PPQ 격자 위 음은 그대로 보존되지만 셋잇단은 왕복에서 길이가 1/1000박쯤 밀린다.", {
@@ -250,7 +254,7 @@ const TOOLS = [
     name: z.string().describe("list_songs에 나온 곡 이름")
   }],
   ["list_songs", "라이브러리에 보관된 곡 목록(오래된 순)을 돌려준다.", {}],
-  ["list_feedback", "사용자가 GUI 피아노롤에서 구간을 잡아 남긴 피드백 중 처리 안 된 것을 돌려준다. 사용자가 곡 수정을 요청하거나 get_song 요약에 피드백 표시가 있으면 가장 먼저 확인하라.", {}],
+  ["list_feedback", "사용자가 GUI 피아노롤에서 구간을 잡아 남긴 피드백 중 처리 안 된 것을 돌려준다. get_song 요약의 피드백 표시는 여기서 읽을 항목이 있다는 뜻이다.", {}],
   ["resolve_feedback", "피드백을 곡에 반영한 뒤 완료로 표시한다. 반영 없이 임의로 완료 처리하지 마라.", {
     id: z.number().int().min(1).describe("list_feedback에 나온 피드백 번호")
   }],
@@ -262,37 +266,42 @@ const TOOLS = [
   }]
 ];
 
-const INSTRUCTIONS = `aria는 작곡 앱이다. 사용자가 곡을 만들어 달라고 하면 이 도구들로 실제로 작곡하고 소리로 들려줄 수 있다.
+const INSTRUCTIONS = `aria는 작곡 앱이다. 곡은 실행 중인 앱 안에 하나 살아 있고, 이 도구들은 그 곡을 읽고 편집하고 소리로 재생한다. 사람은 같은 곡을 브라우저 피아노롤에서 보고 듣고 직접 고칠 수 있다(GUI 주소는 get_song 결과에 포함).
+이 문서는 도구와 데이터의 동작만 설명한다.
 
-본격적으로 곡을 만들 때는 aria-compose 스킬을 먼저 불러라. 장르를 고정 공식으로 만들지 않는 근거 기반 경향,
-감정·형식·그루브·화성·편곡·진단 reference와 완성 전 자기점검 목록이 들어 있다.
-아래는 스킬 없이도 알아야 할 최소한이다.
+곡 데이터:
+- 노트는 {bar, beat, pitch, dur, vel}. bar는 1부터, beat·dur는 4분음표 단위(4/4에서 beat 0~3.999, dur 0.25 = 16분음표), vel은 1~127.
+- 화음은 같은 bar/beat에 노트를 여러 개 넣어 표현한다.
+- 드럼 트랙의 pitch는 피스 이름이다: kick snare rim clap hhc hho tom-l tom-m tom-h crash ride shaker. 프리셋마다 실제 제공되는 피스는 list_presets가 알려준다.
+- 박자표는 new_song의 time_sig로 정한다(예: [7,8], [5,4]).
 
-기본 워크플로:
-1. get_song/list_feedback로 현재 상태 확인 → 의미 있는 현재 작업은 고유 이름으로 보존 → list_presets로 실제 프리셋 확인 → 필요할 때만 new_song/template으로 시작
-2. 트랙별로 add_notes — 8마디 스케치를 먼저 완성하라 (드럼 그루브 → 베이스 → 코드 → 멜로디 순이 안정적)
-3. play(from_bar, to_bar)로 방금 만든 구간만 바로 들려주기. loop:true면 반복 재생
-4. 사용자 피드백 → clear_notes로 구간을 지우고 다시 쓰거나, set_song으로 통째로 교체. 구조 편집(간주 추가·후렴 줄이기)은 insert_bars/delete_bars가 전 트랙을 한 번에 민다
-5. 완성되면 export로 MIDI/WAV 저장. 여러 곡을 오갈 땐 save_song/load_song/list_songs로 라이브러리를 쓴다
-6. 사용자는 GUI 피아노롤에서 구간을 드래그해 피드백을 남길 수 있다 — 수정 요청을 받으면 list_feedback부터 확인하고, 반영한 항목은 resolve_feedback으로 닫는다
+프리셋·음원:
+- 모든 프리셋은 외부 SF2/SFZ 샘플이다. list_presets는 프리셋별 설치 여부를 함께 돌려주며, 미설치 프리셋은 소리가 나지 않고 다른 악기로 자동 대체되지 않는다.
+- 레가토·스타카토·피치카토 같은 주법은 그 주법이 녹음된 키스위치·CC 프리셋에서만 선택할 수 있다. 트랙 전체는 set_track의 articulation, 마디 구간은 set_region_articulation으로 설정하며, ID는 list_presets가 돌려준 값을 그대로 쓴다.
+- list_presets는 인자 없이 그룹→악기 트리를, instruments를 주면 악기별 독주/섹션 × 주법 × 출처 → 실제 ID 표(★ 기본값)를 돌려준다. add_track/set_track의 preset에는 실제 ID 대신 계층 ID("violin/section/sustain", "flute", "cello/pizzicato")를 줄 수 있고, 서버가 설치된 대표 음원의 실제 ID로 바꿔 저장한다. 녹음 클립은 kind:"clip"을 줄 때만 검색된다.
 
-작곡 요령:
-- 모든 프리셋은 외부 SoundFont 또는 SFZ 샘플이다. list_presets에서 각 프리셋의 필수 음원 파일·팩이 설치됐는지 확인하고, 미설치 음원은 다른 악기로 자동 대체하지 않는다
-- 코드(화음)는 구성음을 같은 bar/beat에 여러 노트로 쌓는다 (Fmaj7 = F3+A3+C4+E4)
-- beat·dur는 4분음표 단위: beat 0~3.999(4/4), dur 0.25=16분음표. 오프비트(2.5, 3.5)와 vel 변화(60~110)를 쓰면 리듬이 살아난다
-- 드럼 트랙은 pitch에 피스 이름: kick snare rim clap hhc hho tom-l/m/h crash ride shaker
-- 재생은 사용자 스피커로 즉시 나온다. 만들면 꼭 들려주고, 피아노롤 GUI 주소(get_song에 포함)를 알려줘라
+트랙 파라미터:
+- volume 0~2, 음량에 선형(1.0 = 0dB, 2.0 ≈ +6dB).
+- velRange 0~1: 악보 velocity를 샘플의 강약 레이어·변조에 얼마나 반영할지. 0이면 모두 중간 세기, 1이면 악보 값 그대로.
+- reverb 0~1, 트랙별.
+- set_region_gain은 한 트랙의 마디 구간에만 dB 게인을 건다. 겹치는 구간은 곱으로 누적된다.
 
-다이내믹·표현 (여기를 모르면 곡이 밋밋해진다):
-- velRange는 악보 velocity를 원본 샘플 음원의 강약 레이어와 변조에 얼마나 그대로 보낼지 정한다. 0이면 모두 중간 세기, 1이면 악보 값을 그대로 보낸다. 크레셴도는 velocity·구간 gain·편성·음역·음색 중 필요한 축을 나눠 쓴다
-- 트랙 volume은 음량에 선형이라 파트 간 밸런스용으로 쓴다. 1.0이 0dB이고 2.0까지 올릴 수 있다
-- 특정 구간만 음량을 바꾸려면 set_region_gain — "하이라이트 전까지 심벌 -8dB", "브리지에서 패드 -4dB"처럼 구간 믹싱에 쓴다. 사용자도 GUI에서 구간을 드래그해 직접 조절할 수 있다
-- 레가토(Legato)·스타카토(Staccato)·피치카토(Pizzicato) 같은 주법은 해당 주법을 녹음한 키스위치·CC 프리셋으로 선택한다. 트랙 전체는 set_track의 articulation, 특정 마디만은 set_region_articulation을 쓴다. 정확한 ID는 list_presets에서 확인하며 단순한 여운 효과로 실제 주법인 것처럼 숨기지 않는다
-- 리버브는 트랙마다 reverb로 조절한다(0.5~0.8이면 넓은 공간)
-- rit./accel.은 set_tempo(bpm, from_bar, ramp:true). 램프는 "직전 변화점부터" 걸리므로 끝 4마디만 늘어지게 하려면 앵커를 먼저 둔다:
-  set_tempo({bpm:92, from_bar:13}) → set_tempo({bpm:58, from_bar:16, ramp:true})  (13마디까지는 92, 13→16마디에서 58로)
-- 현재 렌더에는 기본 마스터 리미터(-0.3dBFS ceiling)가 있다. play의 peak·RMS·LUFS·리미터 보고를 진단으로 읽되, 지속적인 큰 감쇄를 리미터에 맡기지 말고 겹치는 노트·저역·vel·트랙 balance를 먼저 고쳐라
-- 변박은 new_song의 time_sig로 (예: [7,8], [5,4], [13,16])`;
+템포:
+- set_tempo(bpm)은 기준 템포를, from_bar를 주면 그 마디부터의 템포를 바꾼다. ramp:true는 "직전 템포 변화점"에서 from_bar까지 서서히 변한다. 따라서 특정 구간만 램프하려면 그 시작 마디에 앵커를 먼저 둔다:
+  set_tempo({bpm:92, from_bar:13}) → set_tempo({bpm:58, from_bar:16, ramp:true})  (13마디까지 92, 13→16마디에서 58로)
+
+편집·되돌리기:
+- add_notes는 기존 노트를 유지한 채 추가한다. clear_notes는 구간 삭제, set_song은 곡 전체 교체.
+- insert_bars/delete_bars/copy_bars는 전 트랙의 노트·구간 게인·구간 주법·템포 변화·구간 이름표·피드백을 함께 밀거나 당긴다.
+- 곡을 바꾸는 모든 연산은 undo_edit으로 최대 30단계 되돌릴 수 있다.
+
+재생·출력:
+- play(from_bar, to_bar, loop)는 사용자 스피커로 즉시 재생한다. 반환값에 peak·RMS·LUFS·클리핑 경고와 마스터 리미터(-0.3dBFS ceiling) 감쇄 보고가 들어 있다.
+- export는 MIDI/WAV를 저장한다. WAV는 한 번에 10분까지.
+
+곡 관리·피드백:
+- new_song/load_song은 노트가 있는 현재 곡을 자동으로 라이브러리에 보존한 뒤 교체한다. save_song/list_songs로 이름을 붙여 보관·조회하고, ab_save/ab_load는 전역 A/B 슬롯이다.
+- 사용자가 GUI에서 구간을 드래그해 남긴 피드백은 list_feedback으로 읽고, 곡에 반영한 뒤 resolve_feedback으로 닫는다.`;
 
 export async function startMcp(execute = (name, args) => runOp(name, args, "mcp")) {
   const server = new McpServer({ name: "aria", version: "0.1.0" }, { instructions: INSTRUCTIONS });

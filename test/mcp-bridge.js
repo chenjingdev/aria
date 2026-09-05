@@ -137,6 +137,13 @@ try {
   });
   ok(!exported.isError && fs.existsSync(`${exportBase}.mid`),
     "인증된 MCP 브리지는 지정한 내보내기 경로 권한을 유지");
+  const mp3Base = path.join(dataDir, "bridge-mp3");
+  const mp3 = await client.callTool({
+    name: "export",
+    arguments: { format: "mp3", path: mp3Base, from_bar: 1, to_bar: 1 }
+  });
+  ok(!mp3.isError && fs.statSync(`${mp3Base}.mp3`).size > 1000 && !fs.existsSync(`${mp3Base}.mid`),
+    "MCP가 MP3 형식과 구간을 전달하고 MP3 파일만 내보냄");
 
   const badAuth = await fetch(`${web.url}/api/rpc`, {
     method: "POST",

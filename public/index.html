@@ -672,7 +672,8 @@
         <button id="btnNew"><svg class="icon"><use href="#i-plus"></use></svg><span class="label">새 곡</span></button>
         <div class="menu-divider"></div>
         <div class="menu-heading">내보내기</div>
-        <button id="btnWav"><svg class="icon"><use href="#i-download"></use></svg><span class="label">오디오 파일</span></button>
+        <button id="btnMp3" title="320kbps MP3 파일로 저장합니다"><svg class="icon"><use href="#i-download"></use></svg><span class="label">MP3 다운로드</span></button>
+        <button id="btnWav"><svg class="icon"><use href="#i-download"></use></svg><span class="label">WAV 다운로드</span></button>
         <button id="btnMidi"><svg class="icon"><use href="#i-file"></use></svg><span class="label">MIDI</span></button>
         <button id="btnStems" title="악기마다 오디오 파일을 따로 만듭니다"><svg class="icon"><use href="#i-layers"></use></svg><span class="label">악기별 오디오</span></button>
         <div class="menu-divider"></div>
@@ -1256,8 +1257,27 @@ $("btnLive").onclick = () => {
   if (live.on) toast("바로 듣기 켬 — 재생 중에도 악기 끄기와 음량이 즉시 반영됩니다");
   else { liveStop(); toast("바로 듣기 끔 — 완성 음질로 재생합니다"); }
 };
-$("btnMidi").onclick = () => rpc("export", { format:"midi" });
-$("btnWav").onclick = () => rpc("export", { format:"wav" });
+let exportPending = false;
+async function exportToFolder(args) {
+  if (exportPending) return;
+  const buttons = [$("btnMidi"), $("btnWav"), $("btnMp3"), $("btnStems")];
+  exportPending = true;
+  buttons.forEach(button => { button.disabled = true; });
+  toast("저장할 폴더를 선택하세요");
+  try {
+    const result = await rpc("export", { ...args, choose_folder:true });
+    // 파일 내보내기는 두 번째 줄에 경로가 있어 완료 알림에도 함께 표시한다.
+    if (result.startsWith("내보내기 완료:")) toast(result.split("\n").slice(0, 2).join(" ").replace(/\s+/g, " "));
+  } catch {
+    // rpc가 오류를 표시한다. 취소·실패 후에도 버튼을 다시 쓸 수 있게 한다.
+  } finally {
+    exportPending = false;
+    buttons.forEach(button => { button.disabled = false; });
+  }
+}
+$("btnMidi").onclick = () => exportToFolder({ format:"midi" });
+$("btnWav").onclick = () => exportToFolder({ format:"wav" });
+$("btnMp3").onclick = () => exportToFolder({ format:"mp3" });
 $("btnAB").onclick = e => {
   const r = e.currentTarget.getBoundingClientRect();
   e.currentTarget.blur();
@@ -1269,7 +1289,7 @@ $("btnABMenu").onclick = e => {
   showAbPop(r.right - 300, r.bottom);
   e.currentTarget.blur();
 };
-$("btnStems").onclick = () => rpc("export", { stems:true, from_bar:+($("fromBar").value||1) || undefined, to_bar:+($("toBar").value) || undefined });
+$("btnStems").onclick = () => exportToFolder({ stems:true, from_bar:+($("fromBar").value||1) || undefined, to_bar:+($("toBar").value) || undefined });
 $("bpm").onchange = () => rpc("set_tempo", { bpm: +$("bpm").value });
 let newArmed = false, newTimer;
 $("btnNew").onclick = () => {

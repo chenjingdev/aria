@@ -8,7 +8,7 @@ Aria는 말로 부탁하면 AI가 노트·악기·구간을 직접 고치고 그
 - AI는 MCP로 같은 곡의 노트·트랙·구조를 실제 편집합니다
 - 사람은 브라우저 악보에서 변경 내용을 보고 재생·구간 반복·악기 변경을 합니다
 - 재생은 설치된 외부 샘플 팩(SF2/SFZ) → 검증된 오픈소스 엔진 → 오프라인 PCM/WAV 렌더 → macOS `afplay` 순서입니다
-- MIDI/WAV 내보내기 (기본 위치 `~/Music/aria/`)
+- MIDI/WAV/MP3·악기별 내보내기 버튼을 누르면 macOS 창에서 저장할 폴더를 직접 선택합니다. 취소하면 파일을 만들지 않습니다. MP3는 320kbps로 저장합니다. (MCP에서 경로를 생략하면 `~/Music/aria/`)
 
 ## 플랫폼 문서
 
@@ -40,19 +40,21 @@ claude mcp add -s user aria -- node /절대/경로/aria/src/mcp-bridge.js
 
 GUI만 띄워보려면: `npm start`. MCP 브리지만 직접 시험하려면: `npm run mcp`.
 
+MP3 내보내기에는 `libmp3lame` 인코더가 포함된 FFmpeg가 필요합니다(macOS: `brew install ffmpeg`). 기본 실행 경로와 Homebrew 설치 위치에서 찾으며, 별도 위치는 `ARIA_FFMPEG=/절대/경로/ffmpeg`로 지정할 수 있습니다. `npm test`의 MP3 검증에도 FFmpeg와 함께 설치되는 `ffprobe`가 필요합니다.
+
 ## MCP 도구
 
 | 도구 | 역할 |
 |---|---|
 | `new_song` | 새 곡 생성 — `template`: citypop, lofi, ballad, bossa, edm, chiptune |
 | `get_song` / `set_song` | 곡 전체를 JSON 텍스트로 읽기 / 통째로 교체 (대규모 수정용) |
-| `list_presets` | 출처·악기군 요약 또는 이름/악기군/출처로 검색한 샘플 프리셋 목록(설치 상태·주법·드럼 피스 포함) |
-| `add_track` / `remove_track` / `set_track` | 트랙 추가·삭제·변경(프리셋/아티큘레이션/볼륨/팬/이름) |
+| `list_presets` | 인자 없이 그룹→악기 트리 요약(ID 없음), `instruments`로 악기별 독주/섹션 × 주법 × 출처 → 실제 ID 표(★ 기본값), `group`으로 한 그룹의 악기·주법 이름, `query`/`family`/`source`/`kind`로 검색(녹음 클립은 `kind:"clip"`) |
+| `add_track` / `remove_track` / `set_track` | 트랙 추가·삭제·변경(프리셋/아티큘레이션/볼륨/팬/이름). `preset`에는 실제 ID 또는 계층 ID(`violin/section/sustain`, `flute`, `cello/pizzicato`)를 줄 수 있고 곡에는 해석된 실제 ID가 저장됩니다 |
 | `set_region_articulation` | 키스위치·CC 프리셋의 선택 마디만 실제 녹음 주법으로 전환 (`null`이면 선택 범위가 트랙 설정을 다시 따름) |
 | `set_tempo` / `clear_tempo` | 기준 템포 변경 · 마디별 템포 변화(rit./accel.) 추가·삭제 |
 | `add_notes` / `clear_notes` | 노트 추가 / 구간 삭제 |
 | `play` / `stop` | 구간 재생(`from_bar`,`to_bar`,`loop`) / 정지 — 반환값에 피크·RMS·클리핑 경고 포함 |
-| `export` | MIDI/WAV 내보내기 (`from_bar`/`to_bar`로 구간만 WAV 렌더) |
+| `export` | MIDI/WAV/MP3 내보내기 (`from_bar`/`to_bar`로 구간 오디오 렌더, `both`는 MIDI+WAV) |
 | `save_song` / `load_song` / `list_songs` | 곡 라이브러리(`~/.aria/songs/`) 보관·전환·목록 — new_song/load_song 시 현재 곡은 자동 보존 |
 
 ## 음원 엔진과 샘플 팩
@@ -74,7 +76,7 @@ Aria는 자체 파형 합성기를 포함하지 않습니다. 악기와 드럼�
 
 현재 이 컴퓨터의 레지스트리는 **2,114/2,114개가 사용 가능**합니다. 음정 악기 333개와 드럼·타악 90개, 사용자·MCP에 공개된 Recorded Clip 1,691개이며, 드럼·타악과 클립을 합치면 1,781개입니다. 설치 상태는 바뀔 수 있으므로 실제 작업에서는 여전히 `list_presets` 결과를 기준으로 삼습니다.
 
-상단의 **음원 관리**에서 팩의 출처·라이선스·설치 용량·상태를 보고 설치할 수 있습니다. 악기 추가·교체 화면은 이름, 악기군, 출처, 주법으로 검색하며, 미설치 프리셋도 숨기지 않고 사용할 수 없는 이유를 보여 줍니다. 설치 여부와 전체 개수는 로컬 상태에 따라 달라지므로 MCP에서는 `list_presets`를 인자 없이 한 번 호출해 요약을 보고, 필요한 `query`·`family`·`source`와 `available_only`로 다시 검색합니다.
+상단의 **음원 관리**에서 팩의 출처·라이선스·설치 용량·상태를 보고 설치할 수 있습니다. 악기 추가·교체 화면은 이름, 악기군, 출처, 주법으로 검색하며, 미설치 프리셋도 숨기지 않고 사용할 수 없는 이유를 보여 줍니다. 설치 여부와 전체 개수는 로컬 상태에 따라 달라지므로 MCP에서는 `list_presets`를 인자 없이 한 번 호출해 그룹·악기 트리를 보고, `instruments:["Violin","Flute"]`로 악기별 표를 받거나 `add_track`의 `preset`에 `violin/section/sustain` 같은 계층 ID를 바로 씁니다. 계층 ID는 설치된 대표 음원(VSCO 2 CE → Salamander → Philharmonia → VSCO SF2 → GM 순)으로 해석되어 곡에는 실제 ID가 저장되므로, 음원을 새로 설치해도 기존 곡의 소리는 바뀌지 않습니다. 녹음 클립은 `kind:"clip"`을 줄 때만 검색됩니다.
 
 노트 형식: `{bar: 8, beat: 1.5, pitch: "F#3", dur: 0.5, vel: 96}` — beat·dur는 4분음표 단위.
 드럼·타악과 Recorded Clip 트랙은 `pitch` 자리에 `list_presets`가 돌려준 정확한 피스 ID를 넣습니다. 공통 GM 킷의 예는 `kick snare rim clap hhc hho tom-l tom-m tom-h crash ride shaker`이고, 녹음 클립은 보통 `play`입니다.
@@ -119,7 +121,7 @@ set_tempo({bpm: 58, from_bar: 16, ramp: true})  # 13→16마디에서 서서히
 - SFZ용 sfizz는 현재 동기식 로컬 사이드카입니다. 대형 팩을 여러 트랙에서 동시에 부를 때 앱과 격리된 작업 프로세스로 옮기는 최적화는 아직 남았습니다
 - 큰 SF2는 필요한 preset/key/velocity만 남겨 렌더하지만, 처음 파일을 읽고 해석할 때 순간 메모리 사용량이 큽니다
 - 레가토(Legato, 음 사이를 실제 연주처럼 이어 주는 주법)는 단순 릴리스 효과가 아닙니다. 음원에 녹음된 전이 샘플과 그 매핑이 있어야 true legato(실제 전이 레가토)를 재현할 수 있습니다
-- WAV 렌더는 한 번에 10분까지 — 긴 곡은 `export({from_bar, to_bar})`로 나눠 뽑습니다
+- WAV·MP3 렌더는 한 번에 10분까지 — 긴 곡은 `export({from_bar, to_bar})`로 나눠 뽑습니다
 - MIDI 내보내기는 멜로디 트랙 15개까지(채널 한계)
 - 사용 중인 트랙에 전체 또는 실제 노트가 놓인 구간의 `articulation`을 명시했다면 portable MIDI 내보내기를 중단합니다. 표준 MIDI의 GM 근사는 그 선택을 안전하게 보존하지 못하므로 현재 소리는 WAV로 내보냅니다. GM 근사가 필요하면 `set_region_articulation(... articulation:null)`로 구간 선택을 지우고, 필요하면 `set_track(... articulation:null)`로 트랙 전체도 기본 주법에 되돌린 뒤 MIDI를 내보냅니다. 노트가 없는 빈 구간과 implicit 기본 주법, 드럼 피스에 선언된 CC는 기존처럼 MIDI로 내보냅니다
 - 마디 안에서의 박자표 변경은 불가(곡 단위 고정)

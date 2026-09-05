@@ -14,7 +14,7 @@
 
 ## 프리셋과 트랙
 
-- 새 곡을 만들거나 악기를 추가·교체·선택할 때 `list_presets`를 호출한다. 인자 없이 부르면 거대한 전체 목록 대신 출처·악기군 요약이 돌아오므로, 곡의 필요를 정한 뒤 `query`, `family`, `source`와 보통 `available_only:true`로 실제 ID·주법·드럼 피스를 검색한다. Aria는 자체 파형 합성 프리셋 없이 외부 SF2/SFZ 샘플만 재생한다.
+- 새 곡을 만들거나 악기를 추가·교체·선택할 때 `list_presets`를 호출한다. 인자 없이 부르면 그룹→악기 트리 요약(ID 없음)이 돌아오고, `instruments:["Violin","Flute"]`를 주면 악기별 독주/섹션 × 주법 × 출처 → 실제 ID 표(★가 기본값)가 온다. `add_track`/`set_track`의 `preset`에는 실제 ID 대신 계층 ID(`violin/section/sustain`, `flute`, `cello/pizzicato`, 한국어·복수형 가능)를 바로 줄 수 있으며 서버가 설치된 대표 음원의 실제 ID로 바꿔 저장한다. `query`, `family`, `source`, `available_only` 검색은 그대로 있고 녹음 클립은 `kind:"clip"`을 줄 때만 나온다. Aria는 자체 파형 합성 프리셋 없이 외부 SF2/SFZ 샘플만 재생한다.
 - GeneralUser, VSCO, Philharmonia, Salamander처럼 이름이 비슷한 악기의 서로 다른 출처·주법은 별도 음색 선택지다. 자동 대체하지 않으며 어느 쪽이 더 좋은지는 곡 안에서 같은 구간을 A/B해 정한다. `설치됨`은 음원 자산을 열 수 있다는 뜻이지 현재 악보 전체를 소리 낼 수 있다는 뜻이 아니다. SFZ 편집은 **Sample Coverage (샘플 대응 — 현재 악보의 Pitch·Velocity·Articulation에 맞는 실제 녹음 샘플이 있는지 확인)** 사전검사를 거치며, 실패하면 곡·Undo 이력·자동 저장을 바꾸지 않는다. 필요한 팩·파일·bank/program·key/velocity sample이 없거나 손상됐으면 오류를 표시하고, 노트를 몰래 삭제·이조·재배정하거나 무음·다른 음원으로 대체하지 않는다.
 - 템플릿은 현재 구현자가 정한 **하나의 선택적 스케치**로 편성과 BPM만 준비한다. 이름이 요청 장르와 같다는 이유만으로 선택하지 말고 exact palette를 먼저 확인한다. 학술적 장르 정의가 아니며, 넓거나 혼합된 장르는 blank song이 더 안전하다. 곡의 필요에 따라 프리셋·트랙·템포를 자유롭게 바꾼다.
 - 현재 SF2 백엔드는 `spessasynth_core@4.3.16`이다. 비압축 PCM SF2/DLS의 스테레오 링크, 필터, LFO(저주파 진동기), 엔벌로프, 모듈레이터, bank/program과 벨로시티 레이어를 원래 SoundFont 규칙으로 해석한다. SF3는 지원하지 않는다. [S69][S70]

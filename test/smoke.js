@@ -227,6 +227,7 @@ ok("삭제한 내장 합성 프리셋 ID를 더는 인정하지 않음", () => {
 
 // ---------- 리뷰에서 확정된 결함의 회귀 테스트 ----------
 const { state, ops, runOp, subscribe, addLog, loadAutosave } = await import("../src/core.js");
+const { resolvePresetAlias } = await import("../src/catalog.js");
 
 ok("같은 밀리초의 반복 작업 기록도 고유 ID를 가진다", () => {
   const n = state.log.length;
@@ -791,20 +792,43 @@ ok("모든 managed catalog와 GM·Philharmonia 선택지를 서로 대체하지 
   assert.equal(SF_PRESETS["sf-contrabassoon"].gm, 70, "콘트라바순 대체음이 GM Recorder로 잘못 바뀜");
 });
 
-ok("큰 음원 카탈로그는 요약하고 악기군·주법으로 좁혀 찾음", () => {
+ok("큰 음원 카탈로그는 그룹·악기 트리로 요약하고 악기별 표·검색으로 좁혀 찾음", () => {
   const summary = ops.list_presets();
   const totalPresets = Object.keys(SF_PRESETS).length + Object.keys(SF_DRUM_KITS).length;
   assert.ok(summary.includes(`외부 샘플 프리셋 ${totalPresets}개`));
-  assert.match(summary, /list_presets\(\{family:"Violin"\}\)/);
-  assert.ok(!summary.includes("vsco-solo-violin-vibrato"), "요약이 모든 preset ID를 쏟아 문맥을 낭비함");
-  const violin = ops.list_presets({ family: "Violin" });
-  assert.match(violin, /sf-violin-phil/);
-  assert.match(violin, /vsco-solo-violin-vibrato/);
+  assert.match(summary, /현악: Violin\(solo·section\)/);
+  assert.match(summary, /instruments:\["Violin","Flute"\]/);
+  assert.ok(!summary.includes("vsco-solo-violin-vibrato"), "요약이 preset ID를 쏟아 문맥을 낭비함");
+  assert.ok(summary.split("\n").length < 45, "트리 요약이 너무 길다");
+
+  const violin = ops.list_presets({ instruments: ["Violin"] });
+  assert.match(violin, /^Violin — 현악/);
+  assert.match(violin, /sustain: ★vsco-solo-violin-vibrato · sf-violin-phil/);
+  assert.match(violin, /section\n\s+sustain: ★vsco-violin-ensemble-sustain-vibrato/);
+  assert.match(violin, /keyswitch: vsco-solo-violin-keyswitch → keyswitch-36=/);
+  assert.match(violin, /계층 ID.*violin\/solo\/sustain/);
+  assert.ok(violin.split("\n").length < 30, "악기 표가 너무 길다");
+  const two = ops.list_presets({ instruments: ["첼로", "없는악기"] });
+  assert.match(two, /Cello — 현악/);
+  assert.match(two, /✗ 없는악기: 악기 "없는악기"을\(를\) 찾을 수 없습니다/);
+  assert.throws(() => ops.list_presets({ instruments: [] }), /instruments/);
+  const strings = ops.list_presets({ group: "현악" });
+  assert.match(strings, /^현악 — 악기 5개/);
+  assert.match(strings, /Double Bass/);
+  assert.ok(!strings.includes("vsco-"), "그룹 뷰는 이름만 보인다");
+  assert.throws(() => ops.list_presets({ group: "없는 그룹" }), /그룹: /);
+
+  const violinSearch = ops.list_presets({ family: "Violin" });
+  assert.match(violinSearch, /sf-violin-phil/);
+  assert.match(violinSearch, /vsco-solo-violin-vibrato/);
+  const doubleBassCount = Object.values(SF_PRESETS).filter(spec => spec.family === "Double Bass" && spec.kind !== "clip").length;
   const doubleBass = ops.list_presets({ family: "Double Bass", limit: 100 });
-  assert.match(doubleBass, /검색 결과 90개 중 90개 표시/);
+  assert.match(doubleBass, new RegExp(`검색 결과 ${doubleBassCount}개 중 ${doubleBassCount}개 표시`));
   assert.match(doubleBass, /sf-contrabass-phil/);
   assert.match(doubleBass, /vsco-contrabass-keyswitch/);
+  assert.ok(!doubleBass.includes("[clip ·"), "녹음 클립은 kind:'clip'을 줄 때만 보인다");
   assert.match(ops.list_presets({ family: "Contrabass" }), /조건에 맞는 샘플 프리셋이 없습니다/);
+  assert.match(ops.list_presets({ query: "glissando" }), /녹음 클립 \d+개가 조건에 맞습니다 — kind:"clip"/);
   const tremolo = ops.list_presets({ query: "tremolo", source: "VSCO 2 CE" });
   assert.match(tremolo, /vsco-violin-ensemble-tremolo/);
   assert.ok(!tremolo.includes("sf-piano-gm"));
@@ -817,6 +841,39 @@ ok("큰 음원 카탈로그는 요약하고 악기군·주법으로 좁혀 찾�
   assert.match(clips, /\[clip ·/);
   assert.match(clips, /Recorded Clip|녹음 클립/);
   assert.throws(() => ops.list_presets({ limit: 101 }), /1~100/);
+});
+
+ok("계층 ID는 설치된 대표 음원으로 해석되고 곡에는 실제 ID만 저장됨", () => {
+  const all = () => true;
+  assert.equal(resolvePresetAlias("violin/section/sustain", all).id, "vsco-violin-ensemble-sustain-vibrato");
+  assert.equal(resolvePresetAlias("violins", all).id, "vsco-violin-ensemble-sustain-vibrato", "복수형은 섹션이 기본");
+  assert.equal(resolvePresetAlias("violin", all).id, "vsco-solo-violin-vibrato", "독주 바이올린의 vibrato가 기본 지속음");
+  assert.equal(resolvePresetAlias("violin", all).alias, "violin/solo/sustain");
+  assert.equal(resolvePresetAlias("cello/pizzicato", all).id, "sf-cello-pizz");
+  assert.equal(resolvePresetAlias("piano", all).id, "sf-piano", "Salamander가 GM보다 앞");
+  assert.equal(resolvePresetAlias("drum kit", all).id, "salamander-all-full");
+  assert.equal(resolvePresetAlias("콘트라베이스/pizz", all).id, "vsco-contrabass-pizzicato");
+  assert.equal(resolvePresetAlias("timpani/roll", all).id, "vsco-timpani-roll");
+  assert.equal(resolvePresetAlias("timpani", all).id, "vsco-timpani-hit");
+  assert.equal(resolvePresetAlias("violin/section/legato", all).id, "vsco-violin-ensemble-sustain-vibrato", "legato는 지속음으로 해석(true legato 아님)");
+  // 미설치 음원은 건너뛰고, 남는 것이 없으면 대체 없이 실패한다
+  assert.equal(resolvePresetAlias("violin", id => id.startsWith("sf-")).id, "sf-violin-phil");
+  assert.throws(() => resolvePresetAlias("violin/section/sustain", id => id.startsWith("sf-")), /설치되지 않았습니다/);
+  assert.throws(() => resolvePresetAlias("flute/section", all), /section 음원이 없습니다/);
+  assert.throws(() => resolvePresetAlias("organ", all), /후보: Drawbar Organ, Pipe Organ/);
+  assert.throws(() => resolvePresetAlias("violin/solo/harp", all), /주법 음원이 없습니다/);
+  assert.throws(() => resolvePresetAlias("sf-violn", all), /list_presets/);
+
+  state.song = validateSong({ title: "alias", bpm: 100, timeSig: [4, 4], tempoMap: [], tracks: [] });
+  const added = ops.add_track({ name: "피아노", preset: "piano" });
+  const piano = state.song.tracks.find(t => t.name === "피아노");
+  assert.ok(presetExists(piano.preset) && !piano.preset.includes("/"), "곡에는 실제 ID만 저장");
+  assert.match(added, /grand-piano\/solo\/sustain → sf-piano/);
+  const changed = ops.set_track({ track: "피아노", preset: "electric piano/tine" });
+  assert.ok(presetExists(state.song.tracks[0].preset) && !state.song.tracks[0].preset.includes("/"));
+  assert.match(changed, /프리셋→.*\(electric-piano\/solo\/tine\)/);
+  assert.throws(() => ops.add_track({ name: "x", preset: "sf-violn" }), /list_presets/);
+  assert.throws(() => ops.add_track({ name: "y", preset: "organ" }), /후보: Drawbar Organ, Pipe Organ/);
 });
 
 ok("키스위치 프리셋의 원래 연주법을 곡·도구가 검증하고 보존", () => {

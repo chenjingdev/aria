@@ -4,8 +4,9 @@ import path from "node:path";
 import os from "node:os";
 import {
   DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS,
-  isDrumPreset, presetLabel, presetKind, presetArticulations
+  isDrumPreset, presetLabel, presetKind, presetArticulations, presetExists
 } from "./presets.js";
+import { catalogTreeText, catalogGroupText, catalogInstrumentsText, resolvePresetAlias } from "./catalog.js";
 import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
 import {
   createSong, validateSong, validateNote, findTrack, songText, songSummary, totalBars, beatsPerBar,
@@ -18,6 +19,7 @@ import { assertSfizzSongCoverage, renderRange } from "./sampler-renderer.js";
 import { wavBuffer } from "./renderer.js";
 import { lufs } from "./master.js";
 import { midiBuffer } from "./midi.js";
+import { writeMp3 } from "./mp3.js";
 import { importMidi } from "./midi-import.js";
 import { detectKey, outOfKey } from "./key.js";
 import { hashSeed, mulberry32 } from "./rng.js";
@@ -47,6 +49,16 @@ function requirePresetAvailable(id) {
   if (!status.available)
     throw new Error(`preset "${id}"에 필요한 음원 ${samplerAssetName(spec, status)}을 사용할 수 없습니다: ${status.reason}`);
   return spec;
+}
+
+// 프리셋 참조 해석 — 실제 ID는 그대로, 계층 ID("violin/section/sustain")는 설치된 대표 음원으로 푼다.
+// 곡에는 언제나 해석된 실제 ID만 저장한다. 미설치 음원은 후보에서 빼고, 남는 것이 없으면 대체 없이 실패한다.
+function resolvePresetRef(ref) {
+  if (typeof ref === "string" && presetExists(ref)) return { id: ref, alias: null };
+  return resolvePresetAlias(ref, id => {
+    const spec = SF_PRESETS[id] ?? SF_DRUM_KITS[id];
+    return Boolean(spec) && samplerAssetStatus(spec, { shallow: true }).available === true;
+  });
 }
 
 let logSeq = 0;
@@ -720,7 +732,7 @@ export const ops = {
     return `곡을 통째로 교체했습니다.\n${songSummary(state.song)}`;
   },
 
-  list_presets({ query, family, source, kind, available_only = false, limit } = {}) {
+  list_presets({ query, family, source, kind, available_only = false, limit, instruments, group } = {}) {
     const resultLimit = limit === undefined ? 30 : Number(limit);
     if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > 100)
       throw new Error(`list_presets limit은 1~100 정수여야 합니다 — 받은 값: ${JSON.stringify(limit)}`);
@@ -734,17 +746,26 @@ export const ops = {
       status: samplerAssetStatus(item.spec, { shallow: true })
     }));
     const availableCount = entries.filter(item => item.status.available).length;
+    const statusById = new Map(entries.map(item => [item.id, item.status]));
+    const isAvailable = id => statusById.get(id)?.available === true;
+    // 계층 뷰 — 악기별 표(독주/섹션 × 주법 × 출처 → 실제 ID) 또는 한 그룹의 악기·주법 이름
+    if (instruments !== undefined) {
+      if (!Array.isArray(instruments) || !instruments.length || instruments.length > 12
+        || instruments.some(x => typeof x !== "string" || !x.trim()))
+        throw new Error('instruments는 악기 이름 문자열 1~12개의 배열입니다 — 예: ["Violin", "Flute"]');
+      return catalogInstrumentsText(instruments, isAvailable);
+    }
+    if (group !== undefined) return catalogGroupText(String(group), isAvailable);
     const norm = value => String(value ?? "").trim().toLocaleLowerCase("en");
     const q = norm(query), qTokens = q.split(/\s+/).filter(Boolean);
     const wantedFamily = norm(family), wantedSource = norm(source), wantedKind = norm(kind);
     if (wantedKind && !["instrument", "percussion", "clip"].includes(wantedKind))
       throw new Error(`kind는 instrument, percussion, clip 중 하나여야 합니다 — 받은 값: ${JSON.stringify(kind)}`);
     const hasFilter = Boolean(q || wantedFamily || wantedSource || wantedKind || available_only || limit !== undefined);
-    const filtered = entries.filter(({ id, spec, status, kind: entryKind }) => {
+    const matchesFilters = ({ id, spec, status, kind: entryKind }) => {
       if (available_only && !status.available) return false;
       if (wantedFamily && norm(spec.family) !== wantedFamily) return false;
       if (wantedSource && ![spec.source, spec.sourceDetail].some(value => norm(value) === wantedSource)) return false;
-      if (wantedKind && entryKind !== wantedKind) return false;
       const searchable = norm([
         id, spec.name, spec.desc, spec.family, spec.source, spec.sourceDetail,
         spec.articulation, spec.category, spec.familyDetail, spec.sourceEntry,
@@ -753,28 +774,30 @@ export const ops = {
       ].join(" "));
       if (qTokens.length && !qTokens.every(token => searchable.includes(token))) return false;
       return true;
-    });
+    };
+    // 녹음 클립(원래 연주 전체를 한 번 재생하는 고정 길이 녹음)은 kind:"clip"을 명시할 때만 검색된다
+    const kindMatches = entryKind => wantedKind ? entryKind === wantedKind : entryKind !== "clip";
+    const filtered = entries.filter(item => kindMatches(item.kind) && matchesFilters(item));
     if (!hasFilter) {
-      const countBy = key => [...entries.reduce((map, item) => {
-        const value = item.spec[key] ?? (key === "source" ? "기타/GM" : "기타");
-        map.set(value, (map.get(value) ?? 0) + 1);
-        return map;
-      }, new Map())].sort((a, b) => a[0].localeCompare(b[0]));
-      const sources = countBy("source").map(([name, count]) => `  ${name}: ${count}`).join("\n");
-      const families = countBy("family").map(([name, count]) => `  ${name}: ${count}`).join("\n");
-      const kinds = [...entries.reduce((map, item) => {
-        map.set(item.kind, (map.get(item.kind) ?? 0) + 1);
-        return map;
-      }, new Map())].map(([name, count]) => `  ${name}: ${count}`).join("\n");
       const unavailable = entries.filter(item => !item.status.available).length;
+      const count = wanted => entries.filter(item => item.kind === wanted).length;
       return `외부 샘플 프리셋 ${entries.length}개 (사용 가능 ${availableCount}, 설치·수정 필요 ${unavailable})\n`
-        + `엔진: SpessaSynth · SoundFont / sfizz · SFZ\n\n종류별:\n${kinds}\n\n출처별:\n${sources}\n\n악기군별:\n${families}`
-        + `\n\n실제 ID·주법은 list_presets({family:"Violin"}), list_presets({source:"VSCO 2 CE"}), list_presets({query:"tremolo"})처럼 좁혀서 확인하세요.`
-        + `\n미설치·손상 음원은 다른 폰트나 팩으로 자동 대체하지 않습니다.`
-        + `\n\nnew_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
+        + `엔진: SpessaSynth · SoundFont / sfizz · SFZ\n`
+        + `연주용 악기 ${count("instrument")} · 드럼·타악 ${count("percussion")} · 녹음 클립 ${count("clip")}(kind:"clip"으로만 검색)\n\n`
+        + `${catalogTreeText(isAvailable)}\n\n`
+        + `다음 단계:\n`
+        + `  list_presets({instruments:["Violin","Flute"]}) — 악기별 독주/섹션 × 주법 × 출처 → 실제 프리셋 ID 표(★ 기본값)\n`
+        + `  add_track({preset:"violin/section/sustain"}) — 계층 ID(악기/독주|섹션/주법)를 주면 설치된 대표 음원으로 해석해 실제 ID를 저장\n`
+        + `  list_presets({group:"현악"}) — 한 그룹의 악기와 주법 이름\n`
+        + `  검색: query·family·source·kind·available_only (녹음 클립은 kind:"clip")\n`
+        + `미설치·손상 음원은 다른 폰트나 팩으로 자동 대체하지 않습니다.\n\n`
+        + `new_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
     }
-    if (!filtered.length)
-      return `조건에 맞는 샘플 프리셋이 없습니다. 전체 ${entries.length}개, 사용 가능 ${availableCount}개입니다.`;
+    if (!filtered.length) {
+      const clipMatches = wantedKind ? 0 : entries.filter(item => item.kind === "clip" && matchesFilters(item)).length;
+      return `조건에 맞는 샘플 프리셋이 없습니다. 전체 ${entries.length}개, 사용 가능 ${availableCount}개입니다.`
+        + (clipMatches ? `\n녹음 클립 ${clipMatches}개가 조건에 맞습니다 — kind:"clip"을 주면 보입니다.` : "");
+    }
     const line = ({ id, spec, drum, kind: entryKind, status }) => {
       const asset = samplerAssetName(spec, status);
       const allPieces = drum ? Object.keys(spec.pieces ?? DRUM_PIECES) : [];
@@ -798,19 +821,20 @@ export const ops = {
   add_track({ name, preset, volume, pan, articulation, ...rest } = {}) {
     const song = needSong();
     if (!name || !preset) throw new Error("name과 preset이 필요합니다");
-    requirePresetAvailable(preset);
+    const ref = resolvePresetRef(preset);
+    requirePresetAvailable(ref.id);
     if (song.tracks.some(t => t.name.toLowerCase() === String(name).trim().toLowerCase()))
       throw new Error(`트랙 "${name}"이 이미 있습니다`);
     // 씨앗은 이름과 별개로 굳힌다 — 이후 이름을 바꿔도 소리가 안 변한다.
     // 이름을 지웠다 같은 이름으로 다시 만들면 씨앗이 겹칠 수 있어 접미사로 피한다
     let seed = String(name);
     for (let i = 2; song.tracks.some(t => t.seed === seed); i++) seed = `${name}#${i}`;
-    const track = { name, seed, preset, volume: volume ?? 0.8, pan: pan ?? 0, notes: [] };
+    const track = { name, seed, preset: ref.id, volume: volume ?? 0.8, pan: pan ?? 0, notes: [] };
     if (articulation !== undefined) track.articulation = articulation;
     for (const [key] of TRACK_OVERRIDES) if (rest[key] !== undefined) track[key] = rest[key];
     state.song = validateSong({ ...song, tracks: [...song.tracks, track] });
     mutated();
-    return `트랙 "${name}"(${presetLabel(preset)}) 추가. 현재 트랙: ${state.song.tracks.map(t => t.name).join(", ")}`;
+    return `트랙 "${name}"(${presetLabel(ref.id)}) 추가${ref.alias ? ` — ${ref.alias} → ${ref.id}` : ""}. 현재 트랙: ${state.song.tracks.map(t => t.name).join(", ")}`;
   },
 
   remove_track({ track } = {}) {
@@ -834,14 +858,15 @@ export const ops = {
       else { updated[key] = rest[key]; changes.push(`${key}→${rest[key]}`); }
     }
     if (preset !== undefined) {
-      requirePresetAvailable(preset);
+      const ref = resolvePresetRef(preset);
+      requirePresetAvailable(ref.id);
       // MCP가 현재 preset을 다른 설정과 함께 반복해서 보내도 같은 ID namespace의
       // 주법 자동화를 지우지 않는다. 실제 preset이 바뀔 때만 옛 선택을 초기화한다.
-      if (preset !== t.preset) {
-        const wasDrum = isDrumPreset(t.preset), isDrum = isDrumPreset(preset);
+      if (ref.id !== t.preset) {
+        const wasDrum = isDrumPreset(t.preset), isDrum = isDrumPreset(ref.id);
         if (wasDrum !== isDrum && t.notes.length)
           throw new Error(`"${t.name}"에 노트가 있어 ${wasDrum ? "드럼→멜로디" : "멜로디→드럼"} 전환이 불가합니다 — clear_notes 후 바꾸세요`);
-        updated.preset = preset;
+        updated.preset = ref.id;
         // 프리셋마다 articulation ID 체계가 다르다. 호출자가 새 값을 함께 주지 않았다면
         // 옛 프리셋의 선택을 새 음원에 억지로 적용하지 않고 새 프리셋 기본값으로 되돌린다.
         if (articulation === undefined) delete updated.articulation;
@@ -849,7 +874,7 @@ export const ops = {
         // 자동 승계하지 않고 새 음원에서 다시 명시적으로 선택하게 한다.
         const clearedArticulationRegions = updated.articulationRegions?.length ?? 0;
         delete updated.articulationRegions;
-        changes.push(`프리셋→${presetLabel(preset)}`);
+        changes.push(`프리셋→${presetLabel(ref.id)}${ref.alias ? ` (${ref.alias})` : ""}`);
         if (clearedArticulationRegions)
           changes.push(`구간 주법 ${clearedArticulationRegions}곳 초기화`);
       }
@@ -1739,11 +1764,11 @@ export const ops = {
     return `피드백 #${id} 완료${remain ? ` — 남은 피드백 ${remain}건` : " — 모두 처리했습니다"}`;
   },
 
-  export({ format = "both", path: outPath, from_bar, to_bar, stems = false } = {}) {
+  export({ format = "both", path: outPath, directory = EXPORT_DIR, from_bar, to_bar, stems = false } = {}) {
     const song = needSong();
-    if (!["midi", "wav", "both"].includes(format)) throw new Error(`format은 midi|wav|both (받은 값: ${format})`);
+    if (!["midi", "wav", "mp3", "both"].includes(format)) throw new Error(`format은 midi|wav|mp3|both (받은 값: ${format})`);
     if (!song.tracks.some(t => t.notes.length)) throw new Error("내보낼 노트가 없습니다");
-    if (stems) return exportStems(song, outPath, from_bar, to_bar);
+    if (stems) return exportStems(song, outPath, from_bar, to_bar, directory);
     const ranged = from_bar !== undefined || to_bar !== undefined;
     // 길이 상한은 오디오 렌더에만 적용된다 — MIDI만 뽑을 때는 10분을 넘겨도 막지 않는다
     const [from, to] = format === "midi"
@@ -1751,21 +1776,24 @@ export const ops = {
       : clampRange(song, from_bar, to_bar);
     const base = outPath
       ? path.resolve(String(outPath).replace(/^~(?=\/|$)/, os.homedir()))
-      : path.join(EXPORT_DIR,
+      : path.join(directory,
         safeName(song.title) || "aria-song");
-    // MIDI는 항상 곡 전체다 — 구간 접미사는 실제로 구간만 담은 WAV에만 붙인다.
+    // MIDI는 항상 곡 전체다 — 구간 접미사는 실제로 구간만 담은 오디오에만 붙인다.
     // 경로를 직접 준 경우엔 사용자가 고른 이름이므로 손대지 않는다.
-    const wavBase = outPath || !ranged ? base : `${base}-${from}-${to}마디`;
+    const audioBase = outPath || !ranged ? base : `${base}-${from}-${to}마디`;
     fs.mkdirSync(path.dirname(base), { recursive: true });
     const written = [];
     let level = null;
-    if (format !== "wav") { fs.writeFileSync(`${base}.mid`, midiBuffer(song)); written.push(`${base}.mid (곡 전체)`); }
+    if (format === "midi" || format === "both") { fs.writeFileSync(`${base}.mid`, midiBuffer(song)); written.push(`${base}.mid (곡 전체)`); }
     if (format !== "midi") {
       const { left, right, sr, master } = renderRange(song, from, to);
       level = master ?? levelReport(left, right);
       if (master) level.lufs = lufs(left, right, sr).integrated;
-      fs.writeFileSync(`${wavBase}.wav`, wavBuffer(left, right, sr));
-      written.push(`${wavBase}.wav (${from}~${to}마디, ${fmtBeats(rangeSeconds(song, from, to))}초)`);
+      const audio = wavBuffer(left, right, sr);
+      const audioPath = `${audioBase}.${format === "mp3" ? "mp3" : "wav"}`;
+      if (format === "mp3") writeMp3(audio, audioPath);
+      else fs.writeFileSync(audioPath, audio);
+      written.push(`${audioPath} (${from}~${to}마디, ${fmtBeats(rangeSeconds(song, from, to))}초${format === "mp3" ? ", 320kbps" : ""})`);
     }
     return `내보내기 완료:\n${written.map(w => `  ${w}`).join("\n")}`
       + (ranged && format === "both" ? `\n(구간 지정은 WAV에만 적용됩니다 — MIDI는 곡 전체)` : "")
@@ -1803,13 +1831,13 @@ export function runOp(name, args = {}, source = "mcp") {
 
 // 악기별 파일 내보내기 — 다른 도구(로직·에이블톤 등)에서 믹싱하려면 트랙마다 따로 필요하다.
 // 스템은 트랙 볼륨·음소거 없이, 그러나 팬·리버브·구간 게인은 담아서 굽는다.
-function exportStems(song, outPath, from_bar, to_bar) {
+function exportStems(song, outPath, from_bar, to_bar, directory = EXPORT_DIR) {
   const [from, to] = clampRange(song, from_bar, to_bar);
   const live = song.tracks.filter(t => t.notes.some(n => n.bar >= from && n.bar <= to));
   if (!live.length) throw new Error(`${from}~${to}마디에 소리가 나는 트랙이 없습니다`);
   const dir = outPath
     ? path.resolve(String(outPath).replace(/^~(?=\/|$)/, os.homedir()))
-    : path.join(EXPORT_DIR, `${safeName(song.title) || "aria-song"}-스템`);
+    : path.join(directory, `${safeName(song.title) || "aria-song"}-스템`);
   fs.mkdirSync(dir, { recursive: true });
   const written = [];
   live.forEach((t, i) => {
