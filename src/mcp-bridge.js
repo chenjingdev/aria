@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // aria — 상태를 갖지 않는 stdio MCP 브리지. 실행 중인 GUI의 HTTP API만 전달한다.
+import "./session-data-dir.js"; // ARIA_DATA_DIR_PER_SESSION — 다른 import 보다 먼저 env 를 손본다
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

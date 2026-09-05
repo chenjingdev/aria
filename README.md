@@ -57,7 +57,7 @@ MP3 내보내기에는 `libmp3lame` 인코더가 포함된 FFmpeg가 필요합�
 | `export` | MIDI/WAV/MP3 내보내기 (`from_bar`/`to_bar`로 구간 오디오 렌더, `both`는 MIDI+WAV) |
 | `save_song` / `load_song` / `list_songs` | 곡 라이브러리(`~/.aria/songs/`) 보관·전환·목록 — new_song/load_song 시 현재 곡은 자동 보존 |
 
-브리지 환경 변수로 노출 범위를 좁힐 수 있습니다. `ARIA_HIDE_TOOLS=list_feedback,ab_save,…`(쉼표·공백 구분)를 준 브리지는 그 도구를 도구 목록과 안내문에서 함께 감춥니다. 앱의 능력은 그대로이고, 벤치처럼 사람과의 협업 루프가 없는 자리에서 씁니다. 모르는 이름이 있으면 브리지가 그 이름을 알리고 종료합니다. `ARIA_DATA_DIR`·`ARIA_PORT`·`ARIA_SCAN=0`을 함께 주면 사용자 앱과 별도의 곡·라이브러리·포트를 가진 인스턴스를 자동 시작하며, 음원·팩·엔진은 `~/.aria` 아래 것을 공유합니다.
+브리지 환경 변수로 노출 범위를 좁힐 수 있습니다. `ARIA_HIDE_TOOLS=list_feedback,ab_save,…`(쉼표·공백 구분)를 준 브리지는 그 도구를 도구 목록과 안내문에서 함께 감춥니다. 앱의 능력은 그대로이고, 벤치처럼 사람과의 협업 루프가 없는 자리에서 씁니다. 모르는 이름이 있으면 브리지가 그 이름을 알리고 종료합니다. `ARIA_DATA_DIR`·`ARIA_PORT`·`ARIA_SCAN=0`을 함께 주면 사용자 앱과 별도의 곡·라이브러리·포트를 가진 인스턴스를 자동 시작하며, 음원·팩·엔진은 `~/.aria` 아래 것을 공유합니다. 여기에 `ARIA_DATA_DIR_PER_SESSION=1`을 더하면 브리지 세션마다 `<ARIA_DATA_DIR>/sessions/<시각>-<pid>` 아래에 자기 인스턴스를 띄우므로, 같은 프로필을 동시에 여러 개 돌려도 곡을 공유하지 않습니다.
 
 ## 음원 엔진과 샘플 팩
 

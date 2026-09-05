@@ -155,6 +155,39 @@ try {
   ok(badExit === 1 && /모르는 도구 이름이 있습니다: nope_tool$/m.test(badStderr),
     "ARIA_HIDE_TOOLS에 모르는 도구 이름이 있으면 브리지가 그 이름을 알리고 종료");
 
+  // 같은 프로필(같은 env)의 브리지 둘을 동시에 띄워도 세션별 데이터 디렉터리로 인스턴스와 곡이 갈라져야 한다.
+  const sessionsBase = path.join(dataDir, "per-session");
+  const sessionEnv = {
+    ARIA_DATA_DIR: sessionsBase,
+    ARIA_DATA_DIR_PER_SESSION: "1",
+    ARIA_PORT: String(occupiedPort + 10),   // finally 의 stopTestAriaInstances 스캔 범위(+20) 안
+    ARIA_SCAN: "0",
+    ARIA_SF2: soundfonts.defaultPath
+  };
+  const sessionProbe = async (name, title) => {
+    const transport = new StdioClientTransport({ command: process.execPath, args: [bridgePath], cwd: path.resolve("."), stderr: "pipe", env: sessionEnv });
+    const probe = new Client({ name, version: "1.0.0" });
+    await probe.connect(transport);
+    const created = await probe.callTool({ name: "new_song", arguments: { title, bpm: 90 } });
+    const seen = await probe.callTool({ name: "get_song", arguments: {} });
+    await probe.close();
+    return { created, text: seen.content?.[0]?.text ?? "" };
+  };
+  const [sessionA, sessionB] = await Promise.all([sessionProbe("aria-session-a", "세션 A"), sessionProbe("aria-session-b", "세션 B")]);
+  const sessionsDir = path.join(sessionsBase, "sessions");
+  const sessionRuntimes = (fs.existsSync(sessionsDir) ? fs.readdirSync(sessionsDir) : [])
+    .map(name => JSON.parse(fs.readFileSync(path.join(sessionsDir, name, "runtime.json"), "utf8")));
+  ok(!sessionA.created.isError && !sessionB.created.isError
+    && sessionA.text.includes("세션 A") && !sessionA.text.includes("세션 B") && sessionB.text.includes("세션 B")
+    && sessionRuntimes.length === 2
+    && new Set(sessionRuntimes.map(rt => rt.pid)).size === 2 && new Set(sessionRuntimes.map(rt => rt.baseUrl)).size === 2
+    && !fs.existsSync(path.join(sessionsBase, "runtime.json")),
+    "ARIA_DATA_DIR_PER_SESSION이면 같은 env의 브리지 둘이 각자의 세션 디렉터리·인스턴스·곡을 가짐");
+  for (const rt of sessionRuntimes) { try { process.kill(rt.pid, "SIGTERM"); } catch { /* noop */ } }
+  for (let i = 0; i < 30 && sessionRuntimes.some(rt => { try { process.kill(rt.pid, 0); return true; } catch { return false; } }); i++) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+
   const created = await client.callTool({
     name: "new_song",
     arguments: { title: "브리지 공유 상태", bpm: 101, template: "citypop" }
