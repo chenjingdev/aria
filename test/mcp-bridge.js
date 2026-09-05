@@ -108,6 +108,53 @@ try {
     listed.tools.some(tool => tool.name === "set_region_articulation"),
     "브리지가 구간 주법을 포함한 최신 MCP 도구 45개를 그대로 노출");
 
+  // 벤치 프로필처럼 사람과의 협업 루프가 없는 자리: 브리지 env로 도구를 숨기면 목록·안내문에서 함께 빠져야 한다.
+  const hiddenNames = ["list_feedback", "resolve_feedback", "add_feedback", "ab_save", "ab_load", "list_songs", "load_song", "import_midi"];
+  const hiddenTransport = new StdioClientTransport({
+    command: process.execPath,
+    args: [bridgePath],
+    cwd: path.resolve("."),
+    stderr: "pipe",
+    env: {
+      ARIA_DATA_DIR: dataDir,
+      ARIA_RUNTIME_FILE: runtimeFile,
+      ARIA_AUTOSTART: "0",
+      ARIA_SCAN: "0",
+      ARIA_SF2: soundfonts.defaultPath,
+      ARIA_HIDE_TOOLS: hiddenNames.join(",")
+    }
+  });
+  const hiddenClient = new Client({ name: "aria-bridge-hide-test", version: "1.0.0" });
+  await hiddenClient.connect(hiddenTransport);
+  const hiddenList = await hiddenClient.listTools();
+  const hiddenInstructions = hiddenClient.getInstructions() ?? "";
+  const mentionsTool = (text, name) => new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(text);
+  ok(hiddenList.tools.length === 45 - hiddenNames.length
+    && hiddenList.tools.every(tool => !hiddenNames.includes(tool.name))
+    && hiddenNames.every(name => !mentionsTool(hiddenInstructions, name))
+    && hiddenInstructions.includes("save_song"),
+    "ARIA_HIDE_TOOLS로 숨긴 도구는 브리지의 도구 목록과 안내문에서 함께 빠짐");
+  const hiddenCall = await hiddenClient.callTool({ name: "list_feedback", arguments: {} })
+    .catch(error => ({ isError: true, message: error.message }));
+  ok(hiddenCall.isError, "숨긴 도구는 브리지를 통해 호출할 수 없음");
+  await hiddenClient.close();
+
+  const badBridge = spawn(process.execPath, [bridgePath], {
+    cwd: path.resolve("."),
+    env: { ...process.env, ARIA_AUTOSTART: "0", ARIA_HIDE_TOOLS: "list_feedback nope_tool" },
+    stdio: ["pipe", "ignore", "pipe"]
+  });
+  let badStderr = "";
+  badBridge.stderr.on("data", chunk => { badStderr += chunk; });
+  const badExit = await new Promise(resolve => {
+    const timer = setTimeout(() => resolve(null), 8000);
+    badBridge.once("exit", code => { clearTimeout(timer); resolve(code); });
+  });
+  if (badExit === null) try { badBridge.kill("SIGKILL"); } catch { /* noop */ }
+  // 첫 줄은 모르는 이름만 나열해야 한다(list_feedback은 실제 도구라 거기 없어야 함). 둘째 줄의 전체 도구 목록은 무관.
+  ok(badExit === 1 && /모르는 도구 이름이 있습니다: nope_tool$/m.test(badStderr),
+    "ARIA_HIDE_TOOLS에 모르는 도구 이름이 있으면 브리지가 그 이름을 알리고 종료");
+
   const created = await client.callTool({
     name: "new_song",
     arguments: { title: "브리지 공유 상태", bpm: 101, template: "citypop" }

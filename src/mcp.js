@@ -299,13 +299,60 @@ const INSTRUCTIONS = `aria는 작곡 앱이다. 곡은 실행 중인 앱 안에 
 - play(from_bar, to_bar, loop)는 사용자 스피커로 즉시 재생한다. 반환값에 peak·RMS·LUFS·클리핑 경고와 마스터 리미터(-0.3dBFS ceiling) 감쇄 보고가 들어 있다.
 - export는 MIDI/WAV를 저장한다. WAV는 한 번에 10분까지.
 
-곡 관리·피드백:
-- new_song/load_song은 노트가 있는 현재 곡을 자동으로 라이브러리에 보존한 뒤 교체한다. save_song/list_songs로 이름을 붙여 보관·조회하고, ab_save/ab_load는 전역 A/B 슬롯이다.
+곡 관리:
+- new_song/load_song은 노트가 있는 현재 곡을 자동으로 라이브러리에 보존한 뒤 교체한다. save_song은 이름을 붙여 라이브러리에 보관한다. list_songs는 보관된 곡 목록을 돌려준다. ab_save/ab_load는 전역 A/B 슬롯이다.
+
+피드백:
 - 사용자가 GUI에서 구간을 드래그해 남긴 피드백은 list_feedback으로 읽고, 곡에 반영한 뒤 resolve_feedback으로 닫는다.`;
 
-export async function startMcp(execute = (name, args) => runOp(name, args, "mcp")) {
-  const server = new McpServer({ name: "aria", version: "0.1.0" }, { instructions: INSTRUCTIONS });
+export const TOOL_NAMES = TOOLS.map(([name]) => name);
+const TOOL_NAME_SET = new Set(TOOL_NAMES);
+const mentions = (text, name) => new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(text);
+
+// 숨긴 도구는 안내문에서도 사라져야 한다 — 없는 도구를 가리키는 문장은 모델을 헛걸음시킨다.
+// 규칙: "a/b/c"로 묶인 이름에서는 숨긴 것만 빼고, 그래도 숨긴 도구가 남는 문장(묶음이 통째로 빈 문장 포함)은 빼고,
+// 문장이 다 빠진 항목과 항목이 다 빠진 절 제목도 뺀다. 숨긴 도구를 말하지 않는 줄은 글자 하나 바뀌지 않는다.
+export function buildInstructions(hide = []) {
+  const hidden = new Set(hide);
+  if (!hidden.size) return INSTRUCTIONS;
+  const touched = text => [...hidden].some(name => mentions(text, name));
+  const lines = [];
+  for (const line of INSTRUCTIONS.split("\n")) {
+    if (!touched(line)) { lines.push(line); continue; }
+    const [, prefix, body] = line.match(/^(\s*(?:-\s+)?)(.*)$/);
+    const kept = body.split(/(?<=\.)\s+/).map(sentence => {
+      let emptied = false;
+      const pruned = sentence.replace(/[a-z_]+(?:\/[a-z_]+)+/g, group => {
+        const names = group.split("/");
+        if (!names.every(name => TOOL_NAME_SET.has(name))) return group;
+        const left = names.filter(name => !hidden.has(name));
+        if (!left.length) emptied = true;
+        return left.join("/");
+      });
+      return emptied || touched(pruned) ? null : pruned;
+    }).filter(Boolean);
+    if (kept.length) lines.push(prefix + kept.join(" "));
+  }
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const isHeader = /^[^\s-].*:$/.test(lines[i]);
+    if (isHeader && !(lines[i + 1] ?? "").startsWith("-")) {
+      while (i + 1 < lines.length && lines[i + 1] === "") i++;
+      continue;
+    }
+    out.push(lines[i]);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd();
+}
+
+// hide: 이 서버가 노출하지 않을 도구 이름. 목록·안내문에서 함께 빠지며 앱 쪽 능력은 그대로다.
+export async function startMcp(execute = (name, args) => runOp(name, args, "mcp"), { hide = [] } = {}) {
+  const unknown = hide.filter(name => !TOOL_NAME_SET.has(name));
+  if (unknown.length) throw new Error(`숨길 수 없는 도구 이름: ${unknown.join(", ")}`);
+  const hidden = new Set(hide);
+  const server = new McpServer({ name: "aria", version: "0.1.0" }, { instructions: buildInstructions(hide) });
   for (const [name, description, shape] of TOOLS) {
+    if (hidden.has(name)) continue;
     server.registerTool(name, { description, inputSchema: shape }, async (args) => {
       try {
         const result = await execute(name, args ?? {});
