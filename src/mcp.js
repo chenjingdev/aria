@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { runOp } from "./core.js";
+import { APP_VERSION } from "./version.js";
 
 const noteSchema = z.object({
   bar: z.number().int().min(1).max(999).describe("마디 번호(1부터)"),
@@ -350,7 +351,7 @@ export async function startMcp(execute = (name, args) => runOp(name, args, "mcp"
   const unknown = hide.filter(name => !TOOL_NAME_SET.has(name));
   if (unknown.length) throw new Error(`숨길 수 없는 도구 이름: ${unknown.join(", ")}`);
   const hidden = new Set(hide);
-  const server = new McpServer({ name: "aria", version: "0.1.0" }, { instructions: buildInstructions(hide) });
+  const server = new McpServer({ name: "aria", version: APP_VERSION }, { instructions: buildInstructions(hide) });
   for (const [name, description, shape] of TOOLS) {
     if (hidden.has(name)) continue;
     server.registerTool(name, { description, inputSchema: shape }, async (args) => {

@@ -5,6 +5,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { startMcp, TOOL_NAMES } from "./mcp.js";
+import { profileHiddenTools } from "./tool-profile.js";
 import {
   discoverAria,
   waitForAria
@@ -111,7 +112,9 @@ async function callGui(name, args) {
 // ARIA_HIDE_TOOLS: 이 브리지가 노출하지 않을 도구 이름(쉼표·공백 구분). 벤치 프로필처럼 사람과의 협업 루프가
 // 없는 자리에서 쓴다. 앱의 능력은 그대로고, 도구 목록과 안내문에서만 함께 사라진다.
 function hiddenTools() {
-  const names = (process.env.ARIA_HIDE_TOOLS ?? "").split(/[\s,]+/).filter(Boolean);
+  let names;
+  try { names = profileHiddenTools(); }
+  catch (error) { console.error(`[aria] ${error.message}`); process.exit(1); }
   const unknown = names.filter(name => !TOOL_NAMES.includes(name));
   if (unknown.length) {
     console.error(`[aria] ARIA_HIDE_TOOLS에 모르는 도구 이름이 있습니다: ${unknown.join(", ")}`);

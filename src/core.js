@@ -716,6 +716,7 @@ export const ops = {
   },
 
   get_song() {
+    if (!state.song) return `아직 곡이 없습니다. Aria 연결은 정상입니다.\nGUI: ${state.guiUrl ?? "(시작 중)"}\n설치된 악기는 list_presets로 확인하고, 사용자가 작곡을 요청하면 new_song으로 시작하세요.`;
     const song = needSong();
     const p = playInfo();
     return `${songSummary(song)}${p ? `\n▶ 재생 중: ${p.fromBar}~${p.toBar}마디${p.loop ? " 루프" : ""}` : ""}\nGUI: ${state.guiUrl}\n\n${songText(song)}`;

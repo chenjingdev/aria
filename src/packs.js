@@ -117,6 +117,7 @@ function packView(record) {
     target,
     sourceUrl: manifest.source?.projectUrl ?? manifest.source?.repositoryUrl ?? null,
     releaseUrl: manifest.source?.releaseUrl ?? null,
+    archiveUrl: manifest.source?.downloadUrl ?? null,
     license: manifest.license ? {
       spdx: manifest.license.spdx ?? null,
       name: manifest.license.name ?? null,
@@ -136,9 +137,12 @@ function packView(record) {
 
 export function listPacks() { return manifestRecords().map(packView); }
 
-export function startPackInstall(id) {
+export function startPackInstall(id, { archive } = {}) {
   const record = loadManifestRecord(safeId(id));
   const installer = installerForPackManifest(record.manifest);
+  if (archive !== undefined && (record.manifest.source.type !== "prepared-archive" ||
+      typeof archive !== "string" || !path.isAbsolute(archive) || !fs.statSync(archive).isFile()))
+    throw new Error("공식 사이트에서 받은 음원 압축파일을 선택해 주세요");
   const current = packView(record);
   if (current.installed || current.installing) return current;
   if (current.state === "unmanaged")
@@ -149,7 +153,7 @@ export function startPackInstall(id) {
   const fd = fs.openSync(logFile, "a", 0o600);
   let child;
   try {
-    child = spawn(process.execPath, [installer, id], {
+    child = spawn(process.execPath, [installer, id, ...(archive ? ["--archive", archive] : [])], {
       cwd: ROOT,
       env: { ...process.env, ARIA_PACKS_DIR: PACK_HOME },
       stdio: ["ignore", fd, fd]

@@ -1,5 +1,7 @@
 // aria — GUI 한 인스턴스와 stdio MCP 브리지가 같은 상태를 보는지 검증
 import assert from "node:assert";
+// This suite exercises all core tools; release-onboarding tests the public profile.
+process.env.ARIA_TOOL_PROFILE = "full";
 import { spawn } from "node:child_process";
 import fs from "node:fs";
 import http from "node:http";
@@ -93,6 +95,7 @@ try {
     cwd: path.resolve("."),
     stderr: "pipe",
     env: {
+      ARIA_TOOL_PROFILE: "full",
       ARIA_DATA_DIR: dataDir,
       ARIA_RUNTIME_FILE: runtimeFile,
       ARIA_AUTOSTART: "0",
@@ -116,6 +119,7 @@ try {
     cwd: path.resolve("."),
     stderr: "pipe",
     env: {
+      ARIA_TOOL_PROFILE: "full",
       ARIA_DATA_DIR: dataDir,
       ARIA_RUNTIME_FILE: runtimeFile,
       ARIA_AUTOSTART: "0",
@@ -310,6 +314,7 @@ try {
     cwd: path.resolve("."),
     stderr: "pipe",
     env: {
+      ARIA_TOOL_PROFILE: "full",
       ARIA_DATA_DIR: path.join(dataDir, "auto-data"),
       ARIA_RUNTIME_FILE: autoRuntimeFile,
       ARIA_PORT: String(occupiedPort),
@@ -323,6 +328,7 @@ try {
     cwd: path.resolve("."),
     stderr: "pipe",
     env: {
+      ARIA_TOOL_PROFILE: "full",
       ARIA_DATA_DIR: path.join(dataDir, "auto-data"),
       ARIA_RUNTIME_FILE: autoRuntimeFile,
       ARIA_PORT: String(occupiedPort),

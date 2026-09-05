@@ -3,11 +3,20 @@
 import { loadAutosave, flushAutosave } from "./core.js";
 import { startWeb } from "./web.js";
 import { stopPlayback } from "./player.js";
+import { spawn } from "node:child_process";
+import { APP_VERSION } from "./version.js";
 import {
   acquireStartLock,
   discoverAria,
   releaseStartLock
 } from "./runtime.js";
+
+function openGui(url) {
+  if (!process.argv.includes("--open") || process.platform !== "darwin") return;
+  const child = spawn("/usr/bin/open", [url], { detached: true, stdio: "ignore" });
+  child.once("error", () => console.error(`[aria] 브라우저에서 열어 주세요: ${url}`));
+  child.unref();
+}
 
 let startLock = null;
 if (process.env.ARIA_ALLOW_MULTIPLE !== "1") {
@@ -18,6 +27,7 @@ if (process.env.ARIA_ALLOW_MULTIPLE !== "1") {
       const startedElsewhere = await discoverAria();
       if (startedElsewhere) {
         console.error(`[aria] 이미 실행 중입니다: ${startedElsewhere.baseUrl}`);
+        openGui(startedElsewhere.baseUrl);
         process.exit(0);
       }
       startLock = acquireStartLock();
@@ -30,6 +40,7 @@ if (process.env.ARIA_ALLOW_MULTIPLE !== "1") {
   if (existing) {
     releaseStartLock(startLock);
     console.error(`[aria] 이미 실행 중입니다: ${existing.baseUrl}`);
+    openGui(existing.baseUrl);
     process.exit(0);
   }
 }
@@ -42,17 +53,18 @@ try {
   releaseStartLock(startLock);
   throw error;
 }
-console.error(`[aria] 피아노롤 GUI: ${url}${restored ? " (이전 곡 복원됨)" : ""}`);
+console.error(`[aria ${APP_VERSION}] 브라우저에서 시작하기: ${url}${restored ? " (이전 곡 복원됨)" : ""}`);
+openGui(url);
 
-const { samplerAssetStatus, samplerAssetName } = await import("./sampler-assets.js");
+const { samplerAssetStatus } = await import("./sampler-assets.js");
 const { SF_PRESETS, SF_DRUM_KITS } = await import("./presets.js");
 const specs = [...Object.values(SF_PRESETS), ...Object.values(SF_DRUM_KITS)];
 const statuses = specs.map((spec, index) => ({ spec, status: samplerAssetStatus(spec, { shallow: true }), index }));
 const available = statuses.filter(item => item.status.available).length;
 const unavailableAssets = new Set(statuses.filter(item => !item.status.available)
-  .map(item => samplerAssetName(item.spec, item.status)));
+  .map(item => item.spec.pack ?? item.spec.font ?? "기본 음원"));
 console.error(`[aria] 오픈소스 샘플 엔진: SpessaSynth(SoundFont) + sfizz(SFZ) — 사용 가능 ${available}/${specs.length}`
-  + (unavailableAssets.size ? `, 설치·수정 필요 ${[...unavailableAssets].join(", ")}` : ""));
+  + (unavailableAssets.size ? `, 미설치·확인 필요 음원 ${unavailableAssets.size}종 — 브라우저의 ‘시작 안내’를 따라 주세요.` : ""));
 
 let closing = false;
 async function shutdown() {

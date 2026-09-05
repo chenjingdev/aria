@@ -1,6 +1,6 @@
 {
   "name": "aria",
-  "version": "0.1.0",
+  "version": "0.1.0-alpha.1",
   "description": "LLM이 MCP로 제어하는 상주 작곡 앱 — 피아노롤 GUI + 오픈소스 SF2·SFZ 샘플 재생 + MIDI/WAV 내보내기",
   "type": "module",
   "bin": {
@@ -8,14 +8,14 @@
     "aria-mcp": "src/mcp-bridge.js"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node src/index.js --open",
     "mcp": "node src/mcp-bridge.js",
     "engine:install:sfizz": "node tools/install-sfizz.mjs",
-    "pack:install": "node tools/install-pack.mjs",
-    "test": "node test/spessa-engine.js && node test/sfizz-engine.js && node test/sampler-renderer.js && node test/sfizz-sampler-renderer.js && node test/pack-installer.js && node test/prepared-pack-installer.js && node test/prepare-vsco2-ce-sfz.js && node test/prepare-philharmonia-sfz.js && node test/prepare-salamander-sfz.js && node test/http-api.js && node test/export-dialog.js && node test/mp3.js && node test/mcp-hide.js && node test/catalog.js && node test/smoke.js && node test/mcp-bridge.js"
+    "pack:install": "node tools/install-prepared-pack.mjs",
+    "test": "node test/spessa-engine.js && node test/sfizz-engine.js && node test/sampler-renderer.js && node test/sfizz-sampler-renderer.js && node test/pack-installer.js && node test/prepared-pack-installer.js && node test/prepare-vsco2-ce-sfz.js && node test/prepare-philharmonia-sfz.js && node test/prepare-salamander-sfz.js && node test/sound-setup.js && node test/release-onboarding.js && node test/http-api.js && node test/export-dialog.js && node test/mp3.js && node test/mcp-hide.js && node test/catalog.js && node test/smoke.js && node test/mcp-bridge.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

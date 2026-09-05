@@ -13,6 +13,9 @@ import { DRUM_PIECES, TEMPLATES, SF_PRESETS, SF_DRUM_KITS } from "./presets.js";
 import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
 import { listPacks, startPackInstall } from "./packs.js";
 import { chooseExportDirectory as nativeChooseExportDirectory } from "./export-dialog.js";
+import { soundSetupStatus, chooseSoundFile as nativeChooseSoundFile, importBasicSoundfont, basicSoundPreview } from "./sound-setup.js";
+import { setupInfo } from "./setup.js";
+import { APP_VERSION } from "./version.js";
 import {
   PREFERRED_PORT,
   PORT_ATTEMPTS,
@@ -29,9 +32,11 @@ function sseSend(res, ev) {
   res.write(`data: ${JSON.stringify(ev)}\n\n`);
 }
 
-export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory } = {}) {
+export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory, chooseSoundFile = nativeChooseSoundFile } = {}) {
   const identity = createRuntimeIdentity();
   let exportDialogPending = false;
+  let soundDialogPending = false;
+  const ai = { lastSeenAt: null };
 
   const bridgeAuth = req => {
     const value = req.headers.authorization;
@@ -70,6 +75,7 @@ export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory }
         res.end(JSON.stringify({
           ok: true,
           app: "aria",
+          version: APP_VERSION,
           schema: 1,
           pid: identity.pid,
           instanceId: identity.instanceId,
@@ -91,6 +97,49 @@ export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory }
         for (const entry of state.log.slice(-50)) sseSend(res, { type: "log", entry });
         const ping = setInterval(() => { try { res.write(": ping\n\n"); } catch { /* noop */ } }, 25000);
         req.on("close", () => { clearInterval(ping); sseClients.delete(res); });
+      } else if (req.method === "GET" && url.pathname === "/api/setup") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(setupInfo(ai)));
+      } else if (req.method === "GET" && url.pathname === "/api/sound-setup") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(soundSetupStatus()));
+      } else if (req.method === "POST" && ["/api/sound-setup/import", "/api/sound-setup/preview", "/api/packs/import"].includes(url.pathname)) {
+        if (crossOrigin(req)) { res.writeHead(403); res.end("교차 출처 요청은 허용되지 않습니다"); return; }
+        const id = url.searchParams.get("id");
+        if (url.pathname === "/api/packs/import" && !listPacks().some(pack => pack.id === id))
+          throw new Error("등록되지 않은 음원 팩입니다");
+        if (url.pathname === "/api/sound-setup/preview") {
+          const wav = basicSoundPreview();
+          res.writeHead(200, { "Content-Type": "audio/wav", "Cache-Control": "no-store" });
+          res.end(wav);
+          return;
+        }
+        if (soundDialogPending) throw new Error("이미 음원 파일을 선택하고 있습니다");
+        if (url.pathname === "/api/sound-setup/import" && soundSetupStatus().basic.exists)
+          throw new Error("기본 음원이 이미 있습니다. 기존 파일을 덮어쓰지 않습니다.");
+        const controller = new AbortController();
+        const abort = () => controller.abort();
+        res.once("close", abort);
+        soundDialogPending = true;
+        void (async () => {
+          try {
+            const file = await chooseSoundFile({ signal: controller.signal, archive: url.pathname === "/api/packs/import" });
+            if (res.destroyed) return;
+            const result = file === null ? { ok: true, cancelled: true }
+              : url.pathname === "/api/packs/import" ? { ok: true, pack: startPackInstall(id, { archive: file }) }
+              : { ok: true, setup: importBasicSoundfont(file) };
+            res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+            res.end(JSON.stringify(result));
+          } catch (error) {
+            if (!res.destroyed) {
+              res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+              res.end(JSON.stringify({ ok: false, error: error.message }));
+            }
+          } finally {
+            soundDialogPending = false;
+            res.off("close", abort);
+          }
+        })();
       } else if (req.method === "GET" && url.pathname === "/api/packs") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         res.end(JSON.stringify({ packs: listPacks() }));
@@ -255,6 +304,7 @@ export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory }
               }
             }
             const result = runOp(tool, safeArgs, auth.valid ? "mcp" : "gui");
+            if (auth.valid) ai.lastSeenAt = new Date().toISOString();
             res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
             res.end(JSON.stringify({ ok: true, result }));
           } catch (e) {
@@ -267,8 +317,13 @@ export function startWeb({ chooseExportDirectory = nativeChooseExportDirectory }
         res.writeHead(404); res.end("not found");
       }
     } catch (e) {
-      if (!res.headersSent) res.writeHead(500);
-      res.end(e.message);
+      if (url.pathname.startsWith("/api/sound-setup/") || url.pathname === "/api/packs/import") {
+        if (!res.headersSent) res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: false, error: e.message }));
+      } else {
+        if (!res.headersSent) res.writeHead(500);
+        res.end(e.message);
+      }
     }
   });
 

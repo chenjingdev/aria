@@ -1,46 +1,66 @@
-# ◆ aria — 말로 곡을 만들고 다시 고치는 작곡 앱
+# ◆ Aria — AI와 함께 만드는 편집 가능한 곡
 
-Aria는 말로 부탁하면 AI가 노트·악기·구간을 직접 고치고 그 결과를 바로 들려주는 macOS용 로컬 작곡 앱입니다. 완성 음원 하나를 생성하고 끝내지 않고, 사람과 AI가 같은 편집 가능한 곡을 계속 다듬습니다.
+**v0.1.0-alpha.1 · macOS용 AI 작곡 프리뷰**
 
-예를 들어 “9–16마디 후렴이 약해. 드럼은 더 밀고 현악은 넓혀 줘”라고 말하면 AI가 그 구간의 실제 악보를 수정합니다. 사용자는 브라우저에서 달라진 부분을 보고 필요한 마디만 다시 들은 뒤, 이어서 작업하거나 되돌릴 수 있습니다.
+Aria는 외부 AI가 악기와 노트를 작성하고, 사용자가 브라우저에서 듣고 보관하고 내보내는 로컬 작곡 앱입니다. AI 모델이나 채팅은 내장되어 있지 않습니다. Claude Code·Codex처럼 MCP를 지원하는 AI 도구와 계정이 별도로 필요합니다.
 
-- 곡은 실행 중인 앱 안에 살고 자동 저장됩니다(`~/.aria/song.json`)
-- AI는 MCP로 같은 곡의 노트·트랙·구조를 실제 편집합니다
-- 사람은 브라우저 악보에서 변경 내용을 보고 재생·구간 반복·악기 변경을 합니다
-- 재생은 설치된 외부 샘플 팩(SF2/SFZ) → 검증된 오픈소스 엔진 → 오프라인 PCM/WAV 렌더 → macOS `afplay` 순서입니다
-- MIDI/WAV/MP3·악기별 내보내기 버튼을 누르면 macOS 창에서 저장할 폴더를 직접 선택합니다. 취소하면 파일을 만들지 않습니다. MP3는 320kbps로 저장합니다. (MCP에서 경로를 생략하면 `~/Music/aria/`)
+이번 공개 범위는 **AI로 곡 만들기 → 듣기 → 기본 조정 → 보관 → WAV 내보내기**입니다. 세부 노트 편집·구간 직접 편집·A/B·피드백은 실험 기능이며 기본 화면에서는 꺼져 있습니다. 완성된 범용 DAW로 소개하지 않습니다. [기능 범위와 벤치 근거](docs/RELEASE_SCOPE.md)
 
-## 플랫폼 문서
+## 처음 설치하기
 
-처음 보는 사람은 [플랫폼 개요](https://chenjingdev.github.io/aria/)부터 읽어 주세요. Aria가 정확히 무엇인지, 외부 AI와 브라우저가 어떻게 하나의 곡을 공유하는지, 입력부터 재생·내보내기까지 어떤 경로로 처리되는지 설명합니다.
-
-설치와 사용법은 이 README에, SF2·SFZ 렌더러의 책임과 검증 규칙은 [오디오 엔진 문서](docs/ENGINE_BACKENDS.md)에, 외부 샘플 팩의 출처·라이선스·설치 상태는 [샘플 음원 감사](docs/SOUND_LIBRARY_AUDIT.md)에 정리되어 있습니다.
-
-## 설치·등록
+1. Mac에 [Node.js 24 LTS](https://nodejs.org/en/download)를 설치하세요. Aria의 최소 요구 버전은 Node.js 22입니다. Git이 없는 Mac은 아래 clone 명령 실행 시 표시되는 개발 도구 설치 안내를 먼저 완료하세요.
+2. 터미널에서 아래 명령을 실행합니다.
 
 ```bash
+git clone https://github.com/chenjingdev/aria.git
 cd aria
-npm install
-
-# SFZ 재생 엔진을 검토된 버전으로 로컬 빌드·설치
-# 사전 준비: Node.js 18 이상, Git, CMake
-npm run engine:install:sfizz
-
-# Claude Code에 MCP 브리지로 등록 (모든 프로젝트에서 사용)
-claude mcp add -s user aria -- node /절대/경로/aria/src/mcp-bridge.js
+npm ci
+npm start
 ```
 
-`npm test`도 실제 SFZ 경로를 검증하므로 첫 실행 전에 `npm run engine:install:sfizz`가 필요합니다.
-설치기는 고정된 sfizz 소스와 의존성을 받아 로컬에서 빌드하고, 패치·실행 파일·라이선스 고지를 검증한 뒤 `~/.aria/engines/`에 넣습니다.
+3. 브라우저가 열리면 **시작 안내 → 기본 음원 준비**를 따르세요. GeneralUser GS 공식 페이지에서 다운로드 → 압축 해제 → 받은 SF2 파일 선택 → 피아노 소리 확인 순서입니다. 파일 이름 변경과 설치 폴더 찾기는 Aria가 대신 처리합니다.
+4. **시작 안내 → AI 연결**에서 사용하는 AI의 등록 명령을 복사해 별도 터미널에서 실행하세요. 실제 설치 경로가 자동으로 들어갑니다. 해당 AI 도구 설치·로그인은 먼저 완료되어 있어야 합니다. [Claude Code 시작 안내](https://code.claude.com/docs/en/quickstart)
+5. AI에서 새 대화를 열고 화면의 **연결 확인 요청**을 붙여 넣으세요. Aria에 실제 도구 요청이 도착하면 최근 요청 시각이 표시됩니다. 이어서 **첫 곡 요청**을 복사해 보내면 됩니다.
 
-새 Claude Code 세션에서 "발라드 풍으로 8마디 스케치해서 들려줘"라고 하면 됩니다.
-첫 도구 호출 때 Aria 앱이 꺼져 있으면 자동으로 열립니다. GUI는 7788을 우선 사용하되 이미 다른 앱이 쓰고 있으면
-다음 빈 포트로 이동하며, MCP 브리지는 `~/.aria/runtime.json`을 읽어 실제 주소에 자동으로 연결합니다.
-`get_song` 결과에도 현재 GUI 주소가 포함됩니다.
+예: “Aria에 설치된 기본 악기만 사용해서 차분한 8마디 곡을 만들고 들려줘.”
 
-GUI만 띄워보려면: `npm start`. MCP 브리지만 직접 시험하려면: `npm run mcp`.
+기본 음원과 AI 연결까지 끝내면 곡을 만들 수 있습니다. 브라우저 안에서 AI가 자동으로 시작되지는 않으며 작곡 품질과 속도는 연결한 AI에 따라 다릅니다. 작곡 스킬 설치는 필수가 아닙니다. 기본 음원만 설치한 첫 곡은 대형 오케스트라 팩을 쓴 벤치 곡과 음색이 다를 수 있습니다.
 
-MP3 내보내기에는 `libmp3lame` 인코더가 포함된 FFmpeg가 필요합니다(macOS: `brew install ffmpeg`). 기본 실행 경로와 Homebrew 설치 위치에서 찾으며, 별도 위치는 `ARIA_FFMPEG=/절대/경로/ffmpeg`로 지정할 수 있습니다. `npm test`의 MP3 검증에도 FFmpeg와 함께 설치되는 `ffprobe`가 필요합니다.
+브라우저가 자동으로 열리지 않으면 터미널에 표시된 주소를 여세요. `npm start` 터미널을 열어 두면 앱이 계속 실행됩니다. 종료는 그 터미널에서 Control+C, 다음 실행은 Aria 폴더에서 다시 `npm start`입니다. MCP 도구 호출로 앱이 자동 시작된 경우에는 AI가 돌려주는 GUI 주소를 열 수 있습니다.
+
+## 다시 쓰기와 업데이트
+
+현재 곡은 `~/.aria/song.json`에 자동 저장되고 이름을 붙여 보관한 곡은 `~/.aria/songs/`에 남습니다. AI의 **save_song** 또는 화면의 보관 버튼으로 곡을 보관하고, 화면의 곡 목록에서 다시 여세요. 음원도 한 번 설치하면 유지됩니다. 코드 폴더를 업데이트해도 이 데이터는 지우지 않습니다.
+
+앱을 종료한 뒤 Aria 폴더에서 실행하세요.
+
+```bash
+git pull --ff-only
+npm ci
+npm start
+```
+
+`main`은 이 프리뷰 릴리스와 같은 커밋을 제공합니다. 정확한 버전을 고정하려면 아래 태그를 선택하세요. 태그를 선택한 상태는 고정 버전이므로 일반 업데이트로 돌아갈 때 먼저 `git switch main`을 실행합니다. 직접 수정한 코드가 있으면 그 변경을 먼저 보관하세요.
+
+```bash
+git fetch origin --tags
+git switch --detach v0.1.0-alpha.1
+npm ci
+```
+
+## 추가 음원과 내보내기
+
+기본 곡의 재생과 WAV 내보내기에는 CMake·SFZ 엔진·FFmpeg가 필요하지 않습니다. 더 많은 오케스트라·드럼 음원을 원하면 Node.js·Git·CMake를 준비하고 아래 엔진을 한 번 설치한 뒤 **음원 관리**에서 필요한 팩만 고르세요. [음원 설치 가이드와 조건](docs/SOUND_SETUP.md)
+
+```bash
+npm run engine:install:sfizz
+```
+
+MIDI/WAV/MP3·악기별 내보내기는 Mac 저장 폴더 선택창으로 저장합니다. MP3에는 `libmp3lame`을 포함한 FFmpeg가 필요합니다(`brew install ffmpeg`). 별도 실행 위치는 `ARIA_FFMPEG`로 지정할 수 있습니다. MIDI는 샘플 고유 주법·믹스의 모든 소리를 보존하지 않으므로 지금 듣는 소리는 WAV로 내보내세요.
+
+## 릴리스와 검증 문서
+
+[릴리스 노트](CHANGELOG.md) · [기능 범위와 벤치 근거](docs/RELEASE_SCOPE.md) · [플랫폼 개요](https://chenjingdev.github.io/aria/) · [오디오 엔진](docs/ENGINE_BACKENDS.md) · [음원 감사](docs/SOUND_LIBRARY_AUDIT.md) · [Windows amd에서 한 설치·제거 검증의 범위](docs/AMD_INSTALL_TEST.md)
 
 ## MCP 도구
 
@@ -55,7 +75,9 @@ MP3 내보내기에는 `libmp3lame` 인코더가 포함된 FFmpeg가 필요합�
 | `add_notes` / `clear_notes` | 노트 추가 / 구간 삭제 |
 | `play` / `stop` | 구간 재생(`from_bar`,`to_bar`,`loop`) / 정지 — 반환값에 피크·RMS·클리핑 경고 포함 |
 | `export` | MIDI/WAV/MP3 내보내기 (`from_bar`/`to_bar`로 구간 오디오 렌더, `both`는 MIDI+WAV) |
-| `save_song` / `load_song` / `list_songs` | 곡 라이브러리(`~/.aria/songs/`) 보관·전환·목록 — new_song/load_song 시 현재 곡은 자동 보존 |
+| `save_song` (기본), `load_song` / `list_songs` (full) | 곡 라이브러리(`~/.aria/songs/`) 보관·전환·목록 — new_song/load_song 시 현재 곡은 자동 보존 |
+
+기본 MCP 프로필은 `release`이며 벤치 당시와 같은 37개 도구를 노출합니다. 피드백·A/B·곡 불러오기·MIDI 가져오기 8개는 제외됩니다. 전체 45개가 필요한 개발·실험 환경은 `ARIA_TOOL_PROFILE=full`을 명시하세요. GUI 곡 목록에서 불러오기는 계속 사용할 수 있습니다. `ARIA_HIDE_TOOLS`는 선택한 프로필에서 추가로 도구를 숨깁니다.
 
 브리지 환경 변수로 노출 범위를 좁힐 수 있습니다. `ARIA_HIDE_TOOLS=list_feedback,ab_save,…`(쉼표·공백 구분)를 준 브리지는 그 도구를 도구 목록과 안내문에서 함께 감춥니다. 앱의 능력은 그대로이고, 벤치처럼 사람과의 협업 루프가 없는 자리에서 씁니다. 모르는 이름이 있으면 브리지가 그 이름을 알리고 종료합니다. `ARIA_DATA_DIR`·`ARIA_PORT`·`ARIA_SCAN=0`을 함께 주면 사용자 앱과 별도의 곡·라이브러리·포트를 가진 인스턴스를 자동 시작하며, 음원·팩·엔진은 `~/.aria` 아래 것을 공유합니다. 여기에 `ARIA_DATA_DIR_PER_SESSION=1`을 더하면 브리지 세션마다 `<ARIA_DATA_DIR>/sessions/<시각>-<pid>` 아래에 자기 인스턴스를 띄우므로, 같은 프로필을 동시에 여러 개 돌려도 곡을 공유하지 않습니다.
 

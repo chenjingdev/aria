@@ -109,6 +109,31 @@
   #empty[hidden] { display:none; }
   #empty .card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px 32px; max-width:460px; }
   #empty b { color:var(--text); }
+  #empty .card { pointer-events:auto; }
+  .welcome-actions { display:flex; justify-content:center; flex-wrap:wrap; gap:8px; margin-top:18px; }
+  .setup-dialog .pack-dialog-body { font-size:13px; line-height:1.65; }
+  .setup-step { padding:16px; margin-bottom:14px; border:1px solid var(--border); border-radius:12px; background:#151e29; }
+  .setup-step h3 { margin:0 0 8px; font-size:15px; color:#e1e9f5; }
+  .setup-step p { margin:8px 0; color:#abb8ca; }
+  .setup-status { color:#bdd5f9; }
+  .setup-copy { display:flex; align-items:flex-start; gap:8px; margin:8px 0; }
+  .setup-copy pre { margin:0; padding:12px; min-width:0; flex:1; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:#c8d8ed; border-radius:8px; background:#0c131d; font-size:12px; }
+  .setup-copy button { flex:none; min-height:40px; }
+  .setup-step details { margin:12px 0; }
+  .setup-step summary { cursor:pointer; color:#b9cce8; }
+  .setup-experimental { display:flex; align-items:flex-start; gap:10px; padding:14px; border:1px solid #65543c; border-radius:10px; background:#211e19; color:#d2c3aa; }
+  .setup-experimental input { margin-top:5px; }
+  .setup-experimental small { display:block; margin-top:4px; line-height:1.5; }
+  body:not(.experimental-editing) #btnAB,
+  body:not(.experimental-editing) #btnABMenu,
+  body:not(.experimental-editing) #fbSave,
+  body:not(.experimental-editing) .precision-tools,
+  body:not(.experimental-editing) #detHead .feel,
+  body:not(.experimental-editing) .fbedit,
+  body:not(.experimental-editing) #velWrap { display:none !important; }
+  #btnSetup { white-space:nowrap; }
+  @media (max-width:700px) { .setup-copy { flex-direction:column; } .setup-copy pre { width:100%; box-sizing:border-box; } }
+
   #toast { position:fixed; left:14px; bottom:14px; max-width:420px; background:#232830; border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:12px; white-space:pre-wrap; opacity:0; transition:opacity .25s; pointer-events:none; z-index:9; }
   #toast.show { opacity:1; }
   #toast.err { border-color:var(--play); }
@@ -315,6 +340,23 @@
     border-radius:12px; color:#7f8ca0; text-align:center; line-height:1.7; }
   .pack-empty strong { color:#b4c0d0; }
   .pack-empty.error { border-color:#674149; color:#d1979d; }
+  .sound-start { padding:20px; margin-bottom:20px; border:1px solid #496589; border-radius:13px; background:#172337; color:#ccd8e9; }
+  .sound-start h3 { margin:0 0 8px; font-size:19px; color:#eff5ff; }
+  .sound-start p, .sound-start li { font-size:13px; line-height:1.7; }
+  .sound-start ol { padding-left:22px; margin:14px 0; }
+  .sound-start li { margin:10px 0; }
+  .sound-start a { color:#a8c8ff; text-decoration:underline; }
+  .sound-start button, .sound-start .sound-link { min-height:44px; padding:10px 14px; display:inline-flex; align-items:center; margin:6px 6px 0 0; border-radius:8px; }
+  .sound-start .sound-link { background:#243d5c; }
+  .sound-start .sound-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .sound-start [hidden] { display:none; }
+  .sound-start audio { width:min(100%,360px); margin-top:12px; }
+  #soundSetupMessage { white-space:pre-wrap; overflow-wrap:anywhere; }
+  #soundSetupMessage.error { color:#ffb8be; }
+  .sound-engine { padding:12px; margin-bottom:14px; border:1px solid #3b485b; border-radius:9px; color:#b8c9df; font-size:12px; line-height:1.7; }
+  .sound-engine code { overflow-wrap:anywhere; user-select:all; }
+  .pack-install-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .pack-install-actions button { min-height:44px; }
   @keyframes pack-spin { to { transform:rotate(360deg); } }
 
   /* 악기 선택기 — 수백·수천 개 프리셋을 native select에 담지 않고, 검색한 최대 200개만 그린다. */
@@ -663,6 +705,7 @@
     <button id="btnUndo" class="icon-button safety" title="되돌리기 (⌘Z)" aria-label="되돌리기"><svg class="icon"><use href="#i-undo"></use></svg></button>
     <button id="btnRedo" class="icon-button safety" title="다시 적용 (⇧⌘Z)" aria-label="다시 적용"><svg class="icon"><use href="#i-redo"></use></svg></button>
     <button id="btnAB" title="두 안을 담아 두고 같은 부분을 번갈아 들어 봅니다"><svg class="icon"><use href="#i-compare"></use></svg><span class="label optional-label">두 안 비교</span></button>
+    <button id="btnSetup" title="음원 준비, AI 연결, 첫 곡 시작" aria-haspopup="dialog"><svg class="icon"><use href="#i-sparkles"></use></svg><span class="label">시작 안내</span></button>
     <button id="btnActivity" title="AI와 직접 편집의 작업 기록" aria-pressed="false"><svg class="icon"><use href="#i-activity"></use></svg><span class="label optional-label">AI 작업</span></button>
     <details class="utility-menu" id="utilityMenu">
       <summary title="프로젝트와 내보내기" aria-label="프로젝트와 내보내기"><svg class="icon"><use href="#i-more"></use></svg></summary>
@@ -694,7 +737,7 @@
   </div>
 </header>
 <div class="guidebar">
-  <div class="guide-copy"><svg class="icon"><use href="#i-sparkles"></use></svg><strong>느낌으로 다듬기</strong><span>악기를 켜고 끄며 찾고, 소리·연주 느낌을 조절하세요. 눈금 드래그는 AI에게 남기는 메모입니다.</span></div>
+  <div class="guide-copy"><svg class="icon"><use href="#i-sparkles"></use></svg><strong>느낌으로 다듬기</strong><span>AI가 만든 곡을 듣고 악기와 음량을 조절하세요. 상세 노트 편집은 시작 안내에서 실험 기능으로 켤 수 있어요.</span></div>
   <button id="mobileViewToggle" title="악기 조절과 확대된 곡 보기를 바꿉니다"><svg class="icon"><use href="#i-expand"></use></svg><span class="label">곡 크게 보기</span></button>
   <button id="soundStatus" class="sound-status" title="재생하면 완성된 소리의 상태를 확인합니다"><span class="status-dot"></span><span id="soundStatusLabel">재생하면 소리 상태를 확인합니다</span></button>
 </div>
@@ -703,15 +746,15 @@
     <div id="arrWrap">
       <div id="arrGrid">
         <div id="corner"><strong>악기</strong><small>켜고 끄며 찾기</small></div>
-        <canvas id="ruler" title="클릭: 재생 시작 마디 · 드래그: 구간 피드백"></canvas>
+        <canvas id="ruler" title="클릭: 재생 시작 마디 · 드래그: AI 구간 요청 작성"></canvas>
         <div id="laneHeads"></div>
         <canvas id="lanes" title="색이 짙고 아래 띠가 높은 곳은 음표의 세기와 겹침이 많은 구간입니다. 실제 오디오 음량은 재생하며 확인하세요" aria-label="곡 전체 악기 배치"></canvas>
       </div>
       <div id="empty" hidden><div class="card">
-        <b>원하는 장면과 느낌부터 말해 보세요.</b><br><br>
-        Codex나 Claude Code에서<br><b>“비 오는 밤, 후렴에서 크게 열리는 시티팝”</b>처럼 부탁하면<br>
-        AI가 곡을 만드는 동안 이 화면에 바로 들리고 보입니다.<br><br>
-        직접 시작하고 싶다면 메뉴에서 <b>새 곡</b>을 고르세요.
+        <b>첫 곡을 만들어 볼까요?</b><br><br>
+        음원을 준비하고 Codex 또는 Claude Code를 연결하세요.<br>
+        연결한 AI 채팅에 원하는 음악을 말하면<br>이 화면에 곡이 생깁니다. 재생을 눌러 들어보세요.
+        <div class="welcome-actions"><button id="emptySetup" class="primary" type="button">AI 연결하고 시작하기</button><button id="emptySounds" type="button">음원 준비하기</button></div>
       </div></div>
     </div>
     <div id="detail">
@@ -737,12 +780,34 @@
 <div id="activityScrim"></div>
 <div id="toast"></div>
 <div id="fbPop" hidden></div>
+<dialog id="setupDialog" class="pack-dialog setup-dialog" aria-labelledby="setupTitle" aria-describedby="setupHelp">
+  <div class="pack-dialog-shell">
+    <header class="pack-dialog-head">
+      <div class="pack-dialog-title"><h2 id="setupTitle">Aria 시작하기 <small id="releaseVersion"></small></h2><p id="setupHelp">음원 준비 → 외부 AI 연결 → 첫 곡 듣기. Aria는 각자의 Mac에서 실행하는 AI 작곡 미리보기 버전입니다.</p></div>
+      <button id="setupClose" class="pack-dialog-close" aria-label="시작 안내 닫기" type="button">✕</button>
+    </header>
+    <div class="pack-dialog-body">
+      <p id="setupStatusMessage" role="status" aria-live="polite">설치 상태를 확인하고 있어요.</p>
+      <section class="setup-step"><h3>1. 기본 악기 준비</h3><p id="setupSoundStatus" class="setup-status">확인 중</p><button id="setupSounds" type="button">음원 준비하기</button><p>GeneralUser GS 하나면 시작할 수 있어요. 추가 오케스트라 음원은 나중에 설치해도 됩니다.</p></section>
+      <section class="setup-step"><h3>2. 사용하는 AI 연결</h3><p>Aria 안에는 채팅 AI가 들어 있지 않습니다. Codex 또는 Claude Code를 별도로 설치·로그인한 뒤, 사용하는 AI의 등록 명령을 터미널에서 한 번 실행하세요.</p>
+        <details open><summary>Codex로 연결</summary><div class="setup-copy"><pre id="setupCodexCommand">명령을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupCodexCommand" disabled>복사</button></div><p>등록한 뒤 새 Codex 작업을 여세요. 앱 설정의 MCP 서버에도 aria가 나타납니다.</p></details>
+        <details><summary>Claude Code로 연결</summary><div class="setup-copy"><pre id="setupClaudeCommand">명령을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupClaudeCommand" disabled>복사</button></div><p>등록한 뒤 새 Claude Code 세션을 여세요.</p></details>
+        <details><summary>다른 MCP 지원 AI에서 연결</summary><p>사용하는 앱의 MCP 설정에 아래 stdio 서버 설정을 추가하세요.</p><div class="setup-copy"><pre id="setupMcpConfig">설정을 불러오는 중입니다.</pre><button type="button" data-setup-copy="setupMcpConfig" disabled>복사</button></div></details>
+        <p>새 AI 채팅에 아래 요청을 붙여넣어 연결을 확인하세요.</p><div class="setup-copy"><pre id="setupCheckPrompt">Aria의 get_song 도구를 호출해서 현재 곡과 연결 주소를 알려줘. 곡은 수정하지 마.</pre><button type="button" data-setup-copy="setupCheckPrompt">요청 복사</button></div>
+        <p id="setupAiStatus" class="setup-status" role="status">아직 이 실행에서 AI 도구 요청을 확인하지 못했습니다.</p><button id="setupRefresh" type="button">연결 상태 새로 확인</button>
+      </section>
+      <section class="setup-step"><h3>3. 첫 곡 부탁하기</h3><p>연결한 AI 채팅에 아래 요청을 붙여넣으세요. AI가 곡을 만들면 이 창을 닫고 재생을 눌러 들을 수 있어요.</p><div class="setup-copy"><pre id="setupFirstPrompt">Aria에서 현재 설치된 음원을 먼저 확인하고, 사용 가능한 기본 악기만 골라 비 오는 밤 느낌의 8마디 곡을 만들어줘. 피아노, 베이스, 드럼을 중심으로 멜로디와 반주를 넣고 재생해줘.</pre><button type="button" data-setup-copy="setupFirstPrompt">첫 요청 복사</button></div><p>마음에 드는 곡은 상단 보관 버튼으로 저장하세요. ⋯ 메뉴에서 WAV·MIDI로 내보낼 수 있고, MP3는 FFmpeg가 필요합니다.</p></section>
+      <label class="setup-experimental"><input id="experimentalEditing" type="checkbox"><span>상세 직접 편집 켜기 · 실험 기능<small>노트·강약·마디 직접 편집, 두 안 비교, 메모 저장은 아직 사용성을 다듬는 중입니다. 이 탭에서만 켜지며 새로고침하면 꺼집니다. AI 작곡·재생·악기와 음량 조절·저장·내보내기는 기본으로 사용할 수 있습니다.</small></span></label>
+      <div class="sound-actions"><button id="setupFinish" class="primary" type="button">곡 화면으로</button></div>
+    </div>
+  </div>
+</dialog>
 <dialog id="packDialog" class="pack-dialog" aria-labelledby="packDialogTitle" aria-describedby="packDialogHelp">
   <div class="pack-dialog-shell">
     <header class="pack-dialog-head">
       <div class="pack-dialog-title">
-        <h2 id="packDialogTitle"><svg class="icon" aria-hidden="true"><use href="#i-headphones"></use></svg>음원 팩 <small>(Sample pack)</small></h2>
-        <p id="packDialogHelp"><strong>악기의 실제 녹음과 연주법을 추가합니다.</strong> 필요한 팩만 한 번 설치하면 AI가 그 안의 악기와 주법을 곡에 사용할 수 있어요.</p>
+        <h2 id="packDialogTitle"><svg class="icon" aria-hidden="true"><use href="#i-headphones"></use></svg>소리 준비하기</h2>
+        <p id="packDialogHelp">기본 악기 하나로 시작하고, 필요한 소리는 나중에 더하세요. 한 번 설치하면 다음 실행에도 그대로 사용할 수 있어요.</p>
       </div>
       <div class="pack-dialog-actions">
         <button id="packRefresh" class="pack-refresh" type="button" title="설치 상태 새로 확인"><svg class="icon" aria-hidden="true"><use href="#i-activity"></use></svg><span class="label">새로 확인</span></button>
@@ -750,6 +815,23 @@
       </div>
     </header>
     <div class="pack-dialog-body">
+      <section class="sound-start" aria-labelledby="soundStartTitle">
+        <h3 id="soundStartTitle">첫 곡을 위한 기본 악기</h3>
+        <p>GeneralUser GS 하나에 피아노·기타·베이스·드럼이 들어 있어요. 기본 악기만 설치하면 별도 SFZ 엔진 없이 시작할 수 있습니다.</p>
+        <p id="soundBasicStatus" role="status">설치 상태를 확인하고 있습니다.</p>
+        <ol id="soundBasicSteps">
+          <li><strong>공식 페이지에서 GeneralUser GS를 받으세요.</strong><br>파일 크기는 약 31MB입니다. 페이지의 다운로드 안내를 따라 받은 ZIP의 압축을 풀어 주세요.<br><a class="sound-link" href="https://www.schristiancollins.com/generaluser" target="_blank" rel="noopener noreferrer">1. 공식 페이지에서 받기 ↗</a></li>
+          <li><strong>압축을 푼 폴더 안의 .sf2 파일을 선택하세요.</strong><br>파일 이름을 바꾸거나 설치 폴더를 찾을 필요 없이 Aria가 확인하고 복사합니다.<br><button id="soundBasicImport" type="button">2. 받은 SF2 파일 선택</button></li>
+          <li><strong>피아노 소리를 확인하면 준비 끝.</strong><br>아래에서 네 음을 들어보세요. 작업 중인 곡은 바뀌지 않습니다.</li>
+        </ol>
+        <div class="sound-actions"><button id="soundBasicPreview" type="button" disabled>3. 피아노 소리 확인</button><button id="soundSetupDone" type="button" hidden>다음: AI 연결하고 첫 곡 만들기</button></div>
+        <audio id="soundSetupAudio" controls hidden aria-label="기본 피아노 확인"></audio>
+        <p id="soundSetupMessage" role="status" aria-live="polite"></p>
+        <details><summary>출처와 사용 조건</summary><p>GeneralUser GS · S. Christian Collins. 제작자 안내에 따라 공식 페이지에서 직접 받는 흐름을 제공합니다. 음악 제작에 사용할 수 있으며, 자세한 조건은 <a href="https://github.com/mrbumpy409/GeneralUser-GS/blob/main/documentation/LICENSE.txt" target="_blank" rel="noopener noreferrer">제작자 라이선스</a>를 확인하세요. 선택한 파일의 형식과 기본 악기 구성을 검사하며, 출처나 음질을 인증하는 검사는 아닙니다.</p></details>
+      </section>
+      <h3>추가 악기 · 필요할 때 설치</h3>
+      <p class="pack-message">모두 받을 필요는 없어요. 오케스트라는 VSCO, 어쿠스틱 드럼은 Salamander부터 골라 보세요.</p>
+      <div id="soundEngineStatus" class="sound-engine" role="status"></div>
       <div id="packOverview" class="pack-overview" aria-live="polite"><span><strong>음원 정보를 불러오는 중입니다</strong></span></div>
       <div id="packList" class="pack-list" aria-live="polite" aria-busy="true">
         <div class="pack-empty"><span><strong>음원 목록을 확인하고 있어요.</strong><br>잠시만 기다려 주세요.</span></div>
@@ -800,6 +882,9 @@ const setUiButton = (button, icon, label) => {
 };
 const COLORS = ["#7aa2ff","#5fd4a2","#f2b06b","#e58fe0","#6bd5f2","#eded8a","#ff8f8f","#b49bff"];
 let song = null, meta = null, selected = 0, playing = null;
+// Explicit opt-in applies only to this browser tab; no song or server state changes.
+let experimentalEditing = false;
+let setupState = null;
 // 조성 판정과 "그 조에서 벗어난 음" — 서버가 확신할 때만 보내 준다(확신 없으면 key만 오고 목록은 빈다)
 let songKey = null, offKey = new Map();
 const noteKeyOf = n => `${n.bar}:${+(Number(n.beat) || 0).toFixed(4)}:${n.pitch}`;
@@ -962,7 +1047,11 @@ async function refreshMeta() {
   renderAll();
   return next;
 }
-refreshMeta().catch(error => {
+refreshMeta().then(next => {
+  if (![...Object.values(next.presets), ...Object.values(next.drumKits)].some(p => p.available)) {
+    $("btnPacks").click();
+  }
+}).catch(error => {
   // 첫 bootstrap 실패도 설치 후 갱신 실패와 같은 복구 흐름에 태운다.
   // 팩 창을 열지 않아도 /api/packs를 확인한 뒤 /api/meta를 다시 시도한다.
   packMetaRefreshPending = true;
@@ -982,6 +1071,66 @@ $("activityScrim").onclick = () => setActivityOpen(false);
 $("utilityMenu").ontoggle = ev => { if (ev.currentTarget.open) hideFbPop(); };
 $("soundStatus").onclick = () => toast(soundStatusDetail || "곡을 재생하면 왜곡·음량 상태를 확인합니다");
 
+// ---------- 첫 사용 안내 · 외부 AI 연결 ----------
+async function refreshSetup() {
+  const message = $("setupStatusMessage");
+  try {
+    const response = await fetch("/api/setup", { cache:"no-store" });
+    if (!response.ok) throw new Error("설치 안내를 읽지 못했습니다. Aria를 최신 버전으로 재시작한 뒤 다시 확인해 주세요.");
+    setupState = await response.json();
+    $("releaseVersion").textContent = setupState.version ? `v${setupState.version}` : "";
+    const basic = setupState.basic ?? {};
+    $("setupSoundStatus").textContent = basic.ready ? `✓ 기본 악기 준비 완료 · ${basic.available}개 사용 가능` : "기본 악기가 아직 준비되지 않았어요. 음원을 설치하고 피아노 소리를 확인하세요.";
+    $("setupSounds").textContent = basic.ready ? "음원 확인·추가하기" : "음원 준비하기";
+    const commands = setupState.commands ?? {};
+    for (const [id, value] of [["setupCodexCommand", commands.codex], ["setupClaudeCommand", commands.claude], ["setupMcpConfig", setupState.mcpConfig ? JSON.stringify(setupState.mcpConfig, null, 2) : null]]) {
+      $(id).textContent = value || "설정을 불러오지 못했습니다. 연결 상태 새로 확인을 눌러 주세요.";
+      document.querySelector(`[data-setup-copy="${id}"]`).disabled = !value;
+    }
+    if (setupState.firstPrompt) $("setupFirstPrompt").textContent = setupState.firstPrompt;
+    if (setupState.verificationPrompt) $("setupCheckPrompt").textContent = setupState.verificationPrompt;
+    const seen = setupState.ai?.lastSeenAt;
+    const date = seen ? new Date(seen) : null;
+    $("setupAiStatus").textContent = date && Number.isFinite(date.getTime())
+      ? `✓ 최근 AI 도구 요청 확인: ${date.toLocaleString("ko-KR")}. 현재 채팅에서 연결 확인 요청을 다시 보내면 이 시각이 갱신됩니다.`
+      : "아직 이 실행에서 AI 도구 요청을 확인하지 못했습니다. 위 확인 요청을 AI 채팅에 보내고 새로 확인을 누르세요.";
+    message.textContent = setupState.platform && setupState.platform !== "darwin" ? "이 버전의 재생과 파일 선택은 macOS에서 지원합니다." : "AI 작곡·듣기·저장·내보내기를 중심으로 공개한 미리보기 버전입니다.";
+  } catch (error) {
+    message.textContent = error.message;
+    $("setupSoundStatus").textContent = "상태를 확인하지 못했습니다. 음원 준비하기에서 다시 확인할 수 있어요.";
+  }
+}
+function openSetup() {
+  $("utilityMenu").open = false;
+  if (!$("setupDialog").open) $("setupDialog").showModal();
+  void refreshSetup();
+}
+$("btnSetup").onclick = openSetup;
+$("emptySetup").onclick = openSetup;
+$("emptySounds").onclick = () => $("btnPacks").click();
+for (const id of ["setupClose", "setupFinish"]) $(id).onclick = () => $("setupDialog").close();
+$("setupSounds").onclick = () => { $("setupDialog").close(); $("btnPacks").click(); };
+$("setupRefresh").onclick = refreshSetup;
+for (const button of document.querySelectorAll("[data-setup-copy]")) button.onclick = async () => {
+  const content = $(button.dataset.setupCopy).textContent;
+  try { await navigator.clipboard.writeText(content); toast("복사했습니다. 안내된 터미널 또는 AI 채팅에 붙여넣으세요."); }
+  catch {
+    const range = document.createRange(); range.selectNodeContents($(button.dataset.setupCopy));
+    const selection = window.getSelection(); selection.removeAllRanges(); selection.addRange(range);
+    toast("텍스트를 선택했습니다. ⌘C로 복사해 주세요.");
+  }
+};
+$("experimentalEditing").onchange = event => {
+  experimentalEditing = event.currentTarget.checked;
+  document.body.classList.toggle("experimental-editing", experimentalEditing);
+  penMode = false; splitMode = false; splitHover = null; detDrag = null; detDraw = null; detMarq = null;
+  detSel = null; detSelSet = new Set(); pasteGhost = null; detToolsOpen = false;
+  if (velDrag) { restoreVelOriginals(velDrag); velDrag = null; }
+  hideFbPop();
+  renderAll();
+  toast(experimentalEditing ? "이 탭에서 상세 편집 실험 기능을 켰습니다." : "상세 편집을 껐습니다. AI 작곡과 기본 조절은 계속 사용할 수 있습니다.");
+};
+
 // ---------- 음원 팩 관리 ----------
 // 전문 형식명은 숨기지 않되, 바로 뒤에 실제로 무엇을 뜻하는지 함께 보여 준다.
 const packDialog = $("packDialog");
@@ -991,6 +1140,67 @@ let packPollTimer = null, packLoadRevision = 0, visiblePacks = [];
 let readyPackIds = null, packMetaRefreshPending = false;
 const locallyInstallingPacks = new Set();
 const packNumber = new Intl.NumberFormat("ko-KR");
+let soundImportPending = false, soundPreviewUrl = null, soundEngineReady = false;
+
+function soundMessage(text, error = false) {
+  $("soundSetupMessage").textContent = text;
+  $("soundSetupMessage").classList.toggle("error", error);
+}
+
+async function loadSoundSetup() {
+  const response = await fetch("/api/sound-setup", { cache:"no-store" });
+  if (!response.ok) throw new Error("기본 악기 상태를 확인하지 못했습니다. 새로 확인을 눌러 주세요.");
+  const setup = await response.json();
+  soundEngineReady = setup.sfizz.ready;
+  const basic = setup.basic;
+  $("soundBasicStatus").textContent = basic.ready ? `✓ 기본 악기 준비 완료 · ${basic.available}개 사용 가능`
+    : basic.exists ? `기존 기본 음원에 필요한 악기가 빠져 있거나 파일을 읽지 못했습니다 (${basic.available}/${basic.total}). 기존 파일은 보존했습니다.`
+    : "아직 기본 악기가 없습니다. 아래 두 단계를 따라 한 번만 설치해 주세요.";
+  $("soundBasicSteps").hidden = basic.ready;
+  $("soundBasicImport").disabled = basic.exists || soundImportPending;
+  $("soundBasicPreview").disabled = !basic.ready;
+  $("soundSetupDone").hidden = !basic.ready;
+  $("soundEngineStatus").innerHTML = setup.sfizz.ready ? "✓ 추가 팩 재생 엔진 준비 완료"
+    : `${escapeHtml(setup.sfizz.message)}<details><summary>추가 팩을 위한 엔진 설치 방법</summary>Node.js·Git·CMake가 준비된 터미널에서 Aria 폴더를 열고 <code>npm run engine:install:sfizz</code>를 실행한 뒤 ‘새로 확인’을 누르세요. Philharmonia 준비 과정에는 FFmpeg도 필요할 수 있습니다.</details>`;
+  return setup;
+}
+
+async function importSoundFile(id = null) {
+  if (soundImportPending) return;
+  soundImportPending = true;
+  $("soundBasicImport").disabled = true;
+  soundMessage("Mac 파일 선택창에서 받은 파일을 선택해 주세요. 취소하면 아무것도 설치하지 않습니다.");
+  try {
+    const response = await fetch(id ? `/api/packs/import?id=${encodeURIComponent(id)}` : "/api/sound-setup/import", { method:"POST" });
+    const text = await response.text();
+    let result;
+    try { result = JSON.parse(text); } catch { throw new Error(text || "파일을 선택하지 못했습니다."); }
+    if (!response.ok) throw new Error(result.error || "음원을 설치하지 못했습니다.");
+    soundMessage(result.cancelled ? "선택을 취소했습니다. 준비되면 다시 선택해 주세요." : id
+      ? "선택한 압축파일을 검증하고 설치합니다. 아래에서 진행 상태를 확인하세요."
+      : "기본 악기를 설치했습니다. 피아노 소리 확인을 눌러 들어보세요.");
+    if (!result.cancelled) { await refreshMeta(); await loadPacks(true); }
+  } catch (error) { soundMessage(error.message, true); }
+  finally { soundImportPending = false; await loadSoundSetup().catch(error => soundMessage(error.message, true)); }
+}
+$("soundBasicImport").onclick = () => importSoundFile();
+$("soundBasicPreview").onclick = async () => {
+  $("soundBasicPreview").disabled = true;
+  soundMessage("설치한 피아노 소리를 준비하고 있습니다.");
+  try {
+    const response = await fetch("/api/sound-setup/preview", { method:"POST" });
+    if (!response.ok) { const error = await response.json(); throw new Error(error.error || "재생 실패"); }
+    const audio = $("soundSetupAudio");
+    if (soundPreviewUrl) URL.revokeObjectURL(soundPreviewUrl);
+    soundPreviewUrl = URL.createObjectURL(await response.blob());
+    audio.src = soundPreviewUrl;
+    audio.hidden = false;
+    soundMessage("피아노 네 음이 들리면 준비 완료입니다. 들리지 않으면 Mac의 출력 장치·음량을 확인하고 재생 버튼을 눌러 주세요.");
+    await audio.play().catch(() => {});
+  } catch (error) { soundMessage(`소리를 확인하지 못했습니다: ${error.message}`, true); }
+  finally { $("soundBasicPreview").disabled = false; }
+};
+$("soundSetupDone").onclick = () => { packDialog.close(); openSetup(); };
 
 function packBytes(value) {
   if (!Number.isFinite(value) || value < 0) return "설치 후 확인";
@@ -1011,11 +1221,12 @@ function packExternalUrl(value) {
 function packViewState(pack) {
   const installing = Boolean(pack.installing || locallyInstallingPacks.has(pack.id));
   if (installing) return { cls:"installing", label:"설치 중", action:"설치 중", disabled:true };
-  if (pack.installed || pack.state === "ready") return { cls:"ready", label:"사용 가능", action:"설치됨", disabled:true };
+  if (pack.installed || pack.state === "ready") return { cls:"ready", label:soundEngineReady ? "사용 가능" : "엔진 준비 필요", action:"설치됨", disabled:true };
+  if (!soundEngineReady) return { cls:"missing", label:"엔진 준비 필요", action:"엔진 설치 후 사용", disabled:true };
   if (pack.state === "error") return { cls:"error", label:"설치 실패", action:"다시 설치", disabled:false };
   if (pack.state === "invalid") return { cls:"invalid", label:"확인 필요", action:"다시 설치", disabled:false };
   if (pack.state === "unmanaged") return { cls:"invalid", label:"전환 필요", action:"원본 확인 필요", disabled:true };
-  return { cls:"missing", label:"설치 필요", action:"설치", disabled:false };
+  return { cls:"missing", label:"설치 필요", action:"공식 원본으로 설치", disabled:false };
 }
 
 function packLink(url, label) {
@@ -1044,7 +1255,7 @@ function packCard(pack) {
   };
   const progressState = pack.status?.state || pack.state;
   let message = view.cls === "installing" ? progressMessages[progressState] || "다운로드한 파일을 확인하고 안전하게 설치하고 있습니다."
-    : view.cls === "ready" ? "검증을 마쳐 바로 곡에 사용할 수 있습니다."
+    : view.cls === "ready" ? soundEngineReady ? "검증을 마쳐 바로 곡에 사용할 수 있습니다." : "음원 파일은 설치되어 있습니다. 위 안내에 따라 재생 엔진을 준비해 주세요."
     : view.cls === "error" ? `설치를 마치지 못했습니다. 다시 설치해 보세요.${pack.message ? ` (${pack.message})` : ""}`
     : view.cls === "invalid" ? "기존 설치 정보를 확인하지 못했습니다. 다시 설치하면 안전한 상태로 복구합니다."
     : "설치하면 이 팩의 악기와 주법을 곡에서 선택할 수 있습니다.";
@@ -1053,17 +1264,19 @@ function packCard(pack) {
 
   const source = packLink(pack.sourceUrl, "공식 출처");
   const release = pack.releaseUrl && pack.releaseUrl !== pack.sourceUrl ? packLink(pack.releaseUrl, "공식 배포판") : "";
+  const pinnedArchive = id === "vsco2-ce" ? packLink(pack.archiveUrl, "검증된 버전 받기") : "";
   const licenseName = pack.license?.spdx || pack.license?.name || "라이선스 정보";
   const license = packLink(pack.license?.url, `사용 조건 · ${licenseName}`);
-  const links = [source, release, license].filter(Boolean).join("");
+  const links = [source, pinnedArchive || release, license].filter(Boolean).join("");
   const disabled = view.disabled ? " disabled" : "";
   const buttonClass = view.cls === "ready" ? "pack-install done" : `pack-install${view.disabled ? "" : " primary"}`;
   return `<article class="pack-card ${view.cls}" data-pack-card="${escapeHtml(id)}">
     <div class="pack-card-head">
-      <div class="pack-card-name"><h3>${escapeHtml(name)}</h3><div class="pack-id">${escapeHtml(id)}</div></div>
+      <div class="pack-card-name"><h3>${escapeHtml(name)}</h3></div>
       <span class="pack-state" role="status">${escapeHtml(view.label)}</span>
     </div>
     <p class="pack-message">${escapeHtml(String(message))}</p>
+    <p class="pack-message">${id === "philharmonia-all-sfz" ? "음악 작품에 사용할 수 있습니다. 샘플·악기 파일 자체의 판매·재배포는 제한됩니다. 공식 원본을 이 Mac으로 받아 준비합니다." : "공식 출처에서 이 Mac으로 다운로드한 뒤 확인하고 설치합니다."}</p>
     <dl class="pack-facts">
       <div class="pack-fact"><dt>형식 (Format)</dt><dd title="${escapeHtml(formatHelp)}">${escapeHtml(format)} · ${escapeHtml(formatHelp)}</dd></div>
       <div class="pack-fact"><dt>프리셋 (악기·주법)</dt><dd>${entries}개</dd></div>
@@ -1074,6 +1287,7 @@ function packCard(pack) {
       <div class="pack-links">${links || "<span>공식 정보 없음</span>"}</div>
       <button class="${buttonClass}" type="button" data-pack-install="${escapeHtml(id)}" aria-label="${escapeHtml(name)} ${escapeHtml(view.action)}"${disabled}>${view.cls === "installing" ? uiIcon("activity") : view.cls === "ready" ? uiIcon("headphones") : uiIcon("download")}<span>${escapeHtml(view.action)}</span></button>
     </div>
+    ${!pack.installed ? `<div class="pack-install-actions"><button type="button" data-pack-import="${escapeHtml(id)}"${pack.installing || !soundEngineReady ? " disabled" : ""}>이미 받은 압축파일 선택</button></div><p class="pack-message">직접 받으려면 ‘공식 출처’를 여세요. ${id === "philharmonia-all-sfz" ? "Download all samples의 ZIP" : id === "salamander-drumkit-sfz" ? "salamanderDrumkit.tar.bz2" : "Aria가 검증한 버전의 원본 압축파일"}을 압축을 풀지 않은 채 선택하세요. 검증한 버전과 다르면 이유를 표시합니다.</p>` : ""}
   </article>`;
 }
 
@@ -1086,7 +1300,7 @@ function renderPacks(packs) {
     list.innerHTML = '<div class="pack-empty"><span><strong>아직 설치할 수 있는 음원 팩이 없어요.</strong><br>팩이 등록되면 이곳에서 설치 상태를 확인할 수 있습니다.</span></div>';
     return;
   }
-  const ready = visiblePacks.filter(pack => pack.installed || pack.state === "ready").length;
+  const ready = soundEngineReady ? visiblePacks.filter(pack => pack.installed || pack.state === "ready").length : 0;
   const installing = visiblePacks.filter(pack => pack.installing || locallyInstallingPacks.has(pack.id)).length;
   const suffix = installing ? ` · <strong>${installing}개 설치 중</strong>` : "";
   overview.innerHTML = `<span>등록 ${packNumber.format(visiblePacks.length)}개 · <strong>${packNumber.format(ready)}개 사용 가능</strong>${suffix}</span><span>설치 중에도 창을 닫고 곡 작업을 계속할 수 있습니다.</span>`;
@@ -1113,6 +1327,7 @@ async function loadPacks(quiet = false) {
     $("packOverview").innerHTML = "<span><strong>음원 정보를 불러오는 중입니다</strong></span>";
   }
   try {
+    await loadSoundSetup();
     const response = await fetch("/api/packs", { headers:{ "Accept":"application/json" }, cache:"no-store" });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || `서버 응답 ${response.status}`);
@@ -1182,12 +1397,15 @@ $("btnPacks").onclick = () => {
 $("packDialogClose").onclick = () => packDialog.close();
 $("packRefresh").onclick = () => loadPacks();
 $("packList").onclick = event => {
+  const imported = event.target.closest("[data-pack-import]");
+  if (imported && !imported.disabled) { importSoundFile(imported.dataset.packImport); return; }
   const install = event.target.closest("[data-pack-install]");
   if (install && !install.disabled) { installPack(install.dataset.packInstall); return; }
   if (event.target.closest("[data-pack-reload]")) loadPacks();
 };
 packDialog.addEventListener("click", event => { if (event.target === packDialog) packDialog.close(); });
 packDialog.addEventListener("close", () => {
+  $("soundSetupAudio").pause();
   schedulePackPolling(visiblePacks);
   $("btnPacks").focus();
 });
@@ -1295,7 +1513,7 @@ let newArmed = false, newTimer;
 $("btnNew").onclick = () => {
   if (!song || !song.tracks.some(t => t.notes.length)) return doNew();
   if (!newArmed) {
-    newArmed = true; setUiButton($("btnNew"), "trash", "지금 곡을 버릴까요?"); $("btnNew").classList.add("danger-arm");
+    newArmed = true; setUiButton($("btnNew"), "trash", "현재 곡 보관 후 새로 만들기"); $("btnNew").classList.add("danger-arm");
     newTimer = setTimeout(disarmNew, 2500); return;
   }
   doNew();
@@ -2187,9 +2405,9 @@ function renderDetHead() {
       <button class="pen tone${toneOn ? " on" : ""}" title="소리 느낌 — 밝기·거리·여운을 귀로 맞춥니다">${uiIcon("sliders")}<span class="label" data-short="소리">소리 느낌${toneOn ? " •" : ""}</span></button>
       <button class="pen feel" title="연주 느낌 — 기계적인 박자를 풀거나 어긋난 박자를 정리합니다">${uiIcon("sparkles")}<span class="label" data-short="연주">연주 느낌</span></button>
     </div>
-    <span class="det-meta">노트 ${t.notes.length}개${fixedClip ? " · 녹음 클립 원본 길이 고정" : ""}${gains}${articulationRegions}${t.mute ? " · 꺼짐" : ""}${keyNote(t)}</span>
+    <span class="det-meta">${experimentalEditing ? "실험 편집 · " : "보기 · "}노트 ${t.notes.length}개${fixedClip ? " · 녹음 클립 원본 길이 고정" : ""}${gains}${articulationRegions}${t.mute ? " · 꺼짐" : ""}${keyNote(t)}</span>
     <details class="precision-tools"${detToolsOpen ? " open" : ""}>
-      <summary title="음표를 직접 고치는 도구">${uiIcon("pencil")}<span class="label" data-short="직접">직접 고치기</span></summary>
+      <summary title="실험 기능 — 음표를 직접 고치는 도구">${uiIcon("pencil")}<span class="label" data-short="실험">직접 고치기 · 실험</span></summary>
       <div class="precision-panel">
         <button class="pen draw${penMode ? " on" : ""}" title="빈 곳을 클릭·드래그해 음을 그리고, 음을 클릭하면 지웁니다">${uiIcon("pencil")}<span class="label">음 그리기</span></button>
         <button class="pen cutm${splitMode ? " on" : ""}"${fixedClip ? " disabled" : ""} title="${fixedClip ? "Recorded Clip(녹음 클립)은 원본 전체를 한 번 재생하므로 자를 수 없습니다" : "음을 클릭하면 격자 위치에서 둘로 가릅니다"}">${uiIcon("scissors")}<span class="label">음 자르기</span></button>
@@ -3096,6 +3314,7 @@ function commitVelocityRamp(t, targets, leftVel, rightVel, originals, label) {
 }
 
 velC.addEventListener("pointerdown", e => {
+  if (!experimentalEditing) return;
   const t = song?.tracks[selected];
   if (!t) return;
   const rect = velC.getBoundingClientRect();
@@ -3144,6 +3363,7 @@ function visibleVelocityTargets(t) {
 }
 
 function applyVelPreset(kind) {
+  if (!experimentalEditing) return;
   const t = song?.tracks[selected];
   if (!t) return;
   const targets = visibleVelocityTargets(t);
@@ -3343,6 +3563,7 @@ function detFloatingChromeAt(e) {
 }
 
 detC.addEventListener("pointerdown", e => {
+  if (!experimentalEditing) return;
   if (!song || !song.tracks[selected]) return;
   if (detFloatingChromeAt(e)) return;
   const rect = detC.getBoundingClientRect();
@@ -3404,6 +3625,7 @@ detC.addEventListener("pointerdown", e => {
   draw();
 });
 detC.addEventListener("pointermove", e => {
+  if (!experimentalEditing) { detC.style.cursor = "default"; return; }
   const rect = detC.getBoundingClientRect();
   const x = e.clientX - rect.left, y = e.clientY - rect.top;
   const g = detGrid(), bpb = beatsPerBar();
@@ -3518,6 +3740,7 @@ detC.addEventListener("pointercancel", () => {
 
 // 빈 칸 더블클릭 → 격자에 맞춰 노트 추가 (선택 모드에서도 빠른 입력용 — 멜로디 1박, 드럼 반 박)
 detC.addEventListener("dblclick", e => {
+  if (!experimentalEditing) return;
   if (!song || !song.tracks[selected] || !detLayout || penMode) return;
   if (detFloatingChromeAt(e)) return;
   const rect = detC.getBoundingClientRect();
@@ -3590,6 +3813,7 @@ window.addEventListener("keydown", e => {
   }
   if (!song) return;
   const mod = e.metaKey || e.ctrlKey;
+  if (!experimentalEditing && ((mod && ["KeyC", "KeyX", "KeyV"].includes(e.code)) || ["Delete", "Backspace"].includes(e.key))) return;
   // 페이지 텍스트(JSON 푸터·로그 등)를 선택해 복사하는 중이면 브라우저 기본 복사에 양보한다
   if (mod && (e.code === "KeyC" || e.code === "KeyX") && String(window.getSelection() ?? "")) return;
   // e.code 기준 — 한글 입력 상태(e.key가 "ㅊ" 등)에서도 단축키가 동작한다
@@ -4130,7 +4354,8 @@ function showFbForm(a, b, cx, cy) {
       <button data-feedback="이상한 소리가 들려요">이상한 소리</button>
     </div>
     <textarea id="fbText" rows="2" placeholder="느낌 그대로 적어도 됩니다. 예: 여기만 너무 급하거나, 악기 하나가 튀는 것 같음"></textarea>
-    <div class="fbrow"><button id="fbSave" class="primary">AI에게 남기기</button><button id="fbCancel">취소</button></div>
+    <div class="fbrow"><button id="fbSave" class="primary">메모 저장</button><button id="fbCopyRequest" class="primary" type="button">AI 요청 복사</button><button id="fbCancel">취소</button></div>
+    <p style="color:var(--dim);font-size:11px;line-height:1.5">AI 요청을 복사해서 연결한 AI 채팅에 보내세요. 이 화면에서 AI가 자동으로 작업하지는 않습니다.</p>
     <details class="fbedit">
       <summary>직접 다듬기 — 음량·연주법·빠르기·마디 편집</summary>
       <div class="fbhead">이 구간의 악기 하나</div>
@@ -4186,7 +4411,14 @@ function showFbForm(a, b, cx, cy) {
   });
   $("fbText").focus();
   $("fbCancel").onclick = hideFbPop;
-  $("fbText").onkeydown = ev => { if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) $("fbSave").click(); };
+  $("fbText").onkeydown = ev => { if (ev.key === "Enter" && (ev.metaKey || ev.ctrlKey)) $(experimentalEditing ? "fbSave" : "fbCopyRequest").click(); };
+  $("fbCopyRequest").onclick = async () => {
+    const text = $("fbText").value.trim();
+    if (!text) { $("fbText").focus(); return; }
+    const request = `Aria의 현재 곡 ${a}${b !== a ? `~${b}` : ""}마디를 확인하고 고쳐줘: ${text}`;
+    try { await navigator.clipboard.writeText(request); toast("요청을 복사했습니다. 연결한 AI 채팅에 붙여넣으세요."); }
+    catch { $("fbText").value = request; $("fbText").select(); toast("요청을 선택했습니다. ⌘C로 복사해 주세요."); }
+  };
   $("fbSave").onclick = async () => {
     const text = $("fbText").value.trim();
     if (!text) { $("fbText").focus(); return; }
