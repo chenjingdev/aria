@@ -500,7 +500,8 @@ function inspectSfz(resolved) {
     regions.push({
       lokey, hikey, lovel, hivel, ccRanges,
       swLast,
-      trigger: region.trigger ?? "attack", sample: region.__sample ?? null
+      trigger: region.trigger ?? "attack", sample: region.__sample ?? null,
+      opcodes: Object.freeze({ ...region })
     });
     region = null;
   };
@@ -776,6 +777,66 @@ export function assertSfizzCoverage(spec, layers, options = {}) {
     sfz: resolved.file,
     layers: layers.length,
     notes: checkedNotes
+  };
+}
+
+// Selection-time facts from the same parser used by playback. This describes
+// sample coverage and equivalent playback definitions, never musical quality.
+export function inspectSfizzPreset(spec, options = {}) {
+  const resolved = resolveSfzPath(spec, options);
+  const index = inspectSfz(resolved);
+  const ids = Object.keys(spec.articulations ?? {});
+  const definitions = ids.length ? ids : [null];
+  const intervals = values => {
+    const result = [];
+    for (const value of values) {
+      const last = result.at(-1);
+      if (last && last[1] + 1 === value) last[1] = value;
+      else result.push([value, value]);
+    }
+    return result;
+  };
+  return {
+    engine: SFIZZ_ENGINE_ID,
+    file: resolved.file,
+    articulations: definitions.map(id => {
+      const articulation = normalizeArticulation(spec, { articulation: id ?? undefined });
+      const key = articulation.keyswitch?.key ?? index.defaultKeyswitch;
+      const controls = new Map(articulation.cc.map(c => [c.controller, c.value]));
+      const active = index.regions.filter(r => r.sample !== null
+        && (r.swLast === null || r.swLast === key)
+        && r.ccRanges.every(c => (controls.get(c.controller) ?? 0) >= c.lo
+          && (controls.get(c.controller) ?? 0) <= c.hi));
+      const attack = active.filter(r => !r.trigger.startsWith("release"));
+      const coverage = attack.map(r => ({ keys: [r.lokey, r.hikey], velocity: [r.lovel, r.hivel] }));
+      const supported = (pitch, velocity) => coverage.some(r => pitch >= r.keys[0] && pitch <= r.keys[1]
+        && velocity >= r.velocity[0] && velocity <= r.velocity[1]);
+      const keyRanges = intervals(Array.from({ length: 128 }, (_, n) => n).filter(n => supported(n, 64)));
+      const safeRanges = intervals(Array.from({ length: 128 }, (_, n) => n)
+        .filter(n => [40, 80, 110].every(v => supported(n, v))));
+      const values = name => [...new Set(attack.map(r => r.opcodes[name]).filter(v => v !== undefined))];
+      // Keep all audible opcodes and region order. Only fixed switch selectors
+      // and presentation labels are removed. Sharing samples alone is not enough.
+      const voice = active.map(r => ({
+        sample: r.sample,
+        opcodes: Object.fromEntries(Object.entries(r.opcodes)
+          .filter(([name]) => !["sw_last", "sw_default", "sw_lokey", "sw_hikey", "sw_label"].includes(name)
+            && !name.startsWith("__") && name !== "sample")
+          .sort(([a], [b]) => a.localeCompare(b)))
+      }));
+      const soundKey = crypto.createHash("sha256").update(JSON.stringify({ voice, gain: spec.gain ?? 1,
+        controls: [...controls.entries()].sort(([a], [b]) => a - b) })).digest("hex");
+      return {
+        id: articulation.id, label: articulation.label ?? spec.articulation ?? "default",
+        coverage, keyRanges, safeRanges,
+        velocityBands: [...new Set(attack.map(r => `${r.lovel}-${r.hivel}`))],
+        attackSeconds: values("ampeg_attack").map(Number).filter(Number.isFinite),
+        releaseSeconds: values("ampeg_release").map(Number).filter(Number.isFinite),
+        loopModes: values("loop_mode"),
+        samples: new Set(attack.map(r => r.sample.file ?? r.sample.special)).size,
+        soundKey
+      };
+    })
   };
 }
 

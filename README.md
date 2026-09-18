@@ -71,6 +71,8 @@ MIDI/WAV/MP3·악기별 내보내기는 Mac 저장 폴더 선택창으로 저장
 | `new_song` | 새 곡 생성 — `template`: citypop, lofi, ballad, bossa, edm, chiptune |
 | `get_song` / `set_song` | 곡 전체를 JSON 텍스트로 읽기 / 통째로 교체 (대규모 수정용) |
 | `list_presets` | 인자 없이 그룹→악기 트리 요약(ID 없음), `instruments`로 악기별 독주/섹션 × 주법 × 출처 → 실제 ID 표(★ 기본값), `group`으로 한 그룹의 악기·주법 이름, `query`/`family`/`source`/`kind`로 검색(녹음 클립은 `kind:"clip"`) |
+| `inspect_instrument` | 주법별 실제 샘플 음역·강약 구간 조회. `pitch`를 주면 해당 음을 렌더해 발음과 여운을 측정(스피커 재생 없음) |
+| `find_presets` | 현재 트랙·구간의 음표를 재생할 수 있는 같은 악기의 후보 조회. 같은 샘플·재생 정의는 묶고, 재생 불가·미검증 후보는 별도 표시 |
 | `add_track` / `remove_track` / `set_track` | 트랙 추가·삭제·변경(프리셋/아티큘레이션/볼륨/팬/이름). `preset`에는 실제 ID 또는 계층 ID(`violin/section/sustain`, `flute`, `cello/pizzicato`)를 줄 수 있고 곡에는 해석된 실제 ID가 저장됩니다 |
 | `set_region_articulation` | 키스위치·CC 프리셋의 선택 마디만 실제 녹음 주법으로 전환 (`null`이면 선택 범위가 트랙 설정을 다시 따름) |
 | `set_tempo` / `clear_tempo` | 기준 템포 변경 · 마디별 템포 변화(rit./accel.) 추가·삭제 |
@@ -79,7 +81,7 @@ MIDI/WAV/MP3·악기별 내보내기는 Mac 저장 폴더 선택창으로 저장
 | `export` | MIDI/WAV/MP3 내보내기 (`from_bar`/`to_bar`로 구간 오디오 렌더, `both`는 MIDI+WAV) |
 | `save_song` (기본), `load_song` / `list_songs` (full) | 곡 라이브러리(`~/.aria/songs/`) 보관·전환·목록 — new_song/load_song 시 현재 곡은 자동 보존 |
 
-기본 MCP 프로필은 `release`이며 벤치 당시와 같은 37개 도구를 노출합니다. 피드백·A/B·곡 불러오기·MIDI 가져오기 8개는 제외됩니다. 전체 45개가 필요한 개발·실험 환경은 `ARIA_TOOL_PROFILE=full`을 명시하세요. GUI 곡 목록에서 불러오기는 계속 사용할 수 있습니다. `ARIA_HIDE_TOOLS`는 선택한 프로필에서 추가로 도구를 숨깁니다.
+기본 MCP 프로필은 `release`이며 음원 선택 도구를 포함한 39개 도구를 노출합니다. 피드백·A/B·곡 불러오기·MIDI 가져오기 8개는 제외됩니다. 전체 47개가 필요한 개발·실험 환경은 `ARIA_TOOL_PROFILE=full`을 명시하세요. GUI 곡 목록에서 불러오기는 계속 사용할 수 있습니다. `ARIA_HIDE_TOOLS`는 선택한 프로필에서 추가로 도구를 숨깁니다.
 
 브리지 환경 변수로 노출 범위를 좁힐 수 있습니다. `ARIA_HIDE_TOOLS=list_feedback,ab_save,…`(쉼표·공백 구분)를 준 브리지는 그 도구를 도구 목록과 안내문에서 함께 감춥니다. 앱의 능력은 그대로이고, 벤치처럼 사람과의 협업 루프가 없는 자리에서 씁니다. 모르는 이름이 있으면 브리지가 그 이름을 알리고 종료합니다. `ARIA_DATA_DIR`·`ARIA_PORT`·`ARIA_SCAN=0`을 함께 주면 사용자 앱과 별도의 곡·라이브러리·포트를 가진 인스턴스를 자동 시작하며, 음원·팩·엔진은 `~/.aria` 아래 것을 공유합니다. 여기에 `ARIA_DATA_DIR_PER_SESSION=1`을 더하면 브리지 세션마다 `<ARIA_DATA_DIR>/sessions/<시각>-<pid>` 아래에 자기 인스턴스를 띄우므로, 같은 프로필을 동시에 여러 개 돌려도 곡을 공유하지 않습니다.
 

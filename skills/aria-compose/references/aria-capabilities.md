@@ -2,7 +2,7 @@
 
 이 문서는 일반 작곡 지식이 아니라 현재 Aria 구현의 동작을 정리한다. 실제 실행 결과와 현재 소스·테스트에서 검증한 동작이 우선하며, 도구 설명이 둘과 충돌하면 설명을 사실로 가정하지 말고 수정 대상으로 남긴다. Aria가 업데이트되면 `scripts/audit-skill.mjs`로 도구 목록이 어긋났는지 확인한다.
 
-<!-- aria-tools: new_song,get_song,set_song,list_presets,add_track,remove_track,set_track,set_tempo,clear_tempo,humanize,swing,quantize,set_section,remove_section,check_key,add_notes,clear_notes,delete_note,move_note,resize_note,split_note,insert_bars,set_bend,set_velocity,copy_bars,delete_bars,move_notes,delete_notes,set_region_gain,set_region_articulation,undo_edit,redo_edit,edit_history,play,stop,export,import_midi,ab_save,ab_load,save_song,load_song,list_songs,list_feedback,resolve_feedback,add_feedback -->
+<!-- aria-tools: new_song,get_song,set_song,list_presets,inspect_instrument,find_presets,add_track,remove_track,set_track,set_tempo,clear_tempo,humanize,swing,quantize,set_section,remove_section,check_key,add_notes,clear_notes,delete_note,move_note,resize_note,split_note,insert_bars,set_bend,set_velocity,copy_bars,delete_bars,move_notes,delete_notes,set_region_gain,set_region_articulation,undo_edit,redo_edit,edit_history,play,stop,export,import_midi,ab_save,ab_load,save_song,load_song,list_songs,list_feedback,resolve_feedback,add_feedback -->
 
 ## 상태 모델
 
@@ -21,6 +21,8 @@
 - SFZ 백엔드는 commit이 고정된 sfizz 로컬 사이드카다. 샘플 매핑, key/velocity 범위, 라운드로빈(Round robin, 같은 음의 반복 샘플 순환), 기본 pitch bend, keyswitch/CC와 드럼 초크를 앱의 재생·WAV·스템 경로에서 처리한다. 현재 동기식 호출이므로 별도 worker/process 격리는 남은 성능 최적화다. [S69][S70]
 - 현재 검증된 로컬 상태에서 세 managed SFZ 팩은 모두 설치됐다. VSCO 2 CE는 카탈로그 462개(공식 정의 75개 보존 + 보강·중복 alias 회계, WAV 3,168/3,168), Philharmonia는 1,565개(음정 악기 184 + 무음정 one-shot 74 + Recorded Clip 1,307), Salamander Drumkit v4는 10개(킷·모듈 9 + 미편집 원본 클립 1, WAV 536/536)다. Philharmonia 공식 archive의 정상 원본 13,681개는 모두 재생 가능하고, 원본부터 0 byte인 파일 2개는 결함으로 명시된다. [S69][S70]
 - 로컬 SF2 선택지까지 합친 현재 레지스트리는 2,114/2,114개 사용 가능이다: instrument 333, percussion 90, 사용자·MCP에 공개된 clip 1,691. percussion과 clip을 합치면 1,781개다. 설치 상태는 이후 달라질 수 있으므로 이 수치를 프리셋 ID 목록으로 외우지 말고 항상 `list_presets` 결과를 우선한다. [S69][S70]
+- `inspect_instrument({preset:"ID"})`는 SFZ 주법별 실제 샘플 음역과 velocity 구간을 보여 준다. `pitch:"G4", velocity:80, duration:0.25`를 추가하면 그 음을 건조하게 렌더한 발음·여운 측정치가 온다. 이는 특정 음의 신호 특성이며 음질 점수가 아니다. SoundFont의 선택 단계 상세 음역은 아직 미검증으로 표시한다.
+- `find_presets({track:"트랙 이름",from_bar:1,to_bar:4})`는 현재 악보의 음높이·실제 velocity를 재생할 수 있는 같은 악기/편성의 후보를 찾고, 같은 샘플·재생 정의를 하나로 묶는다. 주법이 여러 개인 구간은 좁히거나 `articulation`을 지정한다. 결과 조회는 곡을 변경하지 않으며 기존 ID와 소리는 보존된다.
 - VSCO 키스위치 프리셋 8개는 `list_presets`에 실제 `articulation` ID와 쉬운 설명을 함께 노출한다. 트랙 전체는 `add_track`/`set_track`, 특정 마디는 `set_region_articulation`에 정확한 ID를 주면 sfizz가 해당 키스위치·CC를 보내므로 화면용 이름만 바뀌는 것이 아니다. 번역된 label을 ID 대신 보내지 않는다. 구간 주법은 그 구간에서 **시작하는** 음에 적용되며 이미 울리는 긴 음의 샘플을 중간에 교체하지 않는다. `articulation:null`은 트랙 전체, `set_region_articulation(... articulation:null)`은 선택 범위를 상속값으로 되돌린다.
 - Salamander의 권장 전체 킷은 `salamander-all-full`이다. MIDI key 42에는 `hi-hat-closed`와 `hi-hat-semi-open-1`부터 `hi-hat-semi-open-7`까지가 함께 매핑되며, 피스 ID를 고르면 필요한 CC64 값이 자동으로 붙는다. 숫자 key 42나 임의 CC를 직접 쓰지 말고 `list_presets`가 돌려준 피스 ID를 note의 `pitch`로 사용한다.
 - `set_track`은 이름, 프리셋, 음량, 팬(Pan, 원본 스테레오의 좌우 균형), mute/solo와 아래 음색 파라미터를 바꾼다.

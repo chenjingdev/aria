@@ -54,6 +54,19 @@ const TOOLS = [
     limit: z.number().int().min(1).max(100).optional()
       .describe("상세 결과 최대 개수. 기본 30, 최대 100. 결과가 많으면 query/family/source/kind를 먼저 좁힌다")
   }],
+  ["inspect_instrument", "설치된 악기의 주법별 실제 샘플 음역, 강약 구간과 SFZ attack/release 설정을 확인한다. pitch를 주면 짧은 단음을 실제 렌더해 발음·여운을 측정한다(스피커 재생 없음). 음질 점수나 권장 작곡법이 아니며 곡을 변경하지 않는다.", {
+    preset: z.string().min(1).describe("실제 프리셋 ID 또는 계층 ID — 예: vsco-flute-keyswitch, violin/section/sustain"),
+    pitch: z.string().optional().describe("실제 발음 측정에 쓸 음이름, 예: G4. 생략하면 샘플 매핑만 조회"),
+    velocity: z.number().int().min(1).max(127).optional().describe("측정용 실제 velocity, 기본 80. pitch와 함께 지정"),
+    duration: z.number().min(.05).max(2).optional().describe("측정 음을 누르는 시간(초), 기본 0.25. pitch와 함께 지정")
+  }],
+  ["find_presets", "트랙의 지정 구간에 적힌 음높이·실제 velocity를 재생할 수 있는 같은 악기·독주/합주 음원을 찾는다. 동일한 샘플·재생 정의는 한 후보로 묶고, 무음이 생기는 후보는 별도 표시한다. 음표나 음원을 바꾸지 않으며 순서는 음질 순위가 아니다. 타악은 inspect_instrument를 사용한다.", {
+    track: z.string().min(1).describe("현재 선율 악기 트랙 이름"),
+    from_bar: z.number().int().min(1).optional(),
+    to_bar: z.number().int().min(1).optional(),
+    articulation: z.string().min(1).optional().describe("찾을 주법. 생략하면 현재 구간의 주법. 예: sustain, staccato, pizzicato"),
+    limit: z.number().int().min(1).max(20).optional()
+  }],
   ["add_track", "트랙을 추가한다.", {
     name: z.string().describe("트랙 이름(고유)"),
     preset: z.string().describe("실제 프리셋 ID 또는 계층 ID(악기/독주|섹션/주법 — 예: violin/section/sustain, flute, cello/pizzicato, drum kit). 계층 ID는 설치된 대표 음원으로 해석되어 실제 ID가 저장된다. 표는 list_presets({instruments:[…]})"),

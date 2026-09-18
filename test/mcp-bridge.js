@@ -107,9 +107,9 @@ try {
   await client.connect(transport);
 
   const listed = await client.listTools();
-  ok(listed.tools.length === 45 && listed.tools.some(tool => tool.name === "new_song") &&
+  ok(listed.tools.length === 47 && listed.tools.some(tool => tool.name === "inspect_instrument") && listed.tools.some(tool => tool.name === "find_presets") && listed.tools.some(tool => tool.name === "new_song") &&
     listed.tools.some(tool => tool.name === "set_region_articulation"),
-    "브리지가 구간 주법을 포함한 최신 MCP 도구 45개를 그대로 노출");
+    "브리지가 음원 선택을 포함한 최신 MCP 도구 47개를 그대로 노출");
 
   // 벤치 프로필처럼 사람과의 협업 루프가 없는 자리: 브리지 env로 도구를 숨기면 목록·안내문에서 함께 빠져야 한다.
   const hiddenNames = ["list_feedback", "resolve_feedback", "add_feedback", "ab_save", "ab_load", "list_songs", "load_song", "import_midi"];
@@ -133,7 +133,7 @@ try {
   const hiddenList = await hiddenClient.listTools();
   const hiddenInstructions = hiddenClient.getInstructions() ?? "";
   const mentionsTool = (text, name) => new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`).test(text);
-  ok(hiddenList.tools.length === 45 - hiddenNames.length
+  ok(hiddenList.tools.length === 47 - hiddenNames.length
     && hiddenList.tools.every(tool => !hiddenNames.includes(tool.name))
     && hiddenNames.every(name => !mentionsTool(hiddenInstructions, name))
     && hiddenInstructions.includes("save_song"),

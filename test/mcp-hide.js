@@ -19,8 +19,8 @@ const ONESHOT_HIDE = ["list_feedback", "resolve_feedback", "add_feedback", "ab_s
 
 console.log("aria 도구 숨김 테스트");
 try {
-  ok(TOOL_NAMES.length === 45 && new Set(TOOL_NAMES).size === 45 && ONESHOT_HIDE.every(n => TOOL_NAMES.includes(n)),
-    "도구 이름 45개가 고유하고 숨길 후보가 전부 실제 도구");
+  ok(TOOL_NAMES.length === 47 && new Set(TOOL_NAMES).size === 47 && ONESHOT_HIDE.every(n => TOOL_NAMES.includes(n)),
+    "도구 이름 47개가 고유하고 숨길 후보가 전부 실제 도구");
 
   const full = buildInstructions();
   // add_feedback·import_midi는 원문 안내문에 등장하지 않는다 — 원문에 있는 여섯 이름만 확인한다.

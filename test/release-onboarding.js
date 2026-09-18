@@ -226,9 +226,9 @@ async function run() {
 
     const release = await connect();
     const releaseList = (await release.client.listTools()).tools.map(tool => tool.name);
-    ok(releaseList.length === 37 && hidden.every(name => !releaseList.includes(name))
+    ok(releaseList.length === 39 && hidden.every(name => !releaseList.includes(name))
       && release.client.getServerVersion().version === version,
-    "기본 MCP 연결은 같은 버전과 벤치마크 범위의 37개 도구를 노출");
+    "기본 MCP 연결은 음원 선택을 포함한 39개 도구를 노출");
     const mcpEmpty = await call(release.client, "get_song");
     const linked = await setup(app);
     ok(mcpEmpty === guiEmpty.result && Number.isFinite(Date.parse(linked.ai.lastSeenAt)),
@@ -270,13 +270,13 @@ async function run() {
 
     const full = await connect({ ARIA_TOOL_PROFILE: "full" });
     const fullList = (await full.client.listTools()).tools.map(tool => tool.name);
-    ok(fullList.length === 45 && hidden.every(name => fullList.includes(name))
+    ok(fullList.length === 47 && hidden.every(name => fullList.includes(name))
       && (await call(full.client, "list_songs")).includes("Release onboarding saved"),
-    "명시적인 full 프로필은 45개 도구와 저장 곡 조회를 실제로 제공");
+    "명시적인 full 프로필은 47개 도구와 저장 곡 조회를 실제로 제공");
     await disconnect(full);
     const subset = await connect({ ARIA_HIDE_TOOLS: "get_song, list_feedback get_song" });
     const subsetList = (await subset.client.listTools()).tools.map(tool => tool.name);
-    ok(subsetList.length === 36 && !subsetList.includes("get_song") && hidden.every(name => !subsetList.includes(name)),
+    ok(subsetList.length === 38 && !subsetList.includes("get_song") && hidden.every(name => !subsetList.includes(name)),
       "ARIA_HIDE_TOOLS는 기본 프로필과 중복 없이 합쳐져 추가 도구를 숨김");
     await disconnect(subset);
 

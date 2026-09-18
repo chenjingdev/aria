@@ -7,6 +7,7 @@ import {
   isDrumPreset, presetLabel, presetKind, presetArticulations, presetExists
 } from "./presets.js";
 import { catalogTreeText, catalogGroupText, catalogInstrumentsText, resolvePresetAlias } from "./catalog.js";
+import { instrumentProfileText, findPresetCandidates } from "./instrument-selection.js";
 import { samplerAssetStatus, samplerAssetName, samplerEngineLabel } from "./sampler-assets.js";
 import {
   createSong, validateSong, validateNote, findTrack, songText, songSummary, totalBars, beatsPerBar,
@@ -733,6 +734,15 @@ export const ops = {
     return `곡을 통째로 교체했습니다.\n${songSummary(state.song)}`;
   },
 
+  inspect_instrument({ preset, pitch, velocity, duration } = {}) {
+    if (typeof preset !== "string" || !preset.trim()) throw new Error("preset을 지정하세요");
+    return instrumentProfileText(preset, { pitch, velocity, duration });
+  },
+
+  find_presets(args = {}) {
+    return JSON.stringify(findPresetCandidates(needSong(), args), null, 2);
+  },
+
   list_presets({ query, family, source, kind, available_only = false, limit, instruments, group } = {}) {
     const resultLimit = limit === undefined ? 30 : Number(limit);
     if (!Number.isInteger(resultLimit) || resultLimit < 1 || resultLimit > 100)
@@ -754,7 +764,8 @@ export const ops = {
       if (!Array.isArray(instruments) || !instruments.length || instruments.length > 12
         || instruments.some(x => typeof x !== "string" || !x.trim()))
         throw new Error('instruments는 악기 이름 문자열 1~12개의 배열입니다 — 예: ["Violin", "Flute"]');
-      return catalogInstrumentsText(instruments, isAvailable);
+      return catalogInstrumentsText(instruments, isAvailable)
+        + '\n음역·강약 정보: inspect_instrument({preset:"ID"}). pitch를 추가하면 해당 음을 실제 렌더해 발음·여운을 측정합니다. 현재 악보에 맞는 중복 없는 후보: find_presets({track:"트랙 이름",from_bar:1,to_bar:4}).';
     }
     if (group !== undefined) return catalogGroupText(String(group), isAvailable);
     const norm = value => String(value ?? "").trim().toLocaleLowerCase("en");
@@ -790,6 +801,8 @@ export const ops = {
         + `  list_presets({instruments:["Violin","Flute"]}) — 악기별 독주/섹션 × 주법 × 출처 → 실제 프리셋 ID 표(★ 기본값)\n`
         + `  add_track({preset:"violin/section/sustain"}) — 계층 ID(악기/독주|섹션/주법)를 주면 설치된 대표 음원으로 해석해 실제 ID를 저장\n`
         + `  list_presets({group:"현악"}) — 한 그룹의 악기와 주법 이름\n`
+        + `  inspect_instrument({preset:"violin"}) — 실제 주법별 샘플 음역·강약 구간\n`
+        + `  find_presets({track:"트랙 이름",from_bar:1,to_bar:4}) — 현재 음표에 맞는 중복 없는 음원 후보\n`
         + `  검색: query·family·source·kind·available_only (녹음 클립은 kind:"clip")\n`
         + `미설치·손상 음원은 다른 폰트나 팩으로 자동 대체하지 않습니다.\n\n`
         + `new_song 템플릿 (현재 구현의 빠른 출발점이며 장르 정의가 아님):\n${tpls}`;
